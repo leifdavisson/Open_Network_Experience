@@ -1,0 +1,22 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Local databases and data volumes (docker-compose)
+server/deploy/vm-data/
+server/deploy/loki-data/
+server/deploy/grafana-data/
+server/deploy/am-data/
+
+# Prometheus metric collectors
+*.prom
+*.prom.tmp
+failed_transaction.png
+
+# System/IDE files
+.DS_Store
+.idea/
+.vscode/
