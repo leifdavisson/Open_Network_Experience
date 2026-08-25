@@ -1,0 +1,15 @@
+[Unit]
+Description=Open UX Sensor Reconciler Agent
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/bin
+ExecStart=/usr/local/bin/reconciler.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

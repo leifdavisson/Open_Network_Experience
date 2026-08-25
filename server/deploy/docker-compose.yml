@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # 1. Central Monitoring Platform (CMP) API Control Plane
+  cmp-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: open-ux/cmp-server:latest
+    container_name: cmp-server
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # 2. VictoriaMetrics (Prometheus-compatible Time-Series Database)
+  # 2. VictoriaMetrics (Prometheus-compatible Time-Series Database)
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.101.0
+    container_name: victoriametrics
+    restart: always
+    ports:
+      - "8428:8428"
+    volumes:
+      - vm-data:/victoria-metrics-data
+    command:
+      - "-retentionPeriod=13" # In months, matching our retention standard
+
+  # 3. Grafana Loki (Log Ingestion & Logging Endpoint)
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    user: "root"
+    restart: always
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/tmp/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # 4. Prometheus Alertmanager (Alerting Daemon)
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - am-data:/alertmanager
+    command: --config.file=/etc/alertmanager/alertmanager.yml
+
+  # 5. Grafana NOC Visualization Frontend
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin # Change in production
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./dashboards:/etc/grafana/provisioning/dashboards/openux:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - victoriametrics
+      - loki
+
+volumes:
+  vm-data:
+  loki-data:
+  am-data:
+  grafana-data:

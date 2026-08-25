@@ -1,0 +1,71 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    sensor_id: "sensor-mdf-01" # Overwritten dynamically by reconciler/init script
+    site: "central-high"
+
+scrape_configs:
+  # 1. Scrape Node Exporter (System health + CIPA metrics + Playwright metrics)
+  - job_name: "node-and-custom-metrics"
+    static_configs:
+      - targets: ["localhost:9100"]
+
+  # 2. Scrape Blackbox Exporter - Gateway Latency (ICMP)
+  - job_name: "blackbox-gateway-ping"
+    metrics_path: /probe
+    params:
+      module: [icmp_test]
+    static_configs:
+      - targets:
+          - "192.168.1.1" # Local Gateway IP (reconciler configures)
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115 # Blackbox exporter port
+
+  # 3. Scrape Blackbox Exporter - Local and Public DNS Resolvers
+  - job_name: "blackbox-dns"
+    metrics_path: /probe
+    params:
+      module: [dns_udp_test]
+    static_configs:
+      - targets:
+          - "192.168.1.10" # Local DNS Server 1
+          - "8.8.8.8"      # Public DNS (Google)
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+
+  # 4. Scrape Blackbox Exporter - Core SaaS Reachability
+  - job_name: "blackbox-saas-http"
+    metrics_path: /probe
+    params:
+      module: [https_2xx]
+    static_configs:
+      - targets:
+          - "https://portal.your-district.edu"
+          - "https://saas-productivity.your-district.edu"
+          - "https://drive.google.com"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: localhost:9115
+
+# Push metrics to Central Monitoring Platform VictoriaMetrics database
+remote_write:
+  - url: "http://cmp-server:8428/api/v1/write"
+    queue_config:
+      max_samples_per_send: 500
+      capacity: 2000
+      max_backoff: 5s

@@ -1,0 +1,8 @@
+{
+    "cmp_url": "https://cmp.your-district.edu/api/v1",
+    "sensor_id": "auto",
+    "api_key": "sensor-edge-key-change-me",
+    "check_interval_seconds": 60,
+    "wifi_interface": "wlan0",
+    "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf"
+}

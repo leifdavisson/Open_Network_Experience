@@ -1,0 +1,67 @@
+modules:
+  # 1. Standard HTTP/S GET probe
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: true
+      follow_redirects: true
+      headers:
+        User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Open-UX-Sensor-Probe/1.0"
+        Cache-Control: "no-cache"
+
+  # 2. Strict HTTPS Probe (ensures TLS negotiation works)
+  https_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      method: GET
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: true
+      follow_redirects: true
+      fail_if_not_ssl: true
+      headers:
+        User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Open-UX-Sensor-Probe/1.0"
+      tls_config:
+        # Set to false to verify certificate validation (checks if SSL Decryption certificate is trusted)
+        insecure_skip_verify: false
+
+  # 3. ICMP Ping Probe
+  icmp_test:
+    prober: icmp
+    timeout: 3s
+    icmp:
+      preferred_ip_protocol: "ip4"
+
+  # 4. DNS Query over UDP
+  dns_udp_test:
+    prober: dns
+    timeout: 3s
+    dns:
+      preferred_ip_protocol: "ip4"
+      transport_protocol: "udp"
+      query_name: "google.com"
+      query_type: "A"
+      valid_rcodes:
+        - NOERROR
+
+  # 5. DNS Query over TCP (useful for testing DNSSEC or large responses)
+  dns_tcp_test:
+    prober: dns
+    timeout: 5s
+    dns:
+      preferred_ip_protocol: "ip4"
+      transport_protocol: "tcp"
+      query_name: "google.com"
+      query_type: "A"
+      valid_rcodes:
+        - NOERROR
+
+  # 6. TCP Connection Probe
+  tcp_connect_test:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
