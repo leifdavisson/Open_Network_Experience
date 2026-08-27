@@ -38,13 +38,13 @@ jobs:
       - name: Build CMP Server Image
         run: docker build -t open-ux/cmp-server:scan server/
 
+      - name: Install Trivy Scanner
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
       - name: Scan CMP Server Image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: 'open-ux/cmp-server:scan'
-          format: 'table'
-          exit-code: '0'
-          severity: 'CRITICAL,HIGH'
+        run: |
+          trivy image --severity CRITICAL,HIGH --exit-code 0 open-ux/cmp-server:scan
 
   secrets-scan:
     name: Hardcoded Secrets Check
