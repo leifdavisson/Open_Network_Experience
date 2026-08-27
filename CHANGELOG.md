@@ -4,6 +4,17 @@ All notable changes to the Open Network Experience (OpenUX) platform will be doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] — 2026-08-26
+
+### Added
+- **Dual-NIC Split-Brain Diagnostics**: Wired (`eth0`) control baseline vs. Wireless (`wlan0`) variable testing with policy-based routing (PBR) and `SO_BINDTODEVICE` socket binding.
+- **CAASPP & ELPAC State Testing Readiness** (`caaspp_readiness.py`): Validates network connectivity against California Department of Education / Cambium TDS/TIDE, ETS TOMS, and Smarter Balanced SSO endpoints. Verifies SSL Inspection bypass to prevent Secure Browser certificate pinning failures.
+- **Wi-Fi RRM, DARRP & GSK Radio Optimization Monitor** (`rrm_darrp_monitor.py`): Tracks Fortinet DARRP and Global Spectrum Knowledge (GSK) channel changes, channel dwell stability, co-channel interference (CCI) neighbor collisions, and alerts on RF flapping (>3 switches/hour).
+- **Scheduled Bandwidth Tester** (`iperf3_runner.py`): Throughput and jitter testing with time-window restrictions (e.g. off-peak hours only), bandwidth throttling caps, staggered A/B wired/wireless runs, and on-demand trigger delivery.
+- **CMP Dynamic Test Scheduling Engine**: Pydantic schemas and API endpoints to manage test schedules and trigger on-demand bandwidth runs via `POST /api/v1/sensors/{id}/tests/bandwidth/trigger`.
+- **Expanded Grafana NOC Dashboard**: Added Level 4 (Dual-NIC & Bandwidth), Level 5 (CAASPP State Testing Readiness), and Level 6 (Wi-Fi RRM/DARRP Radio Optimization) visualization rows.
+- **Pre-Commit Security Hooks & Workflow Protection**: Integrated local Gitleaks scanning, private key detection, trailing whitespace cleanup, and force-push detection alerts.
+
 ## [0.1.0] — 2026-08-25
 
 ### Added
@@ -15,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Sensor Installer** (`install.sh`): Hardware compliance enforcement (4-core, 8GB RAM, 32GB disk), system package installation, Docker setup, reconciler systemd service registration, CIPA and onboarding exporter provisioning.
 - **CMP FastAPI Server** (`main.py`, `schemas.py`): Sensor registration with pending approval queue, per-sensor cryptographic API key generation, authenticated reconcile check-ins, admin configuration updates, one-shot factory reset delivery, credential redaction (`SensorStatusResponseSafe`), and sensor rejection/revocation.
 - **Telemetry Stack** (Docker Compose): VictoriaMetrics (13-month retention), Grafana (auto-provisioned NOC dashboard), Loki (log ingestion), Alertmanager (alert deduplication and routing).
-- **Grafana NOC Dashboard** (`noc_dashboard.json`): Three-tier provisioned dashboard — Site NOC (CIPA status table, WAN indicator), Diagnostic Path (page load timelines, blocked domain bar gauge), Sensor Health (CPU/memory gauges, Playwright log viewer).
+- **Grafana NOC Dashboard** (`noc_dashboard.json`): Provisioned dashboard covering Site NOC, Diagnostic Path, and Sensor Health.
 - **Integration Test Suite** (`test_integration.py`): End-to-end lifecycle validation of registration, approval, reconciliation, reset delivery, and revocation.
 - **GitHub Actions CI** (`ci.yml`): Pylint, py_compile, bash syntax check, Docker build validation, integration tests, YAML/JSON config validation.
 - **GitHub Actions Security** (`security.yml`): pip-audit, Trivy container scanning, Gitleaks secret detection.
