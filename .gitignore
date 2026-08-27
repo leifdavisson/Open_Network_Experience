@@ -20,3 +20,29 @@ failed_transaction.png
 .DS_Store
 .idea/
 .vscode/
+
+# !! SECRETS — NEVER COMMIT THESE !!
+# Environment files (often contain API keys, DB passwords)
+.env
+.env.*
+!.env.example
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Sensor configs with real API keys (only the .example is safe)
+sensor/reconciler/reconciler.json
+reconciler.json
+!reconciler.json.example
+
+# Wi-Fi credentials
+wpa_supplicant.conf
+
+# Shell history (may contain pasted secrets)
+.bash_history
+.python_history
