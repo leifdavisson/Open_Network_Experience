@@ -28,10 +28,14 @@ jobs:
         run: |
           python -m py_compile server/main.py
           python -m py_compile server/schemas.py
+          python -m py_compile server/test_integration.py
           python -m py_compile sensor/cipa_compliance.py
           python -m py_compile sensor/browser_transaction.py
           python -m py_compile sensor/wifi_dhcp_exporter.py
           python -m py_compile sensor/reconciler/reconciler.py
+          python -m py_compile sensor/iperf3_runner.py
+          python -m py_compile sensor/caaspp_readiness.py
+          python -m py_compile sensor/rrm_darrp_monitor.py
 
       - name: Lint server code
         run: |
@@ -41,7 +45,7 @@ jobs:
 
       - name: Lint sensor code
         run: |
-          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py \
+          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py sensor/caaspp_readiness.py sensor/rrm_darrp_monitor.py sensor/iperf3_runner.py \
             --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401 \
             --fail-under=7.0
 
@@ -80,10 +84,8 @@ jobs:
       - name: Start CMP Server Stack
         run: |
           docker compose -f server/deploy/docker-compose.yml up --build -d
-          # Wait for services to be healthy
           echo "Waiting for services to start..."
           sleep 10
-          # Verify CMP server is responsive
           curl --retry 5 --retry-delay 2 --retry-connrefused -s http://localhost:8000/docs > /dev/null
 
       - name: Run Integration Test Suite
@@ -104,6 +106,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install YAML parser
+        run: pip install pyyaml
+
       - name: Validate YAML configs
         run: |
           python -c "import yaml; yaml.safe_load(open('sensor/blackbox.yml'))"
@@ -112,8 +117,6 @@ jobs:
           python -c "import yaml; yaml.safe_load(open('server/deploy/loki-config.yaml'))"
           python -c "import yaml; yaml.safe_load(open('server/deploy/grafana-datasources.yaml'))"
           python -c "import yaml; yaml.safe_load(open('server/deploy/grafana-dashboards.yaml'))"
-        env:
-          PYTHONPATH: .
 
       - name: Validate JSON configs
         run: |
