@@ -153,6 +153,10 @@ chmod +x /usr/local/bin/iperf3_runner.py
 cp "${SCRIPT_DIR}/wifi_dhcp_exporter.py" /usr/local/bin/wifi_dhcp_exporter.py
 chmod +x /usr/local/bin/wifi_dhcp_exporter.py
 
+# Copy Wi-Fi RRM / DARRP / GSK Optimization Monitor
+cp "${SCRIPT_DIR}/rrm_darrp_monitor.py" /usr/local/bin/rrm_darrp_monitor.py
+chmod +x /usr/local/bin/rrm_darrp_monitor.py
+
 # Create default sensor config directory
 mkdir -p /etc/sensor
 
