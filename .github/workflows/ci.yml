@@ -1,0 +1,124 @@
+name: CI — Lint, Compile & Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Pylint & Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint
+          pip install -r server/requirements.txt
+
+      - name: Compile all Python files (syntax check)
+        run: |
+          python -m py_compile server/main.py
+          python -m py_compile server/schemas.py
+          python -m py_compile sensor/cipa_compliance.py
+          python -m py_compile sensor/browser_transaction.py
+          python -m py_compile sensor/wifi_dhcp_exporter.py
+          python -m py_compile sensor/reconciler/reconciler.py
+
+      - name: Lint server code
+        run: |
+          pylint server/main.py server/schemas.py \
+            --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401 \
+            --fail-under=7.0
+
+      - name: Lint sensor code
+        run: |
+          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py \
+            --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401 \
+            --fail-under=7.0
+
+      - name: Validate shell scripts
+        run: |
+          bash -n sensor/install.sh
+          bash -n sensor/playwright-runner/entrypoint.sh
+
+  docker-build:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build CMP Server Image
+        run: docker build -t open-ux/cmp-server:ci-test server/
+
+      - name: Build Playwright Runner Image
+        run: docker build -t open-ux/playwright-runner:ci-test sensor/playwright-runner/
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: docker-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install server dependencies
+        run: pip install -r server/requirements.txt
+
+      - name: Start CMP Server Stack
+        run: |
+          docker compose -f server/deploy/docker-compose.yml up --build -d
+          # Wait for services to be healthy
+          echo "Waiting for services to start..."
+          sleep 10
+          # Verify CMP server is responsive
+          curl --retry 5 --retry-delay 2 --retry-connrefused -s http://localhost:8000/docs > /dev/null
+
+      - name: Run Integration Test Suite
+        run: python server/test_integration.py
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose -f server/deploy/docker-compose.yml down -v
+
+  validate-configs:
+    name: Validate Configuration Files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate YAML configs
+        run: |
+          python -c "import yaml; yaml.safe_load(open('sensor/blackbox.yml'))"
+          python -c "import yaml; yaml.safe_load(open('sensor/prometheus-agent.yml'))"
+          python -c "import yaml; yaml.safe_load(open('server/deploy/alertmanager.yml'))"
+          python -c "import yaml; yaml.safe_load(open('server/deploy/loki-config.yaml'))"
+          python -c "import yaml; yaml.safe_load(open('server/deploy/grafana-datasources.yaml'))"
+          python -c "import yaml; yaml.safe_load(open('server/deploy/grafana-dashboards.yaml'))"
+        env:
+          PYTHONPATH: .
+
+      - name: Validate JSON configs
+        run: |
+          python -c "import json; json.load(open('sensor/reconciler/reconciler.json.example'))"
+          python -c "import json; json.load(open('server/deploy/dashboards/noc_dashboard.json'))"
+
+      - name: Validate Docker Compose
+        run: docker compose -f server/deploy/docker-compose.yml config > /dev/null
