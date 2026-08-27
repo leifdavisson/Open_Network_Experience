@@ -1,0 +1,8 @@
+# Sensor Python Dependencies
+# Core sensor scripts (cipa_compliance.py, wifi_dhcp_exporter.py, reconciler.py)
+# use only the Python standard library — no third-party packages required.
+#
+# The Playwright browser transaction tester runs inside its own Docker
+# container (sensor/playwright-runner/) and its dependency is pinned there.
+# If running browser_transaction.py outside of Docker, install Playwright:
+playwright>=1.40.0
