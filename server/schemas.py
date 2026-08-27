@@ -19,7 +19,7 @@ class SensorReportRequest(BaseModel):
     os: str = Field(..., description="Operating system type of the sensor host")
     timestamp: int = Field(..., description="Epoch timestamp of report")
     containers: Dict[str, RunningContainer] = Field(
-        default_factory=dict, 
+        default_factory=dict,
         description="Map of container names to their running specs"
     )
 
@@ -50,6 +50,33 @@ class TargetContainerSpec(BaseModel):
     env: Dict[str, str] = Field(default_factory=dict, description="Environment variables passed to container")
     command: Optional[str] = Field(None, description="Command overrides run on execution")
 
+# --- Test Scheduling Schemas ---
+
+class BandwidthScheduleSpec(BaseModel):
+    enabled: bool = Field(False, description="Whether scheduled bandwidth testing is active")
+    server: str = Field("iperf3.district.local", description="Target iperf3 server IP or hostname")
+    port: int = Field(5201, description="Target iperf3 port")
+    duration_seconds: int = Field(10, description="Test duration in seconds")
+    bandwidth_cap_mbps: int = Field(100, description="Bandwidth throttling limit in Mbps (0 for unmetered)")
+    interfaces: List[str] = Field(default_factory=lambda: ["eth0", "wlan0"], description="Interfaces to test in staggered sequence")
+    allowed_hours: List[str] = Field(default_factory=lambda: ["20:00-06:00"], description="Allowed execution windows (e.g. off-peak hours)")
+    interval_seconds: int = Field(3600, description="Execution interval in seconds")
+    run_now: bool = Field(False, description="One-shot trigger to execute test immediately on next check-in")
+
+class CipaScheduleSpec(BaseModel):
+    enabled: bool = Field(True, description="Whether CIPA compliance checks are enabled")
+    interval_seconds: int = Field(300, description="Execution interval in seconds")
+
+class BrowserScheduleSpec(BaseModel):
+    enabled: bool = Field(True, description="Whether synthetic browser transactions are enabled")
+    interval_seconds: int = Field(300, description="Execution interval in seconds")
+    targets: List[str] = Field(default_factory=lambda: ["https://google.com"], description="Target web applications to test")
+
+class TestSchedulesSpec(BaseModel):
+    bandwidth: BandwidthScheduleSpec = Field(default_factory=BandwidthScheduleSpec)
+    cipa: CipaScheduleSpec = Field(default_factory=CipaScheduleSpec)
+    browser: BrowserScheduleSpec = Field(default_factory=BrowserScheduleSpec)
+
 class SensorReconcileResponse(BaseModel):
     reset: bool = Field(False, description="Tells the sensor to perform a factory cleanup of all containers")
     wifi: Optional[WifiSpec] = Field(None, description="Wi-Fi configuration profiles")
@@ -57,12 +84,17 @@ class SensorReconcileResponse(BaseModel):
         default_factory=dict,
         description="Map of desired container names to their target specifications"
     )
+    schedules: TestSchedulesSpec = Field(
+        default_factory=TestSchedulesSpec,
+        description="Dynamic test schedules and bandwidth testing parameters"
+    )
 
 # --- Management / Administrative API Schemas ---
 
 class SensorConfigUpdate(BaseModel):
     wifi: Optional[WifiSpec] = None
     containers: Optional[Dict[str, TargetContainerSpec]] = None
+    schedules: Optional[TestSchedulesSpec] = None
 
 class SensorStatusResponse(BaseModel):
     sensor_id: str
@@ -104,6 +136,7 @@ class SensorReconcileResponseSafe(BaseModel):
     reset: bool
     wifi: Optional[WifiSpecSafe] = None
     containers: Dict[str, TargetContainerSpec]
+    schedules: TestSchedulesSpec = Field(default_factory=TestSchedulesSpec)
 
 class SensorStatusResponseSafe(BaseModel):
     """Admin-facing sensor status with credentials redacted."""
@@ -125,7 +158,8 @@ class SensorStatusResponseSafe(BaseModel):
         safe_config = SensorReconcileResponseSafe(
             reset=target_config.reset,
             wifi=WifiSpecSafe.from_wifi_spec(target_config.wifi),
-            containers=target_config.containers
+            containers=target_config.containers,
+            schedules=getattr(target_config, "schedules", TestSchedulesSpec())
         )
         return cls(
             sensor_id=sensor_id,
@@ -137,4 +171,3 @@ class SensorStatusResponseSafe(BaseModel):
             reported_containers=reported_containers,
             target_config=safe_config
         )
-

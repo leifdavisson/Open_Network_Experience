@@ -23,11 +23,11 @@ class TestCMPFlow(unittest.TestCase):
         """Helper to send urllib HTTP requests."""
         url = f"{CMP_BASE_URL}{path}"
         data = json.dumps(body).encode("utf-8") if body else None
-        
+
         req_headers = {"Content-Type": "application/json"}
         if headers:
             req_headers.update(headers)
-            
+
         req = urllib.request.Request(
             url,
             data=data,
@@ -80,7 +80,7 @@ class TestCMPFlow(unittest.TestCase):
         # 3. View pending sensor on administrative status board
         code, data = self.make_request("/sensors", method="GET", headers={"X-API-Key": ADMIN_KEY})
         self.assertEqual(code, 200)
-        
+
         # Verify our sensor is in the list and marked pending
         test_sensor = next((s for s in data if s["sensor_id"] == self.sensor_id), None)
         self.assertIsNotNone(test_sensor)
@@ -111,7 +111,7 @@ class TestCMPFlow(unittest.TestCase):
         _, sensors = self.make_request("/sensors", method="GET", headers={"X-API-Key": ADMIN_KEY})
         test_sensor = next((s for s in sensors if s["sensor_id"] == self.sensor_id), None)
         self.assertIsNotNone(test_sensor)
-        
+
         # We can't see the raw key in status (redacted). Let's register again to grab it
         reg_payload = {
             "sensor_id": self.sensor_id,
@@ -171,6 +171,71 @@ class TestCMPFlow(unittest.TestCase):
         }
         code, _ = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
         self.assertEqual(code, 401)
+
+    def test_05_test_schedules_and_bandwidth_trigger(self):
+        """Tests updating test schedules and queuing on-demand bandwidth testing."""
+        # 1. Register and approve a fresh sensor
+        s_id = "sched-test-sensor-01"
+        reg_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "hostname": "bandwidth-test-node",
+            "mac_address": "11:22:33:44:55:66",
+            "timestamp": int(time.time())
+        }
+        self.make_request("/sensors/register", method="POST", body=reg_payload)
+        _, app_data = self.make_request(f"/sensors/{s_id}/approve", method="POST", headers={"X-API-Key": ADMIN_KEY})
+        api_key = app_data["api_key"]
+
+        # 2. Update sensor config with custom bandwidth test schedule
+        config_update = {
+            "schedules": {
+                "bandwidth": {
+                    "enabled": True,
+                    "server": "speedtest.district.org",
+                    "port": 5201,
+                    "duration_seconds": 15,
+                    "bandwidth_cap_mbps": 250,
+                    "interfaces": ["eth0", "wlan0"],
+                    "allowed_hours": ["22:00-05:00"],
+                    "interval_seconds": 7200,
+                    "run_now": False
+                },
+                "cipa": {"enabled": True, "interval_seconds": 300},
+                "browser": {"enabled": True, "interval_seconds": 300, "targets": ["https://google.com"]}
+            }
+        }
+        code, data = self.make_request(f"/sensors/{s_id}/config", method="PUT", body=config_update, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+
+        # 3. Check-in from sensor -> verify schedules are received
+        reconcile_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "timestamp": int(time.time()),
+            "containers": {}
+        }
+        code, data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+        self.assertIn("schedules", data)
+        self.assertEqual(data["schedules"]["bandwidth"]["server"], "speedtest.district.org")
+        self.assertEqual(data["schedules"]["bandwidth"]["bandwidth_cap_mbps"], 250)
+        self.assertFalse(data["schedules"]["bandwidth"]["run_now"])
+
+        # 4. Trigger on-demand bandwidth test via admin API
+        code, data = self.make_request(f"/sensors/{s_id}/tests/bandwidth/trigger", method="POST", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "success")
+
+        # 5. Check-in -> run_now should be True
+        code, data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+        self.assertTrue(data["schedules"]["bandwidth"]["run_now"])
+
+        # 6. Next check-in -> run_now should be cleared (one-shot delivery)
+        code, data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+        self.assertFalse(data["schedules"]["bandwidth"]["run_now"])
 
 if __name__ == "__main__":
     unittest.main()

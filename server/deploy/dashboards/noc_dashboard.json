@@ -495,6 +495,120 @@
       ],
       "title": "Playwright Executions Event Log",
       "type": "logs"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 11,
+      "title": "Level 4: Dual-NIC & Bandwidth Diagnostics (Wired vs. Wireless Baseline & Throughput)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth"
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "openux_ping_latency_seconds{instance=~\"$sensor\"} * 1000",
+          "legendFormat": "{{medium}} ({{interface}}) -> {{target}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Dual-NIC Path Latency (Wired Control vs. Wireless Variable)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "linear"
+          },
+          "unit": "Mbits"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "openux_iperf3_throughput_tx_mbps{instance=~\"$sensor\"}",
+          "legendFormat": "TX {{medium}} ({{interface}})",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "openux_iperf3_throughput_rx_mbps{instance=~\"$sensor\"}",
+          "legendFormat": "RX {{medium}} ({{interface}})",
+          "refId": "B"
+        }
+      ],
+      "title": "Scheduled iperf3 Throughput (Mbps)",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 38,
