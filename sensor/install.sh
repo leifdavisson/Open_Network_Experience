@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Open Network Experience Platform - Edge Sensor Installer
-# 
+#
 # 1. Enforces minimum hardware compliance (Linux, 4+ cores, 8GB+ RAM, 32GB+ storage).
 # 2. Installs system network tools (wpasupplicant, iperf3, mtr-tiny, python3, docker).
 # 3. Provisions Sensor Reconciler agent & systemd service (/usr/local/bin/reconciler.py).
@@ -141,6 +141,14 @@ mkdir -p /var/lib/node_exporter/textfile_collector
 cp "${SCRIPT_DIR}/cipa_compliance.py" /usr/local/bin/cipa_compliance.py
 chmod +x /usr/local/bin/cipa_compliance.py
 
+# Copy CAASPP & ELPAC State Testing Readiness Checker
+cp "${SCRIPT_DIR}/caaspp_readiness.py" /usr/local/bin/caaspp_readiness.py
+chmod +x /usr/local/bin/caaspp_readiness.py
+
+# Copy Scheduled iperf3 Bandwidth Tester
+cp "${SCRIPT_DIR}/iperf3_runner.py" /usr/local/bin/iperf3_runner.py
+chmod +x /usr/local/bin/iperf3_runner.py
+
 # Copy Wi-Fi and DHCP onboarding timing exporter
 cp "${SCRIPT_DIR}/wifi_dhcp_exporter.py" /usr/local/bin/wifi_dhcp_exporter.py
 chmod +x /usr/local/bin/wifi_dhcp_exporter.py
@@ -152,8 +160,6 @@ echo -e "\n${GREEN}=============================================${NC}"
 echo -e "${GREEN}Sensor installation completed successfully.${NC}"
 echo -e "${GREEN}=============================================${NC}"
 echo -e "${YELLOW}Next steps:${NC}"
-echo -e "  1. Edit /etc/sensor/reconciler.json with your CMP URL and edge API key (api_key)"
+echo -e "  1. Edit /etc/sensor/reconciler.json with your CMP URL (leave api_key empty for pending registration approval)"
 echo -e "  2. Start the reconciler: systemctl start sensor-reconciler"
 echo -e "  3. Verify check-in: journalctl -u sensor-reconciler -f"
-
-

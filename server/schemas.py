@@ -72,10 +72,15 @@ class BrowserScheduleSpec(BaseModel):
     interval_seconds: int = Field(300, description="Execution interval in seconds")
     targets: List[str] = Field(default_factory=lambda: ["https://google.com"], description="Target web applications to test")
 
+class CaasppScheduleSpec(BaseModel):
+    enabled: bool = Field(True, description="Whether CAASPP/ELPAC state testing readiness validation is enabled")
+    interval_seconds: int = Field(300, description="Execution interval in seconds")
+
 class TestSchedulesSpec(BaseModel):
     bandwidth: BandwidthScheduleSpec = Field(default_factory=BandwidthScheduleSpec)
     cipa: CipaScheduleSpec = Field(default_factory=CipaScheduleSpec)
     browser: BrowserScheduleSpec = Field(default_factory=BrowserScheduleSpec)
+    caaspp: CaasppScheduleSpec = Field(default_factory=CaasppScheduleSpec)
 
 class SensorReconcileResponse(BaseModel):
     reset: bool = Field(False, description="Tells the sensor to perform a factory cleanup of all containers")
