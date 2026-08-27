@@ -91,11 +91,11 @@ def load_config():
             return config
         except Exception as e:
             print(f"Error reading config: {e}. Using defaults.")
-            
+
     # Auto-generate Sensor ID if empty
     config = DEFAULT_CONFIG.copy()
     config["sensor_id"] = get_sensor_uuid()
-    
+
     # Try to write default config if directory exists
     try:
         os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
@@ -104,7 +104,7 @@ def load_config():
         print(f"Generated default config at {CONFIG_PATH}")
     except Exception as e:
         print(f"Could not save default config: {e}")
-        
+
     return config
 
 def save_config(config):
@@ -242,16 +242,16 @@ def reconcile_wifi(wifi_spec, interface, config_path):
 
     ssid = wifi_spec.get("ssid")
     sec_type = wifi_spec.get("security", "open").lower()
-    
+
     # Build wpa_supplicant blocks based on security type
     config_blocks = [
         "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev",
         "update_config=1",
         "country=US\n"
     ]
-    
+
     network_block = ["network={", f'    ssid="{ssid}"']
-    
+
     if sec_type == "open":
         network_block.append("    key_mgmt=NONE")
     elif sec_type == "psk":
@@ -266,7 +266,7 @@ def reconcile_wifi(wifi_spec, interface, config_path):
         network_block.append(f'    identity="{username}"')
         network_block.append(f'    password="{password}"')
         network_block.append("    phase2=\"auth=MSCHAPV2\"")
-    
+
     network_block.append("}")
     config_blocks.append("\n".join(network_block))
     new_config = "\n".join(config_blocks)
@@ -282,7 +282,7 @@ def reconcile_wifi(wifi_spec, interface, config_path):
         try:
             with open(config_path, "w") as f:
                 f.write(new_config)
-            
+
             # Restart wpa_supplicant to apply configuration
             print("Restarting Wi-Fi interface...")
             run_cmd(["wpa_cli", "-i", interface, "reconfigure"])
@@ -299,7 +299,7 @@ def wipe_and_reset():
             subprocess.run(["docker", "stop"] + running_ids)
     except Exception:
         pass
-    
+
     # Remove all containers, volumes, and networks
     run_cmd(["docker", "system", "prune", "-a", "--volumes", "-f"])
 
@@ -307,7 +307,7 @@ def register_sensor(config, cmp_url):
     """Phones home to register the sensor and check approval status.
     If approved, returns the generated API Key. Otherwise, returns None."""
     url = f"{cmp_url}/sensors/register"
-    
+
     # Get hostname and mac address for metadata
     import socket
     import re
@@ -315,7 +315,7 @@ def register_sensor(config, cmp_url):
         hostname = socket.gethostname()
     except Exception:
         hostname = "unknown"
-        
+
     try:
         # Simple MAC address lookup from first active interface
         import uuid
@@ -351,7 +351,7 @@ def register_sensor(config, cmp_url):
 def phone_home(config, cmp_url):
     """Reaches out to the CMP API to report status and get target configuration."""
     url = f"{cmp_url}/sensors/reconcile"
-    
+
     # Gather basic host metrics to send to CMP
     payload = {
         "sensor_id": config["sensor_id"],
@@ -359,7 +359,7 @@ def phone_home(config, cmp_url):
         "timestamp": int(time.time()),
         "containers": get_running_containers()
     }
-    
+
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -369,7 +369,7 @@ def phone_home(config, cmp_url):
         },
         method="POST"
     )
-    
+
     try:
         with urllib.request.urlopen(req, timeout=10) as response:
             if response.status == 200:
@@ -387,17 +387,63 @@ def phone_home(config, cmp_url):
         print(f"Failed to connect to Central Monitoring Platform at {url}: {e}")
     except Exception as e:
         print(f"Error reporting status: {e}")
-        
+
     return None
+
+def reconcile_schedules(schedules: dict, config: dict):
+    """Evaluates dynamic test schedules from CMP and executes scheduled or on-demand tests.
+    Spawns test runners in background processes with strict process bounds so the main
+    reconciler check-in loop never drops heartbeats."""
+    if not schedules:
+        return
+
+    bw_spec = schedules.get("bandwidth", {})
+    if bw_spec.get("enabled") or bw_spec.get("run_now"):
+        server = bw_spec.get("server", "iperf3.district.local")
+        port = str(bw_spec.get("port", 5201))
+        duration = str(bw_spec.get("duration_seconds", 10))
+        cap = str(bw_spec.get("bandwidth_cap_mbps", 100))
+        interfaces = bw_spec.get("interfaces", ["eth0", "wlan0"])
+        allowed = bw_spec.get("allowed_hours", [])
+
+        cmd = [
+            "/usr/local/bin/iperf3_runner.py",
+            "--server", server,
+            "--port", port,
+            "--duration", duration,
+            "--bandwidth-cap", cap,
+            "--interfaces"
+        ] + interfaces
+
+        if allowed:
+            cmd.append("--allowed-hours")
+            cmd.extend(allowed)
+
+        if bw_spec.get("run_now"):
+            cmd.append("--force")
+            print("Executing on-demand bandwidth test triggered by CMP...")
+        else:
+            print("Checking scheduled bandwidth test parameters...")
+
+        # Run in background non-blocking subprocess so reconciler never drops heartbeats
+        try:
+            runner_script = "/usr/local/bin/iperf3_runner.py"
+            if not os.path.exists(runner_script):
+                runner_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "iperf3_runner.py"))
+            if os.path.exists(runner_script):
+                cmd[0] = runner_script
+                subprocess.Popen(["python3"] + cmd)
+        except Exception as e:
+            print(f"Failed to spawn bandwidth test: {e}")
 
 def main():
     print("Starting Sensor Reconciler service...")
     config = load_config()
-    
+
     while True:
         # Dynamically discover the cloud server location
         cmp_url = get_cmp_url(config)
-        
+
         # If the sensor has no API Key, run registration approval flow
         if not config.get("api_key"):
             print(f"Sensor is pending approval. Querying registry at {cmp_url}...")
@@ -413,16 +459,17 @@ def main():
 
         # Authenticated reconcile loop
         target_state = phone_home(config, cmp_url)
-        
+
         if target_state:
             # Check for reset trigger
             if target_state.get("reset", False):
                 wipe_and_reset()
-            
-            # Reconcile local networking and docker runtimes
+
+            # Reconcile local networking, docker runtimes, and test schedules
             reconcile_wifi(target_state.get("wifi"), config["wifi_interface"], config["wifi_config_path"])
             reconcile_containers(target_state.get("containers", {}))
-            
+            reconcile_schedules(target_state.get("schedules", {}), config)
+
         time.sleep(config["check_interval_seconds"])
 
 if __name__ == "__main__":

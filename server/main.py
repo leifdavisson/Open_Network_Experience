@@ -19,11 +19,11 @@ import time
 import copy
 import secrets
 from schemas import (
-    SensorReportRequest, 
+    SensorReportRequest,
     SensorRegisterRequest,
     SensorRegisterResponse,
-    SensorReconcileResponse, 
-    SensorConfigUpdate, 
+    SensorReconcileResponse,
+    SensorConfigUpdate,
     SensorStatusResponse,
     SensorStatusResponseSafe,
     WifiSpec,
@@ -112,20 +112,20 @@ async def register_sensor(request: SensorRegisterRequest):
     for administrative approval.
     """
     sensor = get_or_create_sensor(request.sensor_id)
-    
+
     # Update registration metadata
     sensor["hostname"] = request.hostname
     sensor["mac_address"] = request.mac_address
     sensor["os"] = request.os
     sensor["last_seen"] = int(time.time())
-    
+
     if sensor["status"] == "approved":
         return SensorRegisterResponse(status="approved", api_key=sensor["api_key"])
-    
+
     return SensorRegisterResponse(status="pending")
 
 @app.post(
-    "/api/v1/sensors/reconcile", 
+    "/api/v1/sensors/reconcile",
     response_model=SensorReconcileResponse,
     summary="Sensor Registration and State Reconciliation",
     description="Endpoint for edge sensors to check-in, report metrics, and receive configurations."
@@ -140,20 +140,24 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
     sensor = SENSORS_DB.get(report.sensor_id)
     if not sensor or sensor["status"] != "approved" or sensor["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized or unapproved sensor check-in")
-    
+
     # Update check-in timestamps and system details
     sensor["last_seen"] = int(time.time())
     sensor["os"] = report.os
     sensor["reported_containers"] = {k: v.model_dump() for k, v in report.containers.items()}
-    
-    # Return a COPY with reset flag injected — never mutate target_config directly
+
+    # Return a deep COPY with reset flag injected — never mutate target_config directly
     reset_value = sensor["reset_flag"]
-    response = sensor["target_config"].model_copy(update={"reset": reset_value})
-    
+    response = sensor["target_config"].model_copy(update={"reset": reset_value}, deep=True)
+
     # Reset flag is one-shot: clear it once successfully delivered
     if sensor["reset_flag"]:
         sensor["reset_flag"] = False
-        
+
+    # If on-demand bandwidth test was queued, clear the run_now flag for future check-ins
+    if sensor["target_config"].schedules.bandwidth.run_now:
+        sensor["target_config"].schedules.bandwidth.run_now = False
+
     return response
 
 # --- Administrative / Dashboard Management Endpoints ---
@@ -173,16 +177,16 @@ async def list_sensors():
     """
     now = int(time.time())
     response_list = []
-    
+
     for s_id, data in SENSORS_DB.items():
         # Online threshold: checked in within the last 3 intervals (e.g. 3 minutes)
         is_online = (now - data["last_seen"]) < 180
-        
+
         # Check if the sensor running containers match target containers configuration
         target_keys = set(data["target_config"].containers.keys())
         reported_keys = set(data["reported_containers"].keys())
         reconciled = (target_keys == reported_keys)
-        
+
         # Check if images match
         if reconciled:
             for c_name in target_keys:
@@ -191,7 +195,7 @@ async def list_sensors():
                 if target_img != reported_img:
                     reconciled = False
                     break
-        
+
         response_list.append(
             SensorStatusResponseSafe.from_internal(
                 sensor_id=s_id,
@@ -209,23 +213,40 @@ async def list_sensors():
 @app.put(
     "/api/v1/sensors/{sensor_id}/config",
     summary="Update Sensor Configuration Target",
-    description="Updates the Wi-Fi and container profiles that the sensor will pull during its next loop.",
+    description="Updates the Wi-Fi, container, and test schedules profiles that the sensor will pull during its next loop.",
     dependencies=[Depends(verify_admin_key)]
 )
 async def update_sensor_config(sensor_id: str, config: SensorConfigUpdate):
     """
-    Administrative endpoint to update a sensor's target profile (Wi-Fi/containers).
+    Administrative endpoint to update a sensor's target profile (Wi-Fi/containers/schedules).
     Requires admin API key authentication (X-API-Key). Detects partial updates
     by examining model_fields_set.
     """
     sensor = get_or_create_sensor(sensor_id)
-    
+
     if "wifi" in config.model_fields_set:
         sensor["target_config"].wifi = config.wifi
     if "containers" in config.model_fields_set:
         sensor["target_config"].containers = config.containers
-        
+    if "schedules" in config.model_fields_set and config.schedules is not None:
+        sensor["target_config"].schedules = config.schedules
+
     return {"status": "success", "message": "Sensor target configuration updated."}
+
+@app.post(
+    "/api/v1/sensors/{sensor_id}/tests/bandwidth/trigger",
+    summary="Trigger On-Demand Bandwidth Test",
+    description="Instructs the sensor to execute an immediate iperf3 throughput test on its next reconcile check-in.",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def trigger_bandwidth_test(sensor_id: str):
+    """
+    Administrative endpoint to queue an immediate on-demand bandwidth test.
+    Requires admin API key authentication (X-API-Key). Sets run_now flag to True.
+    """
+    sensor = get_or_create_sensor(sensor_id)
+    sensor["target_config"].schedules.bandwidth.run_now = True
+    return {"status": "success", "message": "On-demand bandwidth test queued for next sensor check-in."}
 
 @app.post(
     "/api/v1/sensors/{sensor_id}/reset",
@@ -257,14 +278,14 @@ async def approve_sensor(sensor_id: str):
     sensor = get_or_create_sensor(sensor_id)
     if sensor["status"] == "approved":
         return {"status": "success", "message": "Sensor already approved.", "api_key": sensor["api_key"]}
-    
+
     # Generate unique key for this sensor
     sensor["api_key"] = f"sensor-key-{secrets.token_hex(16)}"
     sensor["status"] = "approved"
-    
+
     return {
-        "status": "success", 
-        "message": "Sensor approved and key generated.", 
+        "status": "success",
+        "message": "Sensor approved and key generated.",
         "api_key": sensor["api_key"]
     }
 
