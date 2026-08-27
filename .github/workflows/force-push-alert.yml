@@ -1,0 +1,23 @@
+name: Force Push Protection Alert
+
+# This workflow alerts if someone force-pushes to main,
+# which could be used to rewrite history and hide leaked secrets.
+
+on:
+  # Triggered on any push, but checks if it was a force push
+  push:
+    branches: [main]
+
+jobs:
+  check-force-push:
+    name: Detect Force Push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if force push
+        if: github.event.forced == true
+        run: |
+          echo "::error::⚠️ FORCE PUSH DETECTED on main branch by ${{ github.actor }}!"
+          echo "Force pushes can rewrite history and hide leaked secrets."
+          echo "If this was to remove a leaked secret, the secret MUST still be rotated."
+          echo "Git history on forks and caches may still contain the secret."
+          exit 1
