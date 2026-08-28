@@ -452,6 +452,41 @@ def reconcile_pcap_trigger(pcap_spec: dict, config: dict):
     except Exception as e:
         print(f"Failed to trigger PCAP snapshot: {e}")
 
+def reconcile_custom_probes(custom_probes: list, config: dict):
+    """Synchronizes custom synthetic probes from CMP with /etc/sensor/custom_probes.json
+    and spawns the custom probe runner."""
+    if custom_probes is None:
+        return
+
+    probes_file = "/etc/sensor/custom_probes.json"
+    os.makedirs(os.path.dirname(probes_file), exist_ok=True)
+
+    current_probes = []
+    if os.path.exists(probes_file):
+        try:
+            with open(probes_file, "r") as f:
+                current_probes = json.load(f)
+        except Exception:
+            pass
+
+    if current_probes != custom_probes:
+        print(f"Updating custom synthetic probes configuration ({len(custom_probes)} probes)...")
+        try:
+            with open(probes_file + ".tmp", "w") as f:
+                json.dump(custom_probes, f, indent=2)
+            os.replace(probes_file + ".tmp", probes_file)
+        except Exception as e:
+            print(f"Failed to write {probes_file}: {e}")
+
+    try:
+        runner_script = "/usr/local/bin/custom_probe_runner.py"
+        if not os.path.exists(runner_script):
+            runner_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "custom_probe_runner.py"))
+        if os.path.exists(runner_script):
+            subprocess.Popen(["python3", runner_script, "--config", probes_file])
+    except Exception as e:
+        print(f"Failed to spawn custom probe runner: {e}")
+
 def main():
     print("Starting Sensor Reconciler service...")
     config = load_config()
@@ -486,6 +521,7 @@ def main():
             reconcile_containers(target_state.get("containers", {}))
             reconcile_schedules(target_state.get("schedules", {}), config)
             reconcile_pcap_trigger(target_state.get("pcap_trigger", {}), config)
+            reconcile_custom_probes(target_state.get("custom_probes", []), config)
 
         time.sleep(config["check_interval_seconds"])
 

@@ -4,6 +4,15 @@ All notable changes to the Open Network Experience (OpenUX) platform will be doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] — 2026-08-27
+
+### Added
+- **Sensor Administration Web UI**: Built-in responsive single-pane-of-glass management dashboard accessible at `/` for real-time fleet health, quick actions, and sensor approvals.
+- **1-Click Trust-On-First-Use (TOFU) Approval**: Web interface to approve or reject pending sensors with automatic cryptographic API key provisioning.
+- **WYSIWYG "EasyBuilder" Synthetic Probe Studio**: Point-and-click visual form in the Web UI to define custom synthetic tests (Web, API, DNS, TCP) and automatically distribute them to targeted sensors.
+- **Dynamic Custom Synthetic Probe Runner** (`custom_probe_runner.py`): Edge probe executor supporting HTTP/S latency, DNS resolution, and TCP port checks with atomic Prometheus metric exports.
+- **Sensor Reconciler Dynamic Probing Hook**: Automated synchronization of custom synthetic probes from CMP down to edge sensors.
+
 ## [0.2.0] — 2026-08-27
 
 ### Added
