@@ -5,17 +5,18 @@ Aggregates incident PCAP slices, Playwright HAR files, systemd journal logs,
 Wi-Fi RF parameters, and routing state into an audit-ready diagnostic bundle (.tar.gz).
 
 Includes a Plain-English Human-Readable Incident Summary (HTML & Text)
-designed for teachers, school principals, district leadership, and NOC technicians.
+using strictly vendor-neutral, standard industry networking terminology.
 """
 
 import os
 import sys
 import json
 import time
+import glob
 import tarfile
 import tempfile
 import subprocess
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 
 SNAPSHOTS_DIR = "/var/lib/sensor/snapshots"
 EVIDENCE_BUNDLE_DIR = "/var/lib/sensor/evidence_bundles"
@@ -35,41 +36,59 @@ def generate_plain_english_summary(sensor_id: str, reason: str, timestamp: str) 
     human_explanations = {
         "caaspp_failure": {
             "title": "State Testing (CAASPP / ELPAC) Connection Failure",
-            "what_happened": "The sensor could not connect to California State Assessment testing servers, or the firewall attempted to inspect secure test traffic.",
-            "impact": "Students taking online CAASPP/ELPAC tests in this room/wing may be kicked out or receive Secure Browser certificate errors.",
-            "recommended_action": "Verify that firewall SSL inspection is completely bypassed for *.caaspp-elpac.org and *.tds.cambiumast.com."
+            "what_happened": "The sensor could not connect to state assessment testing servers, or the Security Gateway attempted to inspect/decrypt secure test traffic.",
+            "impact": "Students taking online state assessments in this area may be disconnected or receive Secure Browser certificate errors.",
+            "recommended_action": "Verify that SSL/TLS inspection is completely bypassed for state testing domains (*.caaspp-elpac.org and *.tds.cambiumast.com) on the Security Gateway / Firewall."
         },
         "wifi_flapping": {
-            "title": "Excessive Wi-Fi Channel Hopping (AP Flapping)",
-            "what_happened": "The local Wi-Fi Access Point changed radio channels multiple times within the hour due to radio interference.",
-            "impact": "Laptops and Chromebooks will experience intermittent 5-10 second pauses and video buffering.",
-            "recommended_action": "Check for microwave/radar interference or lock the Access Point channel to avoid aggressive dynamic channel hopping (DARRP/GSK)."
+            "title": "Excessive Wi-Fi Channel Hopping (Access Point Flapping)",
+            "what_happened": "The local Wi-Fi Access Point changed radio channels multiple times within the hour due to Radio Resource Management (RRM) adjustments or radio interference.",
+            "impact": "Student laptops and Chromebooks will experience brief 5-10 second connection pauses and video buffering.",
+            "recommended_action": "Check for external RF interference or adjust the wireless controller's Radio Resource Management (RRM) dynamic channel sensitivity."
         },
         "dhcp_exhaustion": {
             "title": "DHCP Address Assignment Failure",
-            "what_happened": "The sensor asked for an IP address but the network router/server did not respond in time.",
-            "impact": "New student devices arriving in this classroom will show 'Connected, No Internet' or fail to connect.",
-            "recommended_action": "Expand the DHCP pool scope on the core network switch/router for this VLAN."
+            "what_happened": "The sensor requested an IP address but the network DHCP server or router did not respond in time.",
+            "impact": "New student devices arriving in this classroom will show 'Connected, No Internet' or fail to obtain a network address.",
+            "recommended_action": "Expand the DHCP pool scope on the core network switch, router, or DHCP server for this VLAN."
+        },
+        "dns_resolution_failure": {
+            "title": "DNS Name Resolution Failure",
+            "what_happened": "The sensor was unable to resolve domain names into network IP addresses.",
+            "impact": "Websites, cloud learning management portals, and cloud services will fail to load across connected devices.",
+            "recommended_action": "Check the health of the local DNS servers and verify that upstream DNS forwarders are responding."
+        },
+        "voip_call_degradation": {
+            "title": "Voice & Video Call Quality Degradation (High Jitter / Packet Loss)",
+            "what_happened": "Real-time audio/video media streams experienced packet delay variation (jitter) or packet loss, lowering the Mean Opinion Score (MOS).",
+            "impact": "Teacher video conferences (Zoom, Google Meet, Microsoft Teams) and VoIP classroom phones will sound choppy or experience video freezing.",
+            "recommended_action": "Verify Quality of Service (QoS) prioritization on the local network switch and firewall for real-time UDP media traffic."
         },
         "high_latency_spike": {
             "title": "Internet Connection Latency Spike (>200ms)",
-            "what_happened": "Internet response times surged dramatically, creating noticeable slowdowns.",
-            "impact": "Websites will load sluggishly and teacher video lessons may freeze.",
-            "recommended_action": "Check if an active bandwidth test, large software update, or ISP circuit congestion is occurring."
+            "what_happened": "Internet round-trip response times increased significantly above baseline levels.",
+            "impact": "Interactive applications will respond sluggishly and media streams may pause to buffer.",
+            "recommended_action": "Check for active high-bandwidth file transfers, operating system software updates, or upstream ISP circuit congestion."
         },
         "cipa_filter_failure": {
-            "title": "CIPA Web Content Filter Policy Alert",
-            "what_happened": "A designated restricted category test token was accessible without being blocked by the school internet filter.",
-            "impact": "Potential compliance warning for E-Rate federal funding requirements.",
-            "recommended_action": "Review the content filter category policies on the school firewall or web security proxy."
+            "title": "Content Filter Policy Alert",
+            "what_happened": "A restricted test verification token was accessible without being blocked by the network content filter.",
+            "impact": "Potential compliance warning for district Internet safety policy and federal E-Rate requirements.",
+            "recommended_action": "Review web content filtering category rules and SSL inspection policies on the Security Gateway / Web Proxy."
+        },
+        "segmentation_policy_breach": {
+            "title": "Network Segmentation Policy Alert",
+            "what_happened": "A restricted internal infrastructure management port was reachable from this client access network.",
+            "impact": "Security isolation policy violation (client devices may be able to reach internal switch/management interfaces).",
+            "recommended_action": "Review internal Access Control Lists (ACLs) and inter-VLAN firewall rules to ensure client isolation is enforced."
         }
     }
 
     info = human_explanations.get(reason, {
         "title": f"Network Diagnostic Incident ({reason})",
-        "what_happened": f"An automated network diagnostic check detected an anomaly ({reason}).",
+        "what_happened": f"An automated network diagnostic prober detected an anomaly ({reason}).",
         "impact": "Users connected in this area may experience connectivity or application slowness.",
-        "recommended_action": "Review the attached PCAP packet slice and system logs for detailed root cause."
+        "recommended_action": "Review the attached packet capture and system logs for detailed root-cause isolation."
     })
 
     # Plain Text Summary
@@ -87,7 +106,7 @@ Incident Category:    {info['title']}
 2. WHO IS AFFECTED?
    {info['impact']}
 
-3. RECOMMENDED ACTION FOR IT / VENDOR:
+3. RECOMMENDED ACTION (REMEDIATION):
    {info['recommended_action']}
 
 --------------------------------------------------------------------------------
@@ -96,7 +115,7 @@ ATTACHED FORENSIC EVIDENCE IN THIS BUNDLE:
   - wifi_link.txt         : Physical Wi-Fi signal strength (RSSI) & SNR details
   - journal_recent.log    : System event logs (Association, WPA Handshake, DHCP)
   - network_ip_route.txt  : Network routing table and gateway configuration
-  - metrics/              : Exact numeric Prometheus performance records
+  - metrics/              : Exact numeric performance metrics
 ================================================================================
 """
 
@@ -223,7 +242,6 @@ def package_evidence_bundle(
 
         # Include latest PCAP snapshot if available
         if include_latest_pcap and os.path.exists(SNAPSHOTS_DIR):
-            import glob
             pcaps = sorted(glob.glob(f"{SNAPSHOTS_DIR}/*.pcap"), key=os.path.getmtime)
             if pcaps:
                 latest_pcap = pcaps[-1]
@@ -232,7 +250,6 @@ def package_evidence_bundle(
                     subprocess.run(["cp", latest_pcap + ".json", tmp_dir], check=False)
 
         # Include Playwright failure screenshots or HARs if present in snapshots
-        import glob
         browser_snaps = glob.glob(f"{SNAPSHOTS_DIR}/browser_failure_*")
         for bs in browser_snaps:
             subprocess.run(["cp", bs, tmp_dir], check=False)
