@@ -1,6 +1,6 @@
-# Contributing to OpenUX
+# Contributing to Open Network Experience (ONE)
 
-Thank you for your interest in contributing to the Open Network Experience platform! This project is licensed under the **AGPLv3** license.
+Thank you for your interest in contributing to the **Open Network Experience (ONE)** platform! This project is licensed under the **AGPLv3** license.
 
 ## Development Setup
 
