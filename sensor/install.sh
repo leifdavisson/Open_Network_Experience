@@ -165,6 +165,10 @@ chmod +x /usr/local/bin/pcap_trigger.py
 cp "${SCRIPT_DIR}/evidence_collector.py" /usr/local/bin/evidence_collector.py
 chmod +x /usr/local/bin/evidence_collector.py
 
+# Copy Lateral East-West Segmentation Validator
+cp "${SCRIPT_DIR}/segmentation_prober.py" /usr/local/bin/segmentation_prober.py
+chmod +x /usr/local/bin/segmentation_prober.py
+
 # Create default sensor config directory
 mkdir -p /etc/sensor
 mkdir -p /var/lib/sensor/snapshots
