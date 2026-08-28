@@ -239,7 +239,7 @@ class TestCMPFlow(unittest.TestCase):
 
     def test_06_pcap_trigger_and_evidence_bundle(self):
         """Tests triggering on-demand PCAP snapshot and registering evidence bundles."""
-        s_id = "pcap-test-sensor-01"
+        s_id = f"pcap-test-sensor-{int(time.time())}"
         reg_payload = {
             "sensor_id": s_id,
             "os": "linux",

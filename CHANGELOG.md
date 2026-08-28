@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Incident-Triggered Packet Capture (PCAP) Daemon** (`pcap_trigger.py`): Continuous 50MB RAM ring buffer (`/dev/shm`) with automatic header slicing (128 bytes) and 60-second snapshot capture on failure or on-demand NOC trigger.
 - **Forensic Evidence Snapshot Bundler** (`evidence_collector.py`): Packages incident PCAP slices, Playwright HARs, systemd journal logs, and Wi-Fi RF state into downloadable `.tar.gz` diagnostic archives.
 - **CMP PCAP & Evidence API**: Control plane endpoints to trigger remote PCAP snapshots and register forensic evidence packages (`/api/v1/sensors/{id}/pcap/trigger`, `/api/v1/sensors/{id}/evidence`).
+- **Playwright HAR Waterfall & Error Screenshot Capture** (`browser_transaction.py`): Automatically preserves network waterfall HAR files and visual error screenshots on failed web transactions.
+- **Security Gateway / Firewall SNMP Telemetry Poller** (`snmp_collector.py`): Queries core FortiGate / gateway CPU, Memory, Session Setup Rate, and Conserve Mode state to correlate firewall load with synthetic slowness.
+- **Lateral East-West Segmentation Validator** (`segmentation_prober.py`): Performs allowlisted TCP connection checks to verify that student VLANs cannot access switch management SSH, camera subnets, or admin portals.
 
 ## [0.1.0] — 2026-08-25
 

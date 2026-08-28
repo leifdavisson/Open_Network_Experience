@@ -28,6 +28,7 @@ jobs:
         run: |
           python -m py_compile server/main.py
           python -m py_compile server/schemas.py
+          python -m py_compile server/snmp_collector.py
           python -m py_compile server/test_integration.py
           python -m py_compile sensor/cipa_compliance.py
           python -m py_compile sensor/browser_transaction.py
@@ -38,16 +39,17 @@ jobs:
           python -m py_compile sensor/rrm_darrp_monitor.py
           python -m py_compile sensor/pcap_trigger.py
           python -m py_compile sensor/evidence_collector.py
+          python -m py_compile sensor/segmentation_prober.py
 
       - name: Lint server code
         run: |
-          pylint server/main.py server/schemas.py \
+          pylint server/main.py server/schemas.py server/snmp_collector.py \
             --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401 \
             --fail-under=7.0
 
       - name: Lint sensor code
         run: |
-          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py sensor/caaspp_readiness.py sensor/rrm_darrp_monitor.py sensor/iperf3_runner.py sensor/pcap_trigger.py sensor/evidence_collector.py \
+          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py sensor/caaspp_readiness.py sensor/rrm_darrp_monitor.py sensor/iperf3_runner.py sensor/pcap_trigger.py sensor/evidence_collector.py sensor/segmentation_prober.py \
             --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401 \
             --fail-under=7.0
 
