@@ -130,3 +130,11 @@ python3 server/test_integration.py
 ## License
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for the full license text.
+
+---
+
+## Disclaimers & Trademarks
+
+* **Trademarks**: All product names, logos, brands, trademarks, and registered trademarks mentioned within this project or documentation are property of their respective owners. Their use does not imply any affiliation with, endorsement by, or sponsorship by those owners.
+* **Privacy & Compliance**: OpenUX is a synthetic network telemetry platform. It generates synthetic test traffic to measure infrastructure performance and does not collect or inspect human student, staff, or user payload data. Packet capture modules enforce automatic header slicing (`-s 128`) to discard application payloads.
+* **Warranty**: As provided under the AGPL-3.0 license, this software is provided "AS IS", without warranty of any kind, express or implied.
