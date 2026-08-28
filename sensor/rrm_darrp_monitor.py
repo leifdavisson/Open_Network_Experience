@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Wi-Fi RRM / DARRP / GSK Dynamic RF Optimization Monitor
-Validates Fortinet DARRP (Distributed Automatic Radio Resource Provisioning) and
-GSK (Global Spectrum Knowledge) / Enterprise RRM channel optimization algorithms.
+Wi-Fi Radio Resource Management (RRM) & Dynamic RF Optimization Monitor
+Validates vendor-agnostic Radio Resource Management (RRM), Distributed Automatic
+Radio Provisioning, and Centralized Spectrum Knowledge channel optimization algorithms.
 
 What this monitor tracks:
-  - Dynamic Channel Switches: Detects when the AP changes operating channels via DARRP/GSK.
+  - Dynamic Channel Switches: Detects when the AP changes operating channels via RRM.
   - Channel Flapping Detection: Alerts if APs bounce channels too frequently (> 3 times/hour),
     which causes student disconnections during instruction.
   - Co-Channel Interference (CCI): Scans neighbor beacons to measure how many competing APs
