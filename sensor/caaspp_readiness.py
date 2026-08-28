@@ -217,10 +217,21 @@ def main():
         print(f" - [{target['name']}]: {status_color} ({latency*1000:.1f}ms) | SSL Inspection: {ssl_color} | {issuer_info}")
 
     overall_val = 1 if all_critical_ok else 0
-    prom_lines.append(f"caaspp_readiness_overall {overall_val}")
-
     overall_str = "\033[92mREADY FOR CAASPP TESTING\033[0m" if all_critical_ok else "\033[91mNOT READY — CRITICAL TEST ENDPOINTS DEGRADED\033[0m"
     print(f"\nOverall Site Status: {overall_str}\n")
+
+    # If critical testing endpoints failed, automatically slice and preserve an incident PCAP snapshot
+    if overall_val == 0:
+        print("[AUTO-TRIGGER] Critical state testing degradation detected. Slicing incident PCAP snapshot...")
+        try:
+            pcap_script = "/usr/local/bin/pcap_trigger.py"
+            if not os.path.exists(pcap_script):
+                pcap_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "pcap_trigger.py"))
+            if os.path.exists(pcap_script):
+                import subprocess
+                subprocess.Popen(["python3", pcap_script, "--trigger", "caaspp_failure"])
+        except Exception:
+            pass
 
     write_metrics(prom_lines, output_file)
 
