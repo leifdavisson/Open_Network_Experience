@@ -23,6 +23,8 @@ This platform isolates network slowness and troubleshoots L2/L3 onboarding, WAN/
 9. **Three-Way Cloud Discovery**: Sensors automatically locate the CMP Cloud server via local configuration, DHCP search domain DNS (`openux-cmp.<domain>`), or global fallback portal.
 10. **Pre-built 6-Tier NOC Dashboards**: Automatically provisions VictoriaMetrics, Loki logs, and Alertmanager inside Grafana, pre-loading an end-to-end NOC dashboard.
 
+> 📖 **New to OpenUX?** Check out the step-by-step [**Getting Started Guide (GETTING_STARTED.md)**](GETTING_STARTED.md) for full deployment instructions, dashboard walkthroughs, and custom probe templates!
+
 ---
 
 ## Directory Structure
