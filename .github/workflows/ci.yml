@@ -40,6 +40,8 @@ jobs:
           python -m py_compile sensor/pcap_trigger.py
           python -m py_compile sensor/evidence_collector.py
           python -m py_compile sensor/segmentation_prober.py
+          python -m py_compile sensor/dns_multi_resolver_probe.py
+          python -m py_compile sensor/voip_jitter_probe.py
 
       - name: Lint server code
         run: |
@@ -49,7 +51,7 @@ jobs:
 
       - name: Lint sensor code
         run: |
-          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py sensor/caaspp_readiness.py sensor/rrm_darrp_monitor.py sensor/iperf3_runner.py sensor/pcap_trigger.py sensor/evidence_collector.py sensor/segmentation_prober.py \
+          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py sensor/caaspp_readiness.py sensor/rrm_darrp_monitor.py sensor/iperf3_runner.py sensor/pcap_trigger.py sensor/evidence_collector.py sensor/segmentation_prober.py sensor/dns_multi_resolver_probe.py sensor/voip_jitter_probe.py \
             --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401 \
             --fail-under=7.0
 

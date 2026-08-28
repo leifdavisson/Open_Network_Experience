@@ -169,6 +169,14 @@ chmod +x /usr/local/bin/evidence_collector.py
 cp "${SCRIPT_DIR}/segmentation_prober.py" /usr/local/bin/segmentation_prober.py
 chmod +x /usr/local/bin/segmentation_prober.py
 
+# Copy Multi-Resolver DNS Health Prober
+cp "${SCRIPT_DIR}/dns_multi_resolver_probe.py" /usr/local/bin/dns_multi_resolver_probe.py
+chmod +x /usr/local/bin/dns_multi_resolver_probe.py
+
+# Copy Real-Time Voice/Video (UDP/RTP) Jitter Prober
+cp "${SCRIPT_DIR}/voip_jitter_probe.py" /usr/local/bin/voip_jitter_probe.py
+chmod +x /usr/local/bin/voip_jitter_probe.py
+
 # Create default sensor config directory
 mkdir -p /etc/sensor
 mkdir -p /var/lib/sensor/snapshots
