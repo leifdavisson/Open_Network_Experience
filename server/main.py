@@ -524,8 +524,8 @@ async def serve_admin_ui():
         .form-group input, .form-group select { width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-main); font-size: 14px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; }
-        .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; width: 550px; max-width: 90%; padding: 24px; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; width: 550px; max-width: 90%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body>
@@ -536,45 +536,45 @@ async def serve_admin_ui():
             <div class="brand">
                 <span>🌐</span> <span class="brand-text">ONE Platform</span>
             </div>
-            <button class="toggle-btn" onclick="toggleSidebar()">≡</button>
+            <button class="toggle-btn" id="btn-toggle-sidebar" onclick="toggleSidebar()">≡</button>
         </div>
         <nav class="nav-menu">
             <!-- 1. MONITOR BUCKET -->
             <div class="bucket-label">1. Monitor</div>
-            <a class="nav-item active" onclick="switchView('monitor-noc')">
+            <a class="nav-item active" id="nav-monitor-noc" onclick="switchView('monitor-noc')">
                 <span class="nav-icon">📊</span> <span class="nav-text">NOC Overview</span>
             </a>
-            <a class="nav-item" onclick="switchView('monitor-map')">
+            <a class="nav-item" id="nav-monitor-map" onclick="switchView('monitor-map')">
                 <span class="nav-icon">🗺️</span> <span class="nav-text">GIS Campus Map</span>
             </a>
-            <a class="nav-item" onclick="switchView('monitor-reports')">
+            <a class="nav-item" id="nav-monitor-reports" onclick="switchView('monitor-reports')">
                 <span class="nav-icon">📋</span> <span class="nav-text">Reports & Forensics</span>
             </a>
 
             <!-- 2. MANAGE BUCKET -->
             <div class="bucket-label">2. Manage</div>
-            <a class="nav-item" onclick="switchView('manage-fleet')">
+            <a class="nav-item" id="nav-manage-fleet" onclick="switchView('manage-fleet')">
                 <span class="nav-icon">📡</span> <span class="nav-text">Fleet & Registration</span>
             </a>
-            <a class="nav-item" onclick="switchView('manage-locations')">
+            <a class="nav-item" id="nav-manage-locations" onclick="switchView('manage-locations')">
                 <span class="nav-icon">📍</span> <span class="nav-text">Campus Hierarchy</span>
             </a>
 
             <!-- 3. CONFIGURE BUCKET -->
             <div class="bucket-label">3. Configure</div>
-            <a class="nav-item" onclick="switchView('configure-probes')">
+            <a class="nav-item" id="nav-configure-probes" onclick="switchView('configure-probes')">
                 <span class="nav-icon">🛠️</span> <span class="nav-text">EasyBuilder Tests</span>
             </a>
-            <a class="nav-item" onclick="switchView('configure-osi')">
+            <a class="nav-item" id="nav-configure-osi" onclick="switchView('configure-osi')">
                 <span class="nav-icon">🔬</span> <span class="nav-text">OSI Layer Suite</span>
             </a>
 
             <!-- 4. SETUP BUCKET -->
             <div class="bucket-label">4. Setup</div>
-            <a class="nav-item" onclick="switchView('setup-server')">
+            <a class="nav-item" id="nav-setup-server" onclick="switchView('setup-server')">
                 <span class="nav-icon">🖥️</span> <span class="nav-text">Server & TSDB</span>
             </a>
-            <a class="nav-item" onclick="switchView('setup-integrations')">
+            <a class="nav-item" id="nav-setup-integrations" onclick="switchView('setup-integrations')">
                 <span class="nav-icon">⚙️</span> <span class="nav-text">Alerts & Webhooks</span>
             </a>
         </nav>
@@ -967,14 +967,13 @@ async def serve_admin_ui():
 
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active-active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
             const target = document.getElementById('view-' + viewId);
             if (target) target.classList.add('active-view');
 
-            // Highlight nav
-            const clicked = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(viewId));
-            if (clicked) clicked.classList.add('active');
+            const navElem = document.getElementById('nav-' + viewId);
+            if (navElem) navElem.classList.add('active');
         }
 
         function handleGlobalSearch() {
