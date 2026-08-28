@@ -23,7 +23,38 @@ Instead of waiting for a classroom of students to get disconnected during state 
 9. **Three-Way Cloud Discovery**: Sensors automatically locate the CMP Cloud server via local configuration, DHCP search domain DNS (`openux-cmp.<domain>`), or global fallback portal.
 10. **Pre-built 6-Tier NOC Dashboards**: Automatically provisions VictoriaMetrics, Loki logs, and Alertmanager inside Grafana, pre-loading an end-to-end NOC dashboard.
 
-> 📖 **New to OpenUX?** Check out the step-by-step [**Getting Started Guide (GETTING_STARTED.md)**](GETTING_STARTED.md) for full deployment instructions, dashboard walkthroughs, and custom probe templates!
+> 📖 **New to Open Network Experience?** Check out the step-by-step [**Getting Started Guide (GETTING_STARTED.md)**](GETTING_STARTED.md) for full deployment instructions, dashboard walkthroughs, and custom probe templates!
+
+---
+
+## 🎯 Prerequisites & Learning Curve
+
+### Who Is This Platform Built For?
+Open Network Experience (ONE) is designed for **K-12 Technology Directors, Network Administrators, Systems Engineers, and Field Technicians**.
+
+### What Basic Knowledge Is Helpful Before Rolling This Out?
+You don't need a high-level engineering certification (like a CCIE or CWNE) to deploy and operate ONE, but having familiarity with the following core concepts will give you the best experience:
+
+1. **Basic Linux Command Line**:
+   * Navigating folders and managing files (`cd`, `ls`, `mkdir`, `cp`).
+   * Executing administrative commands with `sudo`.
+   * Editing simple configuration files using a terminal editor (like `nano` or `vim`).
+   * Checking system logs and service health (`journalctl -u <service> -f`, `systemctl status`).
+2. **Fundamental Networking Concepts**:
+   * Understanding IP addresses, Subnet Masks, Default Gateways, and DNS resolvers.
+   * How clients obtain dynamic IP addresses via **DHCP**.
+   * The difference between **Wired (Ethernet)** and **Wireless (Wi-Fi 2.4/5/6 GHz)** network segments.
+   * Connecting devices to school Wi-Fi networks (WPA2/WPA3 Pre-Shared Keys or 802.1X enterprise logins).
+3. **Basic Docker Container Concepts**:
+   * Understanding that server applications run in lightweight background containers (`docker compose up -d`, `docker ps`).
+
+---
+
+> [!TIP]
+> ### 💡 A Great Way to Learn Linux and Network Engineering!
+> If you are a junior IT technician, school help desk specialist, or student intern looking to sharpen your Linux, Docker, and enterprise network troubleshooting skills, **Open Network Experience is a fantastic, hands-on learning project!**
+>
+> The platform automates the complex scripting and provides clean visual web dashboards, allowing you to learn by exploring real-world network metrics and telemetry.
 
 ---
 
