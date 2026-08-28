@@ -1,6 +1,6 @@
-# OpenUX Getting Started Guide
+# Open Network Experience (ONE) Getting Started Guide
 
-Welcome to the **Open Network Experience (OpenUX)** platform! This comprehensive guide walks you through standing up the Central Monitoring Platform (CMP) server stack in Docker, deploying physical edge sensors, using the pre-built Grafana NOC dashboards, and building custom synthetic tests for your local applications.
+Welcome to the **Open Network Experience (ONE)** platform! This comprehensive guide walks you through standing up the Central Monitoring Platform (CMP) server stack in Docker, deploying physical edge sensors, using the pre-built Grafana NOC dashboards, and building custom synthetic tests for your local applications.
 
 ---
 

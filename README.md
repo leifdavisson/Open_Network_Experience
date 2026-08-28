@@ -1,8 +1,8 @@
-# Open Network Experience (OpenUX)
+# Open Network Experience (ONE)
 
-**OpenUX is a 24/7 digital assistant for school and district networks.** Think of it as a virtual student and teacher sitting in classrooms, libraries, and offices around the clock—constantly testing the Wi-Fi, online learning tools, and school internet to ensure everything works smoothly *before* the school day begins.
+**Open Network Experience (ONE)** is a 24/7 digital assistant for school and district networks. Think of it as a virtual student and teacher sitting in classrooms, libraries, and offices around the clock—constantly testing the Wi-Fi, online learning tools, and school internet to ensure everything works smoothly *before* the school day begins.
 
-Instead of waiting for a classroom of students to get disconnected during state testing or finding out a video lesson is buffering during second period, OpenUX continuously tests the network from the student's point of view. It alerts school technology teams to Wi-Fi dead spots, slow learning portals, or content filter issues instantly so problems can be solved before they disrupt teaching and learning.
+Instead of waiting for a classroom of students to get disconnected during state testing or finding out a video lesson is buffering during second period, Open Network Experience continuously tests the network from the student's point of view. It alerts school technology teams to Wi-Fi dead spots, slow learning portals, or content filter issues instantly so problems can be solved before they disrupt teaching and learning.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![CI](https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/ci.yml/badge.svg)](https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/ci.yml)
