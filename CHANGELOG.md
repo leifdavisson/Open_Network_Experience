@@ -11,9 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **CAASPP & ELPAC State Testing Readiness** (`caaspp_readiness.py`): Validates network connectivity against California Department of Education / Cambium TDS/TIDE, ETS TOMS, and Smarter Balanced SSO endpoints. Verifies SSL Inspection bypass to prevent Secure Browser certificate pinning failures.
 - **Wi-Fi RRM, DARRP & GSK Radio Optimization Monitor** (`rrm_darrp_monitor.py`): Tracks Fortinet DARRP and Global Spectrum Knowledge (GSK) channel changes, channel dwell stability, co-channel interference (CCI) neighbor collisions, and alerts on RF flapping (>3 switches/hour).
 - **Scheduled Bandwidth Tester** (`iperf3_runner.py`): Throughput and jitter testing with time-window restrictions (e.g. off-peak hours only), bandwidth throttling caps, staggered A/B wired/wireless runs, and on-demand trigger delivery.
-- **CMP Dynamic Test Scheduling Engine**: Pydantic schemas and API endpoints to manage test schedules and trigger on-demand bandwidth runs via `POST /api/v1/sensors/{id}/tests/bandwidth/trigger`.
-- **Expanded Grafana NOC Dashboard**: Added Level 4 (Dual-NIC & Bandwidth), Level 5 (CAASPP State Testing Readiness), and Level 6 (Wi-Fi RRM/DARRP Radio Optimization) visualization rows.
-- **Pre-Commit Security Hooks & Workflow Protection**: Integrated local Gitleaks scanning, private key detection, trailing whitespace cleanup, and force-push detection alerts.
+- **Incident-Triggered Packet Capture (PCAP) Daemon** (`pcap_trigger.py`): Continuous 50MB RAM ring buffer (`/dev/shm`) with automatic header slicing (128 bytes) and 60-second snapshot capture on failure or on-demand NOC trigger.
+- **Forensic Evidence Snapshot Bundler** (`evidence_collector.py`): Packages incident PCAP slices, Playwright HARs, systemd journal logs, and Wi-Fi RF state into downloadable `.tar.gz` diagnostic archives.
+- **CMP PCAP & Evidence API**: Control plane endpoints to trigger remote PCAP snapshots and register forensic evidence packages (`/api/v1/sensors/{id}/pcap/trigger`, `/api/v1/sensors/{id}/evidence`).
 
 ## [0.1.0] — 2026-08-25
 

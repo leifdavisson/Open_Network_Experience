@@ -27,7 +27,9 @@ from schemas import (
     SensorStatusResponse,
     SensorStatusResponseSafe,
     WifiSpec,
-    TargetContainerSpec
+    TargetContainerSpec,
+    PcapTriggerSpec,
+    EvidenceBundleInfo
 )
 
 # API Keys — In production, load from environment variables or secrets manager
@@ -158,6 +160,10 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
     if sensor["target_config"].schedules.bandwidth.run_now:
         sensor["target_config"].schedules.bandwidth.run_now = False
 
+    # If on-demand PCAP capture was queued, clear the trigger_now flag for future check-ins
+    if getattr(sensor["target_config"], "pcap_trigger", None) and sensor["target_config"].pcap_trigger.trigger_now:
+        sensor["target_config"].pcap_trigger.trigger_now = False
+
     return response
 
 # --- Administrative / Dashboard Management Endpoints ---
@@ -247,6 +253,53 @@ async def trigger_bandwidth_test(sensor_id: str):
     sensor = get_or_create_sensor(sensor_id)
     sensor["target_config"].schedules.bandwidth.run_now = True
     return {"status": "success", "message": "On-demand bandwidth test queued for next sensor check-in."}
+
+@app.post(
+    "/api/v1/sensors/{sensor_id}/pcap/trigger",
+    summary="Trigger Incident PCAP Capture",
+    description="Instructs the edge sensor to slice and package an incident PCAP snapshot on its next check-in.",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def trigger_pcap_capture(sensor_id: str, reason: str = "manual_noc_trigger"):
+    """
+    Administrative endpoint to queue an immediate PCAP snapshot on the edge sensor.
+    Requires admin API key authentication (X-API-Key). Sets trigger_now flag to True.
+    """
+    sensor = get_or_create_sensor(sensor_id)
+    sensor["target_config"].pcap_trigger.trigger_now = True
+    sensor["target_config"].pcap_trigger.reason = reason
+    return {"status": "success", "message": f"PCAP snapshot trigger '{reason}' queued for next sensor check-in."}
+
+# In-Memory Evidence DB (maps sensor_id to list of evidence bundles)
+EVIDENCE_DB: Dict[str, List[dict]] = {}
+
+@app.post(
+    "/api/v1/sensors/{sensor_id}/evidence",
+    summary="Register Diagnostic Evidence Bundle",
+    description="Registers or records an incident evidence package (.tar.gz) from an edge sensor.",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def register_evidence_bundle(sensor_id: str, evidence: EvidenceBundleInfo):
+    """
+    Registers an incident evidence package manifest uploaded by or stored on an edge sensor.
+    """
+    if sensor_id not in EVIDENCE_DB:
+        EVIDENCE_DB[sensor_id] = []
+    EVIDENCE_DB[sensor_id].append(evidence.model_dump())
+    return {"status": "success", "message": "Evidence bundle registered successfully."}
+
+@app.get(
+    "/api/v1/sensors/{sensor_id}/evidence",
+    response_model=List[EvidenceBundleInfo],
+    summary="List Evidence Bundles",
+    description="Lists all recorded diagnostic evidence packages for a specific sensor.",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def list_evidence_bundles(sensor_id: str):
+    """
+    Lists diagnostic forensic bundles available for the sensor.
+    """
+    return EVIDENCE_DB.get(sensor_id, [])
 
 @app.post(
     "/api/v1/sensors/{sensor_id}/reset",

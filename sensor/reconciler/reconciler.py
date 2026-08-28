@@ -436,6 +436,22 @@ def reconcile_schedules(schedules: dict, config: dict):
         except Exception as e:
             print(f"Failed to spawn bandwidth test: {e}")
 
+def reconcile_pcap_trigger(pcap_spec: dict, config: dict):
+    """Checks for on-demand incident PCAP snapshot triggers from CMP."""
+    if not pcap_spec or not pcap_spec.get("trigger_now"):
+        return
+
+    reason = pcap_spec.get("reason", "cmp_remote_trigger")
+    print(f"Executing incident PCAP snapshot capture (Reason: {reason})...")
+    try:
+        runner_script = "/usr/local/bin/pcap_trigger.py"
+        if not os.path.exists(runner_script):
+            runner_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "pcap_trigger.py"))
+        if os.path.exists(runner_script):
+            subprocess.Popen(["python3", runner_script, "--trigger", reason])
+    except Exception as e:
+        print(f"Failed to trigger PCAP snapshot: {e}")
+
 def main():
     print("Starting Sensor Reconciler service...")
     config = load_config()
@@ -465,10 +481,11 @@ def main():
             if target_state.get("reset", False):
                 wipe_and_reset()
 
-            # Reconcile local networking, docker runtimes, and test schedules
+            # Reconcile local networking, docker runtimes, test schedules, and PCAP triggers
             reconcile_wifi(target_state.get("wifi"), config["wifi_interface"], config["wifi_config_path"])
             reconcile_containers(target_state.get("containers", {}))
             reconcile_schedules(target_state.get("schedules", {}), config)
+            reconcile_pcap_trigger(target_state.get("pcap_trigger", {}), config)
 
         time.sleep(config["check_interval_seconds"])
 
