@@ -177,6 +177,10 @@ chmod +x /usr/local/bin/dns_multi_resolver_probe.py
 cp "${SCRIPT_DIR}/voip_jitter_probe.py" /usr/local/bin/voip_jitter_probe.py
 chmod +x /usr/local/bin/voip_jitter_probe.py
 
+# Copy Dynamic Custom Synthetic Probe Runner (WYSIWYG Engine)
+cp "${SCRIPT_DIR}/custom_probe_runner.py" /usr/local/bin/custom_probe_runner.py
+chmod +x /usr/local/bin/custom_probe_runner.py
+
 # Create default sensor config directory
 mkdir -p /etc/sensor
 mkdir -p /var/lib/sensor/snapshots

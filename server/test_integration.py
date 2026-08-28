@@ -300,5 +300,73 @@ class TestCMPFlow(unittest.TestCase):
         self.assertEqual(data[0]["bundle_id"], "bundle-001")
         self.assertEqual(data[0]["size_bytes"], 1048576)
 
+    def test_07_web_ui_and_easybuilder_studio(self):
+        """Tests the Web UI dashboard, 1-click TOFU approval, and WYSIWYG EasyBuilder probes."""
+        # 1. Test Web UI Dashboard HTML serving
+        url = "http://localhost:8000/"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            self.assertEqual(resp.status, 200)
+            html = resp.read().decode('utf-8')
+            self.assertIn("Open Network Experience (ONE)", html)
+            self.assertIn("WYSIWYG EasyBuilder", html)
+
+        # 2. Register a new sensor and approve it via 1-click endpoint
+        s_id = f"easybuilder-node-{int(time.time())}"
+        reg_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "hostname": "stem-lab",
+            "mac_address": "AA:BB:CC:DD:EE:FF",
+            "timestamp": int(time.time())
+        }
+        code, data = self.make_request("/sensors/register", method="POST", body=reg_payload)
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "pending")
+
+        # Approve via 1-click administrative endpoint
+        code, data = self.make_request(f"/sensors/{s_id}/approve", method="POST", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "success")
+        sensor_key = data["api_key"]
+        self.assertTrue(sensor_key.startswith("sensor-key-"))
+
+        # 3. Create a custom synthetic probe via WYSIWYG EasyBuilder Studio
+        probe_payload = {
+            "id": "canvas-lms",
+            "name": "Canvas LMS Login Portal",
+            "probe_type": "http",
+            "target": "https://canvas.district.edu",
+            "cadence_minutes": 5,
+            "timeout_seconds": 3.0,
+            "expected_status_code": 200,
+            "target_sensors": ["all"],
+            "enabled": True
+        }
+        code, data = self.make_request("/probes", method="POST", body=probe_payload, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "success")
+
+        # 4. List probes
+        code, data = self.make_request("/probes", method="GET", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertTrue(any(p["id"] == "canvas-lms" for p in data))
+
+        # 5. Reconcile sensor and verify custom probe is delivered
+        rec_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "timestamp": int(time.time()),
+            "containers": {}
+        }
+        code, data = self.make_request("/sensors/reconcile", method="POST", body=rec_payload, headers={"X-API-Key": sensor_key})
+        self.assertEqual(code, 200)
+        self.assertIn("custom_probes", data)
+        self.assertTrue(any(p["id"] == "canvas-lms" for p in data["custom_probes"]))
+
+        # 6. Clean up probe
+        code, data = self.make_request("/probes/canvas-lms", method="DELETE", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+
 if __name__ == "__main__":
     unittest.main()

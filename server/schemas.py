@@ -86,6 +86,18 @@ class PcapTriggerSpec(BaseModel):
     trigger_now: bool = Field(False, description="One-shot signal instructing edge sensor to slice and package an incident PCAP snapshot")
     reason: str = Field("manual_noc_trigger", description="Trigger reason or incident description")
 
+class CustomProbeSpec(BaseModel):
+    id: str = Field(..., description="Unique slug for probe, e.g. 'canvas-lms'")
+    name: str = Field(..., description="Human-readable probe name")
+    probe_type: str = Field(default="http", description="http | api | dns | tcp")
+    target: str = Field(..., description="URL, hostname, or IP address")
+    cadence_minutes: int = Field(default=5, ge=1, le=1440)
+    timeout_seconds: float = Field(default=5.0)
+    expected_status_code: int = Field(default=200)
+    match_body_regex: Optional[str] = None
+    target_sensors: List[str] = Field(default_factory=lambda: ["all"], description="Target sensor IDs or 'all'")
+    enabled: bool = True
+
 class SensorReconcileResponse(BaseModel):
     reset: bool = Field(False, description="Tells the sensor to perform a factory cleanup of all containers")
     wifi: Optional[WifiSpec] = Field(None, description="Wi-Fi configuration profiles")
@@ -100,6 +112,10 @@ class SensorReconcileResponse(BaseModel):
     pcap_trigger: PcapTriggerSpec = Field(
         default_factory=PcapTriggerSpec,
         description="One-shot incident PCAP capture trigger"
+    )
+    custom_probes: List[CustomProbeSpec] = Field(
+        default_factory=list,
+        description="Dynamic custom synthetic probes created via WYSIWYG EasyBuilder"
     )
 
 class EvidenceBundleInfo(BaseModel):
@@ -116,6 +132,7 @@ class SensorConfigUpdate(BaseModel):
     wifi: Optional[WifiSpec] = None
     containers: Optional[Dict[str, TargetContainerSpec]] = None
     schedules: Optional[TestSchedulesSpec] = None
+    custom_probes: Optional[List[CustomProbeSpec]] = None
 
 class SensorStatusResponse(BaseModel):
     sensor_id: str
@@ -147,18 +164,19 @@ class WifiSpecSafe(BaseModel):
         return cls(
             ssid=spec.ssid,
             security=spec.security,
-            psk="****REDACTED****" if spec.psk else None,
-            username=spec.username,
-            password="****REDACTED****" if spec.password else None
+            psk="[REDACTED]" if spec.psk else None,
+            username="[REDACTED]" if spec.username else None,
+            password="[REDACTED]" if spec.password else None
         )
 
 class SensorReconcileResponseSafe(BaseModel):
-    """Reconcile response with Wi-Fi credentials redacted."""
-    reset: bool
+    """Safe target config with Wi-Fi credentials scrubbed for admin views."""
+    reset: bool = False
     wifi: Optional[WifiSpecSafe] = None
-    containers: Dict[str, TargetContainerSpec]
+    containers: Dict[str, TargetContainerSpec] = Field(default_factory=dict)
     schedules: TestSchedulesSpec = Field(default_factory=TestSchedulesSpec)
     pcap_trigger: PcapTriggerSpec = Field(default_factory=PcapTriggerSpec)
+    custom_probes: List[CustomProbeSpec] = Field(default_factory=list)
 
 class SensorStatusResponseSafe(BaseModel):
     """Admin-facing sensor status with credentials redacted."""
@@ -182,7 +200,8 @@ class SensorStatusResponseSafe(BaseModel):
             wifi=WifiSpecSafe.from_wifi_spec(target_config.wifi),
             containers=target_config.containers,
             schedules=getattr(target_config, "schedules", TestSchedulesSpec()),
-            pcap_trigger=getattr(target_config, "pcap_trigger", PcapTriggerSpec())
+            pcap_trigger=getattr(target_config, "pcap_trigger", PcapTriggerSpec()),
+            custom_probes=getattr(target_config, "custom_probes", [])
         )
         return cls(
             sensor_id=sensor_id,
