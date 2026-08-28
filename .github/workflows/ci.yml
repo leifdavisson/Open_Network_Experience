@@ -30,6 +30,7 @@ jobs:
           python -m py_compile server/schemas.py
           python -m py_compile server/snmp_collector.py
           python -m py_compile server/test_integration.py
+          python -m py_compile server/test_ui_comprehensive.py
           python -m py_compile sensor/cipa_compliance.py
           python -m py_compile sensor/browser_transaction.py
           python -m py_compile sensor/wifi_dhcp_exporter.py
@@ -96,8 +97,10 @@ jobs:
           sleep 10
           curl --retry 5 --retry-delay 2 --retry-connrefused -s http://localhost:8000/docs > /dev/null
 
-      - name: Run Integration Test Suite
-        run: python server/test_integration.py
+      - name: Run Integration & Web UI Test Suites
+        run: |
+          python server/test_integration.py
+          python server/test_ui_comprehensive.py
 
       - name: Tear down stack
         if: always()
