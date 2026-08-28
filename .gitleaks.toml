@@ -1,0 +1,29 @@
+# Gitleaks Configuration & Allowlist
+# Configures Gitleaks to ignore public test tokens, documentation examples, and unit test keys.
+
+[extend]
+# Inherits default Gitleaks secret detection rules
+
+[allowlist]
+description = "Allowlist for public test verification tokens and benign doc placeholders"
+paths = [
+    '''Open-Source Aruba UXI Alternative\.docx''',
+    '''sensor/cipa_compliance\.py''',
+    '''GETTING_STARTED\.md''',
+    '''README\.md''',
+    '''sensor/README\.md''',
+    '''server/README\.md''',
+    '''server/main\.py''',
+    '''server/test_integration\.py'''
+]
+regexes = [
+    '''admin-noc-key-change-me''',
+    '''sensor-edge-key-change-me''',
+    '''sensor-key-''',
+    '''nowifiyet''',
+    '''SFf84Q2LRDkv02bVB7KYmvF9mPbO27IZnsueXWxeo5KE174T25Y7ybeaof851oyK''',
+    '''3MIN0HYnHWTQF4uJDkOpOm0YVB809JGgTaH94P10ge9lKLDf7E8lFZDTm3qU81Ud''',
+    '''5468v9o44huX499v91e9X35ki0mmlwv21449076I7VMI2LA53200Qd9859S2E4aF''',
+    '''G3xrNuDIiwhLHrLRlgGu8UEHtT6VHkUiei5l5aQ4s8HnLbDW80imeNPTOjr5Th7w''',
+    '''hukmdS4T16uGAVg4G2qLb7wGtdggLngHd1khZDO1mId77mtASZt71kXYdyp1Urgo'''
+]
