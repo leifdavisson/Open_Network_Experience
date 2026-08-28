@@ -157,8 +157,18 @@ chmod +x /usr/local/bin/wifi_dhcp_exporter.py
 cp "${SCRIPT_DIR}/rrm_darrp_monitor.py" /usr/local/bin/rrm_darrp_monitor.py
 chmod +x /usr/local/bin/rrm_darrp_monitor.py
 
+# Copy Incident-Triggered PCAP Daemon
+cp "${SCRIPT_DIR}/pcap_trigger.py" /usr/local/bin/pcap_trigger.py
+chmod +x /usr/local/bin/pcap_trigger.py
+
+# Copy Forensic Evidence Snapshot Bundler
+cp "${SCRIPT_DIR}/evidence_collector.py" /usr/local/bin/evidence_collector.py
+chmod +x /usr/local/bin/evidence_collector.py
+
 # Create default sensor config directory
 mkdir -p /etc/sensor
+mkdir -p /var/lib/sensor/snapshots
+mkdir -p /var/lib/sensor/evidence_bundles
 
 echo -e "\n${GREEN}=============================================${NC}"
 echo -e "${GREEN}Sensor installation completed successfully.${NC}"

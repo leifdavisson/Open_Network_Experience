@@ -82,6 +82,10 @@ class TestSchedulesSpec(BaseModel):
     browser: BrowserScheduleSpec = Field(default_factory=BrowserScheduleSpec)
     caaspp: CaasppScheduleSpec = Field(default_factory=CaasppScheduleSpec)
 
+class PcapTriggerSpec(BaseModel):
+    trigger_now: bool = Field(False, description="One-shot signal instructing edge sensor to slice and package an incident PCAP snapshot")
+    reason: str = Field("manual_noc_trigger", description="Trigger reason or incident description")
+
 class SensorReconcileResponse(BaseModel):
     reset: bool = Field(False, description="Tells the sensor to perform a factory cleanup of all containers")
     wifi: Optional[WifiSpec] = Field(None, description="Wi-Fi configuration profiles")
@@ -93,6 +97,18 @@ class SensorReconcileResponse(BaseModel):
         default_factory=TestSchedulesSpec,
         description="Dynamic test schedules and bandwidth testing parameters"
     )
+    pcap_trigger: PcapTriggerSpec = Field(
+        default_factory=PcapTriggerSpec,
+        description="One-shot incident PCAP capture trigger"
+    )
+
+class EvidenceBundleInfo(BaseModel):
+    bundle_id: str
+    sensor_id: str
+    timestamp: int
+    reason: str
+    filename: str
+    size_bytes: int
 
 # --- Management / Administrative API Schemas ---
 
@@ -142,6 +158,7 @@ class SensorReconcileResponseSafe(BaseModel):
     wifi: Optional[WifiSpecSafe] = None
     containers: Dict[str, TargetContainerSpec]
     schedules: TestSchedulesSpec = Field(default_factory=TestSchedulesSpec)
+    pcap_trigger: PcapTriggerSpec = Field(default_factory=PcapTriggerSpec)
 
 class SensorStatusResponseSafe(BaseModel):
     """Admin-facing sensor status with credentials redacted."""
@@ -164,7 +181,8 @@ class SensorStatusResponseSafe(BaseModel):
             reset=target_config.reset,
             wifi=WifiSpecSafe.from_wifi_spec(target_config.wifi),
             containers=target_config.containers,
-            schedules=getattr(target_config, "schedules", TestSchedulesSpec())
+            schedules=getattr(target_config, "schedules", TestSchedulesSpec()),
+            pcap_trigger=getattr(target_config, "pcap_trigger", PcapTriggerSpec())
         )
         return cls(
             sensor_id=sensor_id,

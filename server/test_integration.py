@@ -237,5 +237,68 @@ class TestCMPFlow(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertFalse(data["schedules"]["bandwidth"]["run_now"])
 
+    def test_06_pcap_trigger_and_evidence_bundle(self):
+        """Tests triggering on-demand PCAP snapshot and registering evidence bundles."""
+        s_id = "pcap-test-sensor-01"
+        reg_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "hostname": "pcap-node",
+            "mac_address": "22:33:44:55:66:77",
+            "timestamp": int(time.time())
+        }
+        self.make_request("/sensors/register", method="POST", body=reg_payload)
+        _, app_data = self.make_request(f"/sensors/{s_id}/approve", method="POST", headers={"X-API-Key": ADMIN_KEY})
+        api_key = app_data["api_key"]
+
+        reconcile_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "timestamp": int(time.time()),
+            "containers": {}
+        }
+
+        # 1. Initial check-in -> pcap_trigger should not be active
+        code, data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+        self.assertIn("pcap_trigger", data)
+        self.assertFalse(data["pcap_trigger"]["trigger_now"])
+
+        # 2. Trigger PCAP capture via Admin API
+        code, data = self.make_request(f"/sensors/{s_id}/pcap/trigger?reason=high_latency_spike", method="POST", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "success")
+
+        # 3. Check-in from sensor -> trigger_now should be True with reason
+        code, data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+        self.assertTrue(data["pcap_trigger"]["trigger_now"])
+        self.assertEqual(data["pcap_trigger"]["reason"], "high_latency_spike")
+
+        # 4. Next check-in -> trigger_now should be cleared (one-shot delivery)
+        code, data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+        self.assertFalse(data["pcap_trigger"]["trigger_now"])
+
+        # 5. Register an evidence bundle
+        bundle_payload = {
+            "bundle_id": "bundle-001",
+            "sensor_id": s_id,
+            "timestamp": int(time.time()),
+            "reason": "high_latency_spike",
+            "filename": "evidence_pcap-node_20260827_high_latency_spike.tar.gz",
+            "size_bytes": 1048576
+        }
+        code, data = self.make_request(f"/sensors/{s_id}/evidence", method="POST", body=bundle_payload, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "success")
+
+        # 6. List evidence bundles
+        code, data = self.make_request(f"/sensors/{s_id}/evidence", method="GET", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["bundle_id"], "bundle-001")
+        self.assertEqual(data[0]["size_bytes"], 1048576)
+
 if __name__ == "__main__":
     unittest.main()
