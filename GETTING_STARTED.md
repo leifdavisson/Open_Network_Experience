@@ -94,8 +94,20 @@ alertmanager                prom/alertmanager:latest         Up
   * **Wired NIC (`eth0`)**: Connects to the local switch / wall jack (serves as the scientific control baseline).
   * **Wireless NIC (`wlan0`)**: Wi-Fi 6 / 6E / 7 radio connecting to school/enterprise SSIDs.
 
-### 2. Run the Sensor Bootstrap Installer
-On the edge sensor machine (running Debian or Ubuntu):
+### 2. Recommended Operating Systems (OS)
+To ensure reliable driver support for Wi-Fi 6/6E adapters, USB GPS receivers, and Chromium Playwright browser testing, install a **64-bit headless Linux OS**:
+
+| Platform | Primary Recommendation | Alternative Supported OS | Key Sizing Notes |
+|---|---|---|---|
+| **Raspberry Pi 5 / 4** | **Raspberry Pi OS (64-bit) Lite** (Bookworm) | **Ubuntu Server 24.04 LTS (ARM64)** | Use **64-bit Lite** (no GUI/desktop) to dedicate all 8GB RAM to synthetic tests. |
+| **Intel N100 / N300 Mini PCs** | **Ubuntu Server 24.04 LTS** (64-bit) | **Debian 12 (Bookworm) Minimal** | Native support for dual Intel i226 2.5GbE Ethernet and USB 3.2. |
+| **Virtual Appliance (VMware/Proxmox)** | **Ubuntu Server 24.04 LTS** | **Debian 12** | Allocate 4 vCPUs and 8 GB vRAM with PCIe/USB Wi-Fi passthrough. |
+
+> [!TIP]
+> **Why 64-bit Headless?** Modern headless Chromium and Playwright binaries require a 64-bit architecture (`arm64` or `x86_64`). Running a headless "Server" or "Lite" image keeps idle OS memory footprint under 250 MB, leaving maximum headroom for packet captures and browser transactions.
+
+### 3. Run the Sensor Bootstrap Installer
+On the edge sensor machine:
 ```bash
 # Clone the repository onto the sensor
 git clone https://github.com/leifdavisson/Open_Network_Experience.git
