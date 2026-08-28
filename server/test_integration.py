@@ -368,5 +368,56 @@ class TestCMPFlow(unittest.TestCase):
         code, data = self.make_request("/probes/canvas-lms", method="DELETE", headers={"X-API-Key": ADMIN_KEY})
         self.assertEqual(code, 200)
 
+    def test_08_sensor_location_and_gps_mapping(self):
+        """Tests updating physical campus location and GPS coordinates."""
+        s_id = f"location-test-{int(time.time())}"
+        # 1. Register with initial GPS fix
+        reg_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "hostname": "outdoor-quad-sensor",
+            "mac_address": "CC:DD:EE:11:22:33",
+            "timestamp": int(time.time()),
+            "location": {
+                "district": "Kern County Superintendent of Schools",
+                "site": "North High Campus",
+                "building": "Quad Area",
+                "room": "Courtyard Pole 4",
+                "latitude": 35.3733,
+                "longitude": -119.0187,
+                "is_gps_auto": True
+            }
+        }
+        code, data = self.make_request("/sensors/register", method="POST", body=reg_payload)
+        self.assertEqual(code, 200)
+
+        # 2. Approve sensor
+        code, data = self.make_request(f"/sensors/{s_id}/approve", method="POST", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+
+        # 3. Update location via administrative location API
+        new_loc = {
+            "district": "Kern County Superintendent of Schools",
+            "site": "North High Campus",
+            "building": "Library Wing",
+            "room": "Room 204",
+            "notes": "Mounted on ceiling grid",
+            "latitude": 35.3745,
+            "longitude": -119.0192,
+            "is_gps_auto": False
+        }
+        code, data = self.make_request(f"/sensors/{s_id}/location", method="PUT", body=new_loc, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "success")
+
+        # 4. List sensors and verify updated location in safe status response
+        code, data = self.make_request("/sensors", method="GET", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        sensor_entry = next((s for s in data if s["sensor_id"] == s_id), None)
+        self.assertIsNotNone(sensor_entry)
+        self.assertEqual(sensor_entry["location"]["building"], "Library Wing")
+        self.assertEqual(sensor_entry["location"]["room"], "Room 204")
+        self.assertEqual(sensor_entry["location"]["latitude"], 35.3745)
+
 if __name__ == "__main__":
     unittest.main()
