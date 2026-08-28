@@ -2,17 +2,17 @@
 Central Monitoring Platform (CMP) API Control Plane & Enterprise Web UI Dashboard
 
 Organized into 4 Core Buckets with Collapsible Sidebar Navigation:
-  1. 📊 Monitor: NOC Overview Wallboard, GIS Campus Map, Live Incidents, OSI Test Trends, Reports & Forensics.
+  1. 📊 Monitor: NOC Overview Wallboard, GIS Interactive Leaflet Map, Live Incidents, OSI Test Trends, Reports & Forensics.
   2. 📡 Manage: Fleet Inventory, 1-Click TOFU Registration, Location Cards, Remote Actions (PCAP/Speedtest), Wi-Fi Profiles.
   3. 🔬 Configure: WYSIWYG EasyBuilder Studio, OSI Diagnostic Probes, Test Schedules, SLA Thresholds.
   4. ⚙️ Setup: Server Health, SNMP Firewall Polling, Slack/Teams Webhooks, Automated Report Schedules, API Key & Backups.
 
 Features:
-  - Collapsible Sidebar with sub-menus.
-  - Global Search Bar (instant filter across sensor ID, Room, Campus, IP, MAC).
-  - Dark / Light Theme Toggle with persistence.
-  - Interactive Location Cards with OpenStreetMap integration.
-  - WYSIWYG EasyBuilder for Custom Synthetic Tests.
+  - Collapsible Sidebar with smooth icon centering, tooltips, and zero text squishing.
+  - High-Contrast Theme Switcher (WCAG AA compliant Dark/Light modes).
+  - Embedded Leaflet.js Interactive OpenStreetMap with live sensor markers.
+  - Global Search Bar with persistent filtering during background polling.
+  - Accessible Modals (Escape key dismissal, backdrop click closing, and reset).
 """
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request, Query
@@ -365,7 +365,7 @@ async def delete_custom_probe(probe_id: str):
         return {"status": "success", "message": f"Probe '{probe_id}' deleted."}
     raise HTTPException(status_code=404, detail="Probe not found")
 
-# --- Central Management Web UI Dashboard with 4 Buckets & Collapsible Sidebar ---
+# --- Central Management Web UI Dashboard with 4 Buckets & Polished Sidebar ---
 
 @app.get("/", response_class=HTMLResponse, summary="Sensor Administration Dashboard")
 @app.get("/ui", response_class=HTMLResponse, summary="Sensor Administration Dashboard")
@@ -377,6 +377,9 @@ async def serve_admin_ui():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Open Network Experience (ONE) — Control & Monitoring Platform</title>
+    <!-- Leaflet GIS Map Styling & Script -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --bg-main: #0f172a;
@@ -386,54 +389,64 @@ async def serve_admin_ui():
             --bg-hover: #334155;
             --accent: #38bdf8;
             --accent-hover: #0284c7;
+            --accent-text: #0f172a;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --border: #334155;
+            --status-online-text: #34d399;
+            --status-offline-text: #f87171;
+            --table-hover: rgba(51, 65, 85, 0.3);
         }
         [data-theme="light"] {
-            --bg-main: #f1f5f9;
+            --bg-main: #f8fafc;
             --bg-sidebar: #ffffff;
             --bg-card: #ffffff;
-            --bg-input: #f8fafc;
+            --bg-input: #f1f5f9;
             --bg-hover: #e2e8f0;
             --accent: #0284c7;
             --accent-hover: #0369a1;
+            --accent-text: #ffffff;
             --success: #059669;
             --warning: #d97706;
             --danger: #dc2626;
             --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
+            --text-muted: #475569;
+            --border: #cbd5e1;
+            --status-online-text: #059669;
+            --status-offline-text: #dc2626;
+            --table-hover: rgba(226, 232, 240, 0.6);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
         /* Sidebar Styles */
         .sidebar {
-            width: 260px;
+            width: 250px;
             background: var(--bg-sidebar);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            transition: width 0.2s ease;
-            z-index: 10;
+            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 20;
+            flex-shrink: 0;
         }
         .sidebar.collapsed { width: 68px; }
         .sidebar-header {
-            padding: 18px 16px;
+            padding: 16px 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid var(--border);
+            height: 60px;
         }
-        .brand { font-size: 16px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
-        .toggle-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 4px; }
+        .brand { font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
+        .toggle-btn { background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-main); cursor: pointer; font-size: 16px; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
 
-        .nav-menu { flex: 1; overflow-y: auto; padding: 12px 8px; }
-        .bucket-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); padding: 12px 10px 4px; letter-spacing: 0.5px; }
+        .nav-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 8px; }
+        .bucket-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); padding: 12px 10px 4px; letter-spacing: 0.5px; white-space: nowrap; }
         .nav-item {
             display: flex;
             align-items: center;
@@ -441,16 +454,25 @@ async def serve_admin_ui():
             padding: 10px 12px;
             border-radius: 8px;
             color: var(--text-muted);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
             text-decoration: none;
             margin-bottom: 2px;
             transition: all 0.15s ease;
+            white-space: nowrap;
         }
         .nav-item:hover { background: var(--bg-hover); color: var(--text-main); }
-        .nav-item.active { background: var(--accent); color: #0f172a; font-weight: 700; }
-        .nav-icon { font-size: 16px; min-width: 20px; text-align: center; }
+        .nav-item.active { background: var(--accent); color: var(--accent-text); font-weight: 700; }
+        .nav-icon { font-size: 16px; min-width: 22px; text-align: center; }
+
+        /* Collapsed Sidebar Clean Formatting (No text squishing) */
+        .sidebar.collapsed .brand-text { display: none; }
+        .sidebar.collapsed .bucket-label { display: none; }
+        .sidebar.collapsed .nav-text { display: none; }
+        .sidebar.collapsed .nav-item { justify-content: center; padding: 10px 0; gap: 0; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; }
+        .sidebar.collapsed .brand span:first-child { display: none; }
 
         /* Main Content Container */
         .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -465,11 +487,12 @@ async def serve_admin_ui():
             justify-content: space-between;
             padding: 0 24px;
             gap: 16px;
+            flex-shrink: 0;
         }
         .search-box {
             position: relative;
             flex: 1;
-            max-width: 450px;
+            max-width: 480px;
         }
         .search-box input {
             width: 100%;
@@ -481,8 +504,8 @@ async def serve_admin_ui():
             font-size: 13px;
         }
         .search-icon { position: absolute; left: 10px; top: 9px; font-size: 14px; color: var(--text-muted); }
-        .topbar-actions { display: flex; align-items: center; gap: 12px; }
-        .theme-btn { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .topbar-actions { display: flex; align-items: center; gap: 10px; }
+        .theme-btn { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
 
         /* Content Area */
         .content-area { flex: 1; overflow-y: auto; padding: 24px; }
@@ -491,29 +514,30 @@ async def serve_admin_ui():
         .view-section.active-view { display: block; }
 
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+        .metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .metric-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
         .metric-value { font-size: 26px; font-weight: 700; color: var(--text-main); }
 
-        .section-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+        .section-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .section-title { font-size: 16px; font-weight: 700; }
 
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th { text-align: left; padding: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 600; }
         td { padding: 12px; border-bottom: 1px solid var(--border); }
-        tr:hover { background: rgba(51, 65, 85, 0.2); }
+        tr:hover { background: var(--table-hover); }
 
+        .btn-group { display: flex; gap: 4px; white-space: nowrap; }
         .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
-        .status-online { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-        .status-offline { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .status-online { background: rgba(16, 185, 129, 0.15); color: var(--status-online-text); }
+        .status-offline { background: rgba(239, 68, 68, 0.15); color: var(--status-offline-text); }
 
         .loc-badge { background: var(--bg-input); border: 1px solid var(--border); color: var(--accent); padding: 3px 8px; border-radius: 4px; font-size: 12px; }
-        .gps-badge { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid #10b981; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .gps-badge { background: rgba(16, 185, 129, 0.15); color: var(--status-online-text); border: 1px solid var(--success); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
 
-        .btn { background: var(--accent); color: #0f172a; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.15s; }
+        .btn { background: var(--accent); color: var(--accent-text); border: none; border-radius: 6px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.15s; }
         .btn:hover { background: var(--accent-hover); }
-        .btn-sm { padding: 4px 8px; font-size: 12px; margin-right: 4px; }
+        .btn-sm { padding: 4px 8px; font-size: 12px; }
         .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
         .btn-outline:hover { background: var(--bg-hover); }
         .btn-success { background: var(--success); color: white; }
@@ -526,6 +550,10 @@ async def serve_admin_ui():
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; width: 550px; max-width: 90%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .close-btn { background: transparent; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; }
+
+        #leaflet-map { height: 420px; width: 100%; border-radius: 8px; border: 1px solid var(--border); margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -536,45 +564,45 @@ async def serve_admin_ui():
             <div class="brand">
                 <span>🌐</span> <span class="brand-text">ONE Platform</span>
             </div>
-            <button class="toggle-btn" id="btn-toggle-sidebar" onclick="toggleSidebar()">≡</button>
+            <button class="toggle-btn" id="btn-toggle-sidebar" onclick="toggleSidebar()" title="Toggle Navigation">≡</button>
         </div>
         <nav class="nav-menu">
             <!-- 1. MONITOR BUCKET -->
             <div class="bucket-label">1. Monitor</div>
-            <a class="nav-item active" id="nav-monitor-noc" onclick="switchView('monitor-noc')">
+            <a class="nav-item active" id="nav-monitor-noc" onclick="switchView('monitor-noc')" title="NOC Live Operations">
                 <span class="nav-icon">📊</span> <span class="nav-text">NOC Overview</span>
             </a>
-            <a class="nav-item" id="nav-monitor-map" onclick="switchView('monitor-map')">
+            <a class="nav-item" id="nav-monitor-map" onclick="switchView('monitor-map')" title="GIS Campus Geolocation">
                 <span class="nav-icon">🗺️</span> <span class="nav-text">GIS Campus Map</span>
             </a>
-            <a class="nav-item" id="nav-monitor-reports" onclick="switchView('monitor-reports')">
+            <a class="nav-item" id="nav-monitor-reports" onclick="switchView('monitor-reports')" title="Forensics & SLA Reports">
                 <span class="nav-icon">📋</span> <span class="nav-text">Reports & Forensics</span>
             </a>
 
             <!-- 2. MANAGE BUCKET -->
             <div class="bucket-label">2. Manage</div>
-            <a class="nav-item" id="nav-manage-fleet" onclick="switchView('manage-fleet')">
+            <a class="nav-item" id="nav-manage-fleet" onclick="switchView('manage-fleet')" title="Sensor Fleet & Registration">
                 <span class="nav-icon">📡</span> <span class="nav-text">Fleet & Registration</span>
             </a>
-            <a class="nav-item" id="nav-manage-locations" onclick="switchView('manage-locations')">
+            <a class="nav-item" id="nav-manage-locations" onclick="switchView('manage-locations')" title="Campus & Room Hierarchy">
                 <span class="nav-icon">📍</span> <span class="nav-text">Campus Hierarchy</span>
             </a>
 
             <!-- 3. CONFIGURE BUCKET -->
             <div class="bucket-label">3. Configure</div>
-            <a class="nav-item" id="nav-configure-probes" onclick="switchView('configure-probes')">
+            <a class="nav-item" id="nav-configure-probes" onclick="switchView('configure-probes')" title="WYSIWYG Custom Probes">
                 <span class="nav-icon">🛠️</span> <span class="nav-text">EasyBuilder Tests</span>
             </a>
-            <a class="nav-item" id="nav-configure-osi" onclick="switchView('configure-osi')">
+            <a class="nav-item" id="nav-configure-osi" onclick="switchView('configure-osi')" title="OSI Diagnostic Matrix">
                 <span class="nav-icon">🔬</span> <span class="nav-text">OSI Layer Suite</span>
             </a>
 
             <!-- 4. SETUP BUCKET -->
             <div class="bucket-label">4. Setup</div>
-            <a class="nav-item" id="nav-setup-server" onclick="switchView('setup-server')">
+            <a class="nav-item" id="nav-setup-server" onclick="switchView('setup-server')" title="Server & TSDB Health">
                 <span class="nav-icon">🖥️</span> <span class="nav-text">Server & TSDB</span>
             </a>
-            <a class="nav-item" id="nav-setup-integrations" onclick="switchView('setup-integrations')">
+            <a class="nav-item" id="nav-setup-integrations" onclick="switchView('setup-integrations')" title="Push Alerts & Webhooks">
                 <span class="nav-icon">⚙️</span> <span class="nav-text">Alerts & Webhooks</span>
             </a>
         </nav>
@@ -603,7 +631,7 @@ async def serve_admin_ui():
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-title">District Experience Score</div>
-                        <div class="metric-value" style="color: #34d399;" id="score-val">99 / 100</div>
+                        <div class="metric-value" style="color: var(--status-online-text);" id="score-val">99 / 100</div>
                     </div>
                     <div class="metric-card">
                         <div class="metric-title">Active Sensors (Online)</div>
@@ -611,11 +639,11 @@ async def serve_admin_ui():
                     </div>
                     <div class="metric-card">
                         <div class="metric-title">Pending TOFU Approvals</div>
-                        <div class="metric-value" style="color: #fbbf24;" id="stat-pending">-</div>
+                        <div class="metric-value" style="color: var(--warning);" id="stat-pending">-</div>
                     </div>
                     <div class="metric-card">
                         <div class="metric-title">CAASPP State Testing Readiness</div>
-                        <div class="metric-value" style="color: #38bdf8;">100% Ready</div>
+                        <div class="metric-value" style="color: var(--accent);">100% Ready</div>
                     </div>
                 </div>
 
@@ -634,12 +662,13 @@ async def serve_admin_ui():
             <div class="view-section" id="view-monitor-map">
                 <div class="section-card">
                     <div class="section-header">
-                        <div class="section-title">🗺️ Campus Geolocation & Sensor GPS Map</div>
+                        <div class="section-title">🗺️ Interactive GIS Campus Map (Live GPS Geolocation)</div>
                     </div>
-                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
-                        Sensors equipped with GPS dongles stream live NMEA coordinates. Click any coordinate to open OpenStreetMap.
+                    <p style="color: var(--text-muted); font-size: 13px;">
+                        Sensors equipped with GPS dongles stream live NMEA coordinates onto the campus map.
                     </p>
-                    <div id="map-sensor-list">Loading GIS sensor positions...</div>
+                    <div id="leaflet-map"></div>
+                    <div id="map-sensor-list" style="margin-top: 16px;">Loading GIS positions...</div>
                 </div>
             </div>
 
@@ -648,7 +677,7 @@ async def serve_admin_ui():
                 <div class="section-card">
                     <div class="section-header">
                         <div class="section-title">📄 Executive SLA Reports & Forensic Incident Bundles</div>
-                        <button class="btn btn-sm" onclick="alert('Monthly Board SLA Report Generated (PDF)')">📥 Download Executive PDF</button>
+                        <button class="btn btn-sm" onclick="downloadSlaCsv()">📥 Export SLA Summary (CSV)</button>
                     </div>
                     <table>
                         <thead>
@@ -823,11 +852,11 @@ async def serve_admin_ui():
                         </div>
                         <div class="metric-card">
                             <div class="metric-title">Loki Log Streams</div>
-                            <div class="metric-value" style="color:#34d399;">Active (200 OK)</div>
+                            <div class="metric-value" style="color:var(--status-online-text);">Active (200 OK)</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-title">Alertmanager</div>
-                            <div class="metric-value" style="color:#38bdf8;">Healthy</div>
+                            <div class="metric-value" style="color:var(--accent);">Healthy</div>
                         </div>
                     </div>
                 </div>
@@ -849,9 +878,12 @@ async def serve_admin_ui():
     </div>
 
     <!-- Location Edit Modal -->
-    <div class="modal-overlay" id="location-modal">
+    <div class="modal-overlay" id="location-modal" onclick="handleBackdropClick(event, 'location-modal')">
         <div class="modal">
-            <h2 style="font-size: 18px; margin-bottom: 16px;">📍 Edit Sensor Physical Location</h2>
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">📍 Edit Sensor Physical Location</h2>
+                <button type="button" class="close-btn" onclick="closeLocationModal()">✕</button>
+            </div>
             <form id="location-form" onsubmit="handleSaveLocation(event)">
                 <input type="hidden" id="loc-sensor-id">
                 <div class="form-group">
@@ -881,11 +913,11 @@ async def serve_admin_ui():
                 <div class="form-row">
                     <div class="form-group">
                         <label>Latitude (Optional / GPS)</label>
-                        <input type="number" step="0.000001" id="loc-lat" placeholder="35.373292">
+                        <input type="number" step="0.000001" min="-90" max="90" id="loc-lat" placeholder="35.373292">
                     </div>
                     <div class="form-group">
                         <label>Longitude (Optional / GPS)</label>
-                        <input type="number" step="0.000001" id="loc-lon" placeholder="-119.018712">
+                        <input type="number" step="0.000001" min="-180" max="180" id="loc-lon" placeholder="-119.018712">
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
@@ -897,9 +929,12 @@ async def serve_admin_ui():
     </div>
 
     <!-- WYSIWYG EasyBuilder Modal -->
-    <div class="modal-overlay" id="probe-modal">
+    <div class="modal-overlay" id="probe-modal" onclick="handleBackdropClick(event, 'probe-modal')">
         <div class="modal">
-            <h2 style="font-size: 18px; margin-bottom: 16px;">Create Custom Synthetic Probe</h2>
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">Create Custom Synthetic Probe</h2>
+                <button type="button" class="close-btn" onclick="closeProbeModal()">✕</button>
+            </div>
             <form id="probe-form" onsubmit="handleSaveProbe(event)">
                 <div class="form-group">
                     <label>Test Name</label>
@@ -952,6 +987,8 @@ async def serve_admin_ui():
     <script>
         const ADMIN_KEY = "admin-noc-key-change-me";
         let SENSORS_CACHE = [];
+        let mapInstance = null;
+        let mapMarkers = [];
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('collapsed');
@@ -974,7 +1011,24 @@ async def serve_admin_ui():
 
             const navElem = document.getElementById('nav-' + viewId);
             if (navElem) navElem.classList.add('active');
+
+            if (viewId === 'monitor-map') {
+                setTimeout(initOrUpdateMap, 200);
+            }
         }
+
+        function handleBackdropClick(e, modalId) {
+            if (e.target.id === modalId) {
+                document.getElementById(modalId).style.display = 'none';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLocationModal();
+                closeProbeModal();
+            }
+        });
 
         function handleGlobalSearch() {
             const q = document.getElementById('global-search').value.toLowerCase();
@@ -1006,6 +1060,7 @@ async def serve_admin_ui():
             const pendingRows = [];
             const mapList = [];
             const hierarchyMap = {};
+            const scopeOptions = ['<option value="all">All Fleet Sensors</option>'];
 
             sensors.forEach(s => {
                 const loc = s.location || {};
@@ -1017,7 +1072,8 @@ async def serve_admin_ui():
                     `<a href="https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}" target="_blank" style="color:var(--accent); text-decoration:none;">${loc.latitude.toFixed(4)}°, ${loc.longitude.toFixed(4)}°</a> ${gpsBadge}` :
                     '<span style="color:var(--text-muted);">No GPS Fix</span>';
 
-                // Hierarchy mapping
+                scopeOptions.push(`<option value="${s.sensor_id}">${s.sensor_id} (${loc.room || 'Room'})</option>`);
+
                 const siteName = loc.site || "General Campus";
                 if (!hierarchyMap[siteName]) hierarchyMap[siteName] = [];
                 hierarchyMap[siteName].push(`${loc.building || 'Main'} - ${loc.room || 'Room'} (${s.sensor_id})`);
@@ -1027,9 +1083,9 @@ async def serve_admin_ui():
                         <div style="background:var(--bg-card); border:1px solid var(--border); padding:12px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <strong>${s.sensor_id}</strong> &bull; ${loc.site} (${loc.room})<br>
-                                <span style="font-size:12px; color:var(--text-muted);">Coords: ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}</span>
+                                <span style="font-size:12px; color:var(--text-muted);">Coordinates: ${loc.latitude.toFixed(6)}°, ${loc.longitude.toFixed(6)}°</span>
                             </div>
-                            <a href="https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}" target="_blank" class="btn btn-outline btn-sm">🗺️ Open Map ↗</a>
+                            <a href="https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}" target="_blank" class="btn btn-outline btn-sm">🗺️ OpenMap ↗</a>
                         </div>
                     `);
                 }
@@ -1040,11 +1096,13 @@ async def serve_admin_ui():
                         <tr>
                             <td><strong>${s.sensor_id}</strong></td>
                             <td>${s.hostname || 'Unknown'}</td>
-                            <td>${s.mac_address || 'Unknown'}</td>
+                            <td><code>${s.mac_address || 'Unknown'}</code></td>
                             <td>${locText}</td>
                             <td>
-                                <button class="btn btn-success btn-sm" onclick="approveSensor('${s.sensor_id}')">✓ Approve</button>
-                                <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">✗ Reject</button>
+                                <div class="btn-group">
+                                    <button class="btn btn-success btn-sm" onclick="approveSensor('${s.sensor_id}')">✓ Approve</button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">✗ Reject</button>
+                                </div>
                             </td>
                         </tr>
                     `);
@@ -1062,9 +1120,11 @@ async def serve_admin_ui():
                             <td>${statusBadge}</td>
                             <td>${s.last_seen > 0 ? new Date(s.last_seen * 1000).toLocaleTimeString() : 'Never'}</td>
                             <td>
-                                <button class="btn btn-outline btn-sm" onclick="triggerPcap('${s.sensor_id}')">⚡ PCAP</button>
-                                <button class="btn btn-outline btn-sm" onclick="triggerSpeedtest('${s.sensor_id}')">📊 Speedtest</button>
-                                <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Revoke</button>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline btn-sm" onclick="triggerPcap('${s.sensor_id}')">⚡ PCAP</button>
+                                    <button class="btn btn-outline btn-sm" onclick="triggerSpeedtest('${s.sensor_id}')">📊 Speedtest</button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Revoke</button>
+                                </div>
                             </td>
                         </tr>
                     `);
@@ -1073,6 +1133,7 @@ async def serve_admin_ui():
 
             document.getElementById('stat-online').innerText = `${onlineCount} / ${sensors.length}`;
             document.getElementById('stat-pending').innerText = pendingCount;
+            document.getElementById('p-scope').innerHTML = scopeOptions.join('');
 
             if (pendingCount > 0) {
                 document.getElementById('pending-section').style.display = 'block';
@@ -1087,11 +1148,10 @@ async def serve_admin_ui():
             document.getElementById('map-sensor-list').innerHTML = mapList.length > 0 ?
                 mapList.join('') : '<p style="color:var(--text-muted);">No GPS coordinates recorded from sensors yet.</p>';
 
-            // Render Hierarchy
             const hierHtml = Object.keys(hierarchyMap).map(site => `
-                <div style="margin-bottom:16px;">
+                <div style="margin-bottom:16px; background:var(--bg-input); padding:14px; border-radius:8px; border:1px solid var(--border);">
                     <strong style="color:var(--text-main); font-size:15px;">🏢 ${site}</strong>
-                    <ul style="margin-left:20px; margin-top:6px;">
+                    <ul style="margin-left:20px; margin-top:8px; line-height:1.6;">
                         ${hierarchyMap[site].map(r => `<li>${r}</li>`).join('')}
                     </ul>
                 </div>
@@ -1101,7 +1161,7 @@ async def serve_admin_ui():
             const probeRows = probes.map(p => `
                 <tr>
                     <td><strong>${p.name}</strong></td>
-                    <td><span class="badge" style="background:#475569; padding:2px 6px; border-radius:4px; font-size:11px;">${p.probe_type.toUpperCase()}</span></td>
+                    <td><span class="badge" style="background:#475569; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">${p.probe_type.toUpperCase()}</span></td>
                     <td><code>${p.target}</code></td>
                     <td>Every ${p.cadence_minutes}m</td>
                     <td>${p.target_sensors.join(', ')}</td>
@@ -1110,6 +1170,42 @@ async def serve_admin_ui():
             `);
             document.getElementById('probes-table-body').innerHTML = probeRows.length > 0 ?
                 probeRows.join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No custom synthetic probes configured yet.</td></tr>';
+
+            // Preserve search state across polling
+            handleGlobalSearch();
+        }
+
+        function initOrUpdateMap() {
+            const mapContainer = document.getElementById('leaflet-map');
+            if (!mapContainer) return;
+
+            if (!mapInstance) {
+                mapInstance = L.map('leaflet-map').setView([35.3733, -119.0187], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(mapInstance);
+            }
+
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapMarkers = [];
+
+            const validCoords = [];
+            SENSORS_CACHE.forEach(s => {
+                const loc = s.location;
+                if (loc && loc.latitude && loc.longitude) {
+                    const marker = L.marker([loc.latitude, loc.longitude])
+                        .addTo(mapInstance)
+                        .bindPopup(`<b>${s.sensor_id}</b><br>${loc.site || 'Site'} (${loc.room || 'Room'})<br>Status: ${s.is_online ? '🟢 Online' : '🔴 Offline'}`);
+                    mapMarkers.push(marker);
+                    validCoords.push([loc.latitude, loc.longitude]);
+                }
+            });
+
+            if (validCoords.length > 0) {
+                mapInstance.fitBounds(validCoords, { padding: [50, 50], maxZoom: 15 });
+            }
+            mapInstance.invalidateSize();
         }
 
         async function approveSensor(sensorId) {
@@ -1139,10 +1235,10 @@ async def serve_admin_ui():
             if (!s) return;
             const loc = s.location || {};
             document.getElementById('loc-sensor-id').value = sensorId;
-            document.getElementById('loc-district').value = loc.district || 'Kern County Superintendent of Schools';
-            document.getElementById('loc-site').value = loc.site || 'Main Campus';
-            document.getElementById('loc-building').value = loc.building || 'North Wing';
-            document.getElementById('loc-room').value = loc.room || 'Room 101';
+            document.getElementById('loc-district').value = loc.district || '';
+            document.getElementById('loc-site').value = loc.site || '';
+            document.getElementById('loc-building').value = loc.building || '';
+            document.getElementById('loc-room').value = loc.room || '';
             document.getElementById('loc-notes').value = loc.notes || '';
             document.getElementById('loc-lat').value = loc.latitude || '';
             document.getElementById('loc-lon').value = loc.longitude || '';
@@ -1177,13 +1273,17 @@ async def serve_admin_ui():
             loadDashboardData();
         }
 
-        function openProbeModal() { document.getElementById('probe-modal').style.display = 'flex'; }
+        function openProbeModal() {
+            document.getElementById('probe-form').reset();
+            document.getElementById('probe-modal').style.display = 'flex';
+        }
         function closeProbeModal() { document.getElementById('probe-modal').style.display = 'none'; }
 
         async function handleSaveProbe(e) {
             e.preventDefault();
             const name = document.getElementById('p-name').value;
-            const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '') || ('custom-probe-' + Date.now());
+            const scopeVal = document.getElementById('p-scope').value;
             const probe = {
                 id: id,
                 name: name,
@@ -1191,7 +1291,7 @@ async def serve_admin_ui():
                 target: document.getElementById('p-target').value,
                 cadence_minutes: parseInt(document.getElementById('p-cadence').value),
                 timeout_seconds: parseFloat(document.getElementById('p-timeout').value) / 1000.0,
-                target_sensors: ["all"],
+                target_sensors: [scopeVal],
                 enabled: true
             };
 
@@ -1209,6 +1309,20 @@ async def serve_admin_ui():
                 await fetch(`/api/v1/probes/${probeId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
                 loadDashboardData();
             }
+        }
+
+        function downloadSlaCsv() {
+            let csv = "Sensor_ID,Campus_Site,Room,Status,GPS_Coordinates,Last_Seen\\n";
+            SENSORS_CACHE.forEach(s => {
+                const loc = s.location || {};
+                csv += `"${s.sensor_id}","${loc.site || 'Site'}","${loc.room || 'Room'}","${s.is_online ? 'Online' : 'Offline'}","${loc.latitude || ''},${loc.longitude || ''}","${s.last_seen}"\\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `ONE_District_SLA_Report_${new Date().toISOString().slice(0,10)}.csv`);
+            a.click();
         }
 
         loadDashboardData();
