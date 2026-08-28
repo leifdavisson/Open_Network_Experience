@@ -181,6 +181,10 @@ chmod +x /usr/local/bin/voip_jitter_probe.py
 cp "${SCRIPT_DIR}/custom_probe_runner.py" /usr/local/bin/custom_probe_runner.py
 chmod +x /usr/local/bin/custom_probe_runner.py
 
+# Copy GPS & Precision Location Collector
+cp "${SCRIPT_DIR}/gps_location_collector.py" /usr/local/bin/gps_location_collector.py
+chmod +x /usr/local/bin/gps_location_collector.py
+
 # Create default sensor config directory
 mkdir -p /etc/sensor
 mkdir -p /var/lib/sensor/snapshots

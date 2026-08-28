@@ -2,7 +2,7 @@
 Central Monitoring Platform (CMP) API Control Plane & Sensor Administration Web UI
 
 Orchestrates configuration, telemetry check-ins, Wi-Fi profiles, remote resets,
-and WYSIWYG EasyBuilder synthetic test creation for edge sensors.
+WYSIWYG EasyBuilder synthetic test creation, and Location/GPS Fleet Mapping for edge sensors.
 
 Security & Concurrency:
   - Trust-On-First-Use Onboarding: Brand new sensors register via public POST /register.
@@ -12,7 +12,7 @@ Security & Concurrency:
   - Redacted Views: Admin status queries return `SensorStatusResponseSafe` to prevent
     exposing sensitive Wi-Fi PSKs and EAP passwords.
   - Built-in Administration Web UI: Responsive browser dashboard at / for 1-click TOFU
-    approvals, forensic evidence bundle downloads, and WYSIWYG probe creation.
+    approvals, forensic evidence bundle downloads, WYSIWYG probe creation, and Location/GPS cards.
 """
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request, Query
@@ -35,10 +35,10 @@ from schemas import (
     TargetContainerSpec,
     PcapTriggerSpec,
     EvidenceBundleInfo,
-    CustomProbeSpec
+    CustomProbeSpec,
+    LocationSpec
 )
 
-# API Keys — In production, load from environment variables or secrets manager
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "admin-noc-key-change-me")
 
 async def verify_admin_key(x_api_key: str = Header(..., alias="X-API-Key")):
@@ -48,16 +48,15 @@ async def verify_admin_key(x_api_key: str = Header(..., alias="X-API-Key")):
 
 app = FastAPI(
     title="Open Network Experience CMP API",
-    description="Manages configuration, telemetry reconciliation, forensic evidence, and WYSIWYG probes for edge sensors.",
+    description="Manages configuration, telemetry reconciliation, forensic evidence, WYSIWYG probes, and GPS location for edge sensors.",
     version="0.3.0"
 )
 
-# In-Memory Databases (In production, backed by SQL Database)
+# In-Memory Databases
 SENSORS_DB: Dict[str, dict] = {}
 PROBES_DB: Dict[str, dict] = {}
 EVIDENCE_DB: Dict[str, List[dict]] = {}
 
-# Default fallback container configurations for new sensors
 DEFAULT_TARGET_CONTAINERS = {
     "blackbox-exporter": TargetContainerSpec(
         image="prom/blackbox-exporter:master",
@@ -98,6 +97,15 @@ def get_or_create_sensor(sensor_id: str) -> dict:
             "status": "pending",
             "api_key": "",
             "reset_flag": False,
+            "location": LocationSpec(
+                district="Kern County Superintendent of Schools",
+                site="Main Campus",
+                building="North Wing",
+                room="Room 101",
+                latitude=35.373292,
+                longitude=-119.018712,
+                is_gps_auto=False
+            ),
             "reported_containers": {},
             "target_config": SensorReconcileResponse(
                 reset=False,
@@ -113,21 +121,17 @@ def get_or_create_sensor(sensor_id: str) -> dict:
 @app.post(
     "/api/v1/sensors/register",
     response_model=SensorRegisterResponse,
-    summary="Register new Edge Sensor",
-    description="Allows a new edge sensor to register its hardware details. Puts the device in a pending state until approved by an administrator."
+    summary="Register new Edge Sensor"
 )
 async def register_sensor(request: SensorRegisterRequest):
-    """
-    Register endpoint for new edge sensors.
-    Allows unauthenticated registration. Saves hardware profiles and queues the sensor
-    for administrative approval.
-    """
+    """Register endpoint for new edge sensors."""
     sensor = get_or_create_sensor(request.sensor_id)
     sensor["hostname"] = request.hostname
     sensor["mac_address"] = request.mac_address
     sensor["os"] = request.os
+    if request.location:
+        sensor["location"] = request.location
 
-    # If already approved, return active key
     if sensor["status"] == "approved":
         return SensorRegisterResponse(status="approved", api_key=sensor["api_key"])
 
@@ -136,14 +140,10 @@ async def register_sensor(request: SensorRegisterRequest):
 @app.post(
     "/api/v1/sensors/reconcile",
     response_model=SensorReconcileResponse,
-    summary="Sensor Registration and State Reconciliation",
-    description="Endpoint for edge sensors to check-in, report metrics, and receive configurations."
+    summary="Sensor Registration and State Reconciliation"
 )
 async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(..., alias="X-API-Key")):
-    """
-    Edge sensor check-in and reconciliation endpoint.
-    Requires edge API key authentication (X-API-Key) that matches this specific sensor.
-    """
+    """Edge sensor check-in and reconciliation endpoint."""
     sensor = SENSORS_DB.get(report.sensor_id)
     if not sensor or sensor["status"] != "approved" or sensor["api_key"] != x_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized or unapproved sensor check-in")
@@ -151,8 +151,9 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
     sensor["last_seen"] = int(time.time())
     sensor["os"] = report.os
     sensor["reported_containers"] = {k: v.model_dump() for k, v in report.containers.items()}
+    if report.location:
+        sensor["location"] = report.location
 
-    # Deliver reset flag safely via deep copy
     reset_value = sensor["reset_flag"]
     response = sensor["target_config"].model_copy(update={"reset": reset_value}, deep=True)
 
@@ -165,7 +166,6 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
     if getattr(sensor["target_config"], "pcap_trigger", None) and sensor["target_config"].pcap_trigger.trigger_now:
         sensor["target_config"].pcap_trigger.trigger_now = False
 
-    # Inject all active custom probes applicable to this sensor
     active_probes = [
         p for p in PROBES_DB.values()
         if p.get("enabled", True) and ("all" in p.get("target_sensors", ["all"]) or report.sensor_id in p.get("target_sensors", []))
@@ -174,13 +174,12 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
 
     return response
 
-# --- Administrative & Sensor Management Endpoints ---
+# --- Administrative Endpoints ---
 
 @app.get(
     "/api/v1/sensors",
     response_model=List[SensorStatusResponseSafe],
     summary="List Active Sensors",
-    description="Returns registration details, online state, and configuration drift checks for all sensors. Wi-Fi credentials are redacted.",
     dependencies=[Depends(verify_admin_key)]
 )
 async def list_sensors():
@@ -203,15 +202,46 @@ async def list_sensors():
                 reconciled_ok=reconciled_ok,
                 status_val=data["status"],
                 reported_containers=data["reported_containers"],
-                target_config=data["target_config"]
+                target_config=data["target_config"],
+                location_val=data.get("location")
             )
         )
     return response_list
 
+@app.put(
+    "/api/v1/sensors/{sensor_id}/location",
+    summary="Update Sensor Physical Location / Geolocation",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def update_sensor_location(sensor_id: str, location: LocationSpec):
+    """Updates physical campus room or GPS coordinates for a sensor."""
+    sensor = get_or_create_sensor(sensor_id)
+    sensor["location"] = location
+    return {"status": "success", "message": f"Location updated for sensor {sensor_id}.", "location": location.model_dump()}
+
+@app.put(
+    "/api/v1/sensors/{sensor_id}/config",
+    summary="Update Sensor Configuration",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def update_sensor_config(sensor_id: str, update: SensorConfigUpdate):
+    """Updates target desired state for an edge sensor."""
+    sensor = get_or_create_sensor(sensor_id)
+    if update.wifi is not None:
+        sensor["target_config"].wifi = update.wifi
+    if update.containers is not None:
+        sensor["target_config"].containers = update.containers
+    if update.schedules is not None:
+        sensor["target_config"].schedules = update.schedules
+    if update.custom_probes is not None:
+        sensor["target_config"].custom_probes = update.custom_probes
+    if update.location is not None:
+        sensor["location"] = update.location
+    return {"status": "success", "message": f"Configuration updated for sensor {sensor_id}."}
+
 @app.post(
     "/api/v1/sensors/{sensor_id}/approve",
     summary="Approve Pending Sensor",
-    description="Approves a pending edge sensor and generates its unique API key.",
     dependencies=[Depends(verify_admin_key)]
 )
 async def approve_sensor(sensor_id: str):
@@ -228,41 +258,9 @@ async def approve_sensor(sensor_id: str):
         "api_key": sensor["api_key"]
     }
 
-@app.put(
-    "/api/v1/sensors/{sensor_id}/config",
-    summary="Update Sensor Configuration",
-    description="Allows updating target Wi-Fi credentials, containers, test schedules, and custom probes for a specific sensor.",
-    dependencies=[Depends(verify_admin_key)]
-)
-async def update_sensor_config(sensor_id: str, update: SensorConfigUpdate):
-    """Updates target desired state for an edge sensor."""
-    sensor = get_or_create_sensor(sensor_id)
-    if update.wifi is not None:
-        sensor["target_config"].wifi = update.wifi
-    if update.containers is not None:
-        sensor["target_config"].containers = update.containers
-    if update.schedules is not None:
-        sensor["target_config"].schedules = update.schedules
-    if update.custom_probes is not None:
-        sensor["target_config"].custom_probes = update.custom_probes
-    return {"status": "success", "message": f"Configuration updated for sensor {sensor_id}."}
-
-@app.post(
-    "/api/v1/sensors/{sensor_id}/reset",
-    summary="Trigger Edge Rebuild",
-    description="Flags the sensor to execute a clean factory wipe of local container states on its next check-in.",
-    dependencies=[Depends(verify_admin_key)]
-)
-async def trigger_sensor_reset(sensor_id: str):
-    """Administrative endpoint to queue a factory reset for a sensor."""
-    sensor = get_or_create_sensor(sensor_id)
-    sensor["reset_flag"] = True
-    return {"status": "success", "message": "Reset flag queued for next reconcile call."}
-
 @app.post(
     "/api/v1/sensors/{sensor_id}/reject",
     summary="Reject/Revoke Sensor",
-    description="Rejects a pending sensor request or revokes an approved sensor's access key.",
     dependencies=[Depends(verify_admin_key)]
 )
 async def reject_sensor(sensor_id: str):
@@ -273,9 +271,19 @@ async def reject_sensor(sensor_id: str):
     raise HTTPException(status_code=404, detail="Sensor not found")
 
 @app.post(
+    "/api/v1/sensors/{sensor_id}/reset",
+    summary="Trigger Edge Rebuild",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def trigger_sensor_reset(sensor_id: str):
+    """Administrative endpoint to queue a factory reset for a sensor."""
+    sensor = get_or_create_sensor(sensor_id)
+    sensor["reset_flag"] = True
+    return {"status": "success", "message": "Reset flag queued for next reconcile call."}
+
+@app.post(
     "/api/v1/sensors/{sensor_id}/pcap/trigger",
     summary="Trigger Incident PCAP Capture",
-    description="Instructs the edge sensor to slice and package an incident PCAP snapshot on its next check-in.",
     dependencies=[Depends(verify_admin_key)]
 )
 async def trigger_pcap_capture(sensor_id: str, reason: str = "manual_noc_trigger"):
@@ -288,7 +296,6 @@ async def trigger_pcap_capture(sensor_id: str, reason: str = "manual_noc_trigger
 @app.post(
     "/api/v1/sensors/{sensor_id}/bandwidth/trigger",
     summary="Trigger On-Demand Bandwidth Test",
-    description="Instructs the edge sensor to execute an immediate throughput test on its next check-in.",
     dependencies=[Depends(verify_admin_key)]
 )
 @app.post(
@@ -305,7 +312,6 @@ async def trigger_bandwidth_test(sensor_id: str):
 @app.post(
     "/api/v1/sensors/{sensor_id}/evidence",
     summary="Register Diagnostic Evidence Bundle",
-    description="Registers an incident evidence package (.tar.gz) from an edge sensor.",
     dependencies=[Depends(verify_admin_key)]
 )
 async def register_evidence_bundle(sensor_id: str, evidence: EvidenceBundleInfo):
@@ -319,7 +325,6 @@ async def register_evidence_bundle(sensor_id: str, evidence: EvidenceBundleInfo)
     "/api/v1/sensors/{sensor_id}/evidence",
     response_model=List[EvidenceBundleInfo],
     summary="List Evidence Bundles",
-    description="Lists all recorded diagnostic evidence packages for a specific sensor.",
     dependencies=[Depends(verify_admin_key)]
 )
 async def list_evidence_bundles(sensor_id: str):
@@ -360,7 +365,7 @@ async def delete_custom_probe(probe_id: str):
         return {"status": "success", "message": f"Probe '{probe_id}' deleted."}
     raise HTTPException(status_code=404, detail="Probe not found")
 
-# --- Central Management Web UI Dashboard ---
+# --- Central Management Web UI Dashboard with Location Cards ---
 
 @app.get("/", response_class=HTMLResponse, summary="Sensor Administration Dashboard")
 @app.get("/ui", response_class=HTMLResponse, summary="Sensor Administration Dashboard")
@@ -410,8 +415,10 @@ async def serve_admin_ui():
 
         .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
         .status-online { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-        .status-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
         .status-offline { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+        .loc-badge { display: inline-flex; align-items: center; gap: 4px; background: #334155; color: #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+        .gps-badge { background: #064e3b; color: #a7f3d0; border: 1px solid #059669; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
 
         .btn { background: var(--accent); color: #0f172a; border: none; border-radius: 6px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.15s; }
         .btn:hover { background: var(--accent-hover); }
@@ -471,7 +478,7 @@ async def serve_admin_ui():
                     <th>Sensor ID</th>
                     <th>Hostname</th>
                     <th>MAC Address</th>
-                    <th>OS</th>
+                    <th>Reported Location / GPS</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -479,24 +486,25 @@ async def serve_admin_ui():
         </table>
     </div>
 
-    <!-- Active Sensor Fleet Table -->
+    <!-- Active Sensor Fleet Table with Location Cards -->
     <div class="section">
         <div class="section-header">
-            <div class="section-title">📡 Active Edge Sensors Fleet</div>
+            <div class="section-title">📡 Active Edge Sensors & Location Fleet</div>
             <button class="btn btn-outline" onclick="loadDashboardData()">🔄 Refresh</button>
         </div>
         <table>
             <thead>
                 <tr>
                     <th>Sensor ID</th>
+                    <th>Campus / Physical Location</th>
+                    <th>GPS Coordinates</th>
                     <th>Status</th>
-                    <th>Target SSID</th>
                     <th>Last Seen</th>
-                    <th>Quick Actions</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="sensors-table-body">
-                <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading fleet status...</td></tr>
+                <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Loading fleet status...</td></tr>
             </tbody>
         </table>
     </div>
@@ -522,6 +530,54 @@ async def serve_admin_ui():
                 <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No custom synthetic probes configured yet.</td></tr>
             </tbody>
         </table>
+    </div>
+
+    <!-- Location Edit Modal -->
+    <div class="modal-overlay" id="location-modal">
+        <div class="modal">
+            <h2 style="font-size: 18px; margin-bottom: 16px;">📍 Edit Sensor Physical Location</h2>
+            <form id="location-form" onsubmit="handleSaveLocation(event)">
+                <input type="hidden" id="loc-sensor-id">
+                <div class="form-group">
+                    <label>School District / Org</label>
+                    <input type="text" id="loc-district" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>School / Site Campus</label>
+                        <input type="text" id="loc-site" placeholder="e.g. North High School" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Building / Wing</label>
+                        <input type="text" id="loc-building" placeholder="e.g. Science Building" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Room / Classroom</label>
+                        <input type="text" id="loc-room" placeholder="e.g. Room 204 / Library" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Installation Notes</label>
+                        <input type="text" id="loc-notes" placeholder="e.g. Ceiling drop near AP-02">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Latitude (Optional / GPS)</label>
+                        <input type="number" step="0.000001" id="loc-lat" placeholder="35.373292">
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude (Optional / GPS)</label>
+                        <input type="number" step="0.000001" id="loc-lon" placeholder="-119.018712">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeLocationModal()">Cancel</button>
+                    <button type="submit" class="btn">Save Location</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- WYSIWYG EasyBuilder Modal -->
@@ -579,18 +635,17 @@ async def serve_admin_ui():
 
     <script>
         const ADMIN_KEY = "admin-noc-key-change-me";
+        let SENSORS_CACHE = [];
 
         async function loadDashboardData() {
             try {
-                // 1. Fetch Sensors
                 const resSensors = await fetch('/api/v1/sensors', { headers: { 'X-API-Key': ADMIN_KEY } });
-                const sensors = await resSensors.json();
+                SENSORS_CACHE = await resSensors.json();
 
-                // 2. Fetch Probes
                 const resProbes = await fetch('/api/v1/probes', { headers: { 'X-API-Key': ADMIN_KEY } });
                 const probes = await resProbes.json();
 
-                renderDashboard(sensors, probes);
+                renderDashboard(SENSORS_CACHE, probes);
             } catch (err) {
                 console.error("Failed to load dashboard:", err);
             }
@@ -603,6 +658,15 @@ async def serve_admin_ui():
             const pendingRows = [];
 
             sensors.forEach(s => {
+                const loc = s.location || {};
+                const locText = `${loc.site || 'Main'} &bull; ${loc.building || 'Main'} (<strong>${loc.room || 'Room'}</strong>)`;
+                const gpsBadge = loc.is_gps_auto ?
+                    '<span class="gps-badge">🛰️ GPS Auto</span>' :
+                    '<span class="loc-badge">📍 Manual</span>';
+                const coordsText = (loc.latitude && loc.longitude) ?
+                    `<a href="https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}" target="_blank" style="color:var(--accent); text-decoration:none;">${loc.latitude.toFixed(4)}°, ${loc.longitude.toFixed(4)}°</a> ${gpsBadge}` :
+                    '<span style="color:var(--text-muted);">No GPS Fix</span>';
+
                 if (s.status === 'pending') {
                     pendingCount++;
                     pendingRows.push(`
@@ -610,7 +674,7 @@ async def serve_admin_ui():
                             <td><strong>${s.sensor_id}</strong></td>
                             <td>${s.hostname || 'Unknown'}</td>
                             <td>${s.mac_address || 'Unknown'}</td>
-                            <td>${s.os || 'Linux'}</td>
+                            <td>${locText}</td>
                             <td>
                                 <button class="btn btn-success btn-sm" onclick="approveSensor('${s.sensor_id}')">✓ Approve</button>
                                 <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">✗ Reject</button>
@@ -626,8 +690,9 @@ async def serve_admin_ui():
                     activeRows.push(`
                         <tr>
                             <td><strong>${s.sensor_id}</strong></td>
+                            <td>${locText} <button class="btn btn-outline btn-sm" style="margin-left:6px; padding:1px 5px;" onclick="openLocationModal('${s.sensor_id}')">✏️</button></td>
+                            <td>${coordsText}</td>
                             <td>${statusBadge}</td>
-                            <td>${s.target_config.wifi ? s.target_config.wifi.ssid : 'None'}</td>
                             <td>${s.last_seen > 0 ? new Date(s.last_seen * 1000).toLocaleTimeString() : 'Never'}</td>
                             <td>
                                 <button class="btn btn-outline btn-sm" onclick="triggerPcap('${s.sensor_id}')">⚡ PCAP</button>
@@ -644,7 +709,6 @@ async def serve_admin_ui():
             document.getElementById('stat-pending').innerText = pendingCount;
             document.getElementById('stat-probes').innerText = probes.length;
 
-            // Pending table visibility
             if (pendingCount > 0) {
                 document.getElementById('pending-section').style.display = 'block';
                 document.getElementById('pending-table-body').innerHTML = pendingRows.join('');
@@ -652,11 +716,9 @@ async def serve_admin_ui():
                 document.getElementById('pending-section').style.display = 'none';
             }
 
-            // Active sensors table
             document.getElementById('sensors-table-body').innerHTML = activeRows.length > 0 ?
-                activeRows.join('') : '<tr><td colspan="5" style="text-align:center;">No active approved sensors found.</td></tr>';
+                activeRows.join('') : '<tr><td colspan="6" style="text-align:center;">No active approved sensors found.</td></tr>';
 
-            // Custom Probes Table
             const probeRows = probes.map(p => `
                 <tr>
                     <td><strong>${p.name}</strong></td>
@@ -693,6 +755,49 @@ async def serve_admin_ui():
             alert(`On-demand speedtest queued for ${sensorId}.`);
         }
 
+        function openLocationModal(sensorId) {
+            const s = SENSORS_CACHE.find(item => item.sensor_id === sensorId);
+            if (!s) return;
+            const loc = s.location || {};
+            document.getElementById('loc-sensor-id').value = sensorId;
+            document.getElementById('loc-district').value = loc.district || 'Kern County Superintendent of Schools';
+            document.getElementById('loc-site').value = loc.site || 'Main Campus';
+            document.getElementById('loc-building').value = loc.building || 'North Wing';
+            document.getElementById('loc-room').value = loc.room || 'Room 101';
+            document.getElementById('loc-notes').value = loc.notes || '';
+            document.getElementById('loc-lat').value = loc.latitude || '';
+            document.getElementById('loc-lon').value = loc.longitude || '';
+            document.getElementById('location-modal').style.display = 'flex';
+        }
+
+        function closeLocationModal() { document.getElementById('location-modal').style.display = 'none'; }
+
+        async function handleSaveLocation(e) {
+            e.preventDefault();
+            const sensorId = document.getElementById('loc-sensor-id').value;
+            const latVal = document.getElementById('loc-lat').value;
+            const lonVal = document.getElementById('loc-lon').value;
+
+            const payload = {
+                district: document.getElementById('loc-district').value,
+                site: document.getElementById('loc-site').value,
+                building: document.getElementById('loc-building').value,
+                room: document.getElementById('loc-room').value,
+                notes: document.getElementById('loc-notes').value,
+                latitude: latVal ? parseFloat(latVal) : null,
+                longitude: lonVal ? parseFloat(lonVal) : null,
+                is_gps_auto: false
+            };
+
+            await fetch(`/api/v1/sensors/${sensorId}/location`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                body: JSON.stringify(payload)
+            });
+            closeLocationModal();
+            loadDashboardData();
+        }
+
         function openProbeModal() { document.getElementById('probe-modal').style.display = 'flex'; }
         function closeProbeModal() { document.getElementById('probe-modal').style.display = 'none'; }
 
@@ -727,9 +832,8 @@ async def serve_admin_ui():
             }
         }
 
-        // Initial Load
         loadDashboardData();
-        setInterval(loadDashboardData, 10000); // Auto-refresh every 10s
+        setInterval(loadDashboardData, 10000);
     </script>
 </body>
 </html>

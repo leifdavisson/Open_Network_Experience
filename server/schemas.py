@@ -14,10 +14,23 @@ class RunningContainer(BaseModel):
     image: str = Field(..., description="The running image tag or digest")
     id: str = Field(..., description="The short container ID")
 
+class LocationSpec(BaseModel):
+    district: str = Field("Default District", description="School district or organization")
+    site: str = Field("Main Campus", description="School name or campus")
+    building: str = Field("Main Building", description="Building name or wing")
+    room: str = Field("Room 101", description="Classroom, library, or office identifier")
+    notes: Optional[str] = Field(None, description="Installation notes, e.g. 'Ceiling mounted near AP-04'")
+    latitude: Optional[float] = Field(None, description="GPS Latitude (-90 to +90)")
+    longitude: Optional[float] = Field(None, description="GPS Longitude (-180 to +180)")
+    altitude_meters: Optional[float] = Field(None, description="GPS Altitude in meters")
+    is_gps_auto: bool = Field(False, description="True if coordinates were automatically resolved via onboard GPS")
+    last_gps_fix: Optional[int] = Field(None, description="Epoch timestamp of last GPS fix")
+
 class SensorReportRequest(BaseModel):
     sensor_id: str = Field(..., description="Unique hardware UUID of the sensor")
     os: str = Field(..., description="Operating system type of the sensor host")
     timestamp: int = Field(..., description="Epoch timestamp of report")
+    location: Optional[LocationSpec] = Field(default_factory=LocationSpec, description="Physical location or GPS coordinates")
     containers: Dict[str, RunningContainer] = Field(
         default_factory=dict,
         description="Map of container names to their running specs"
@@ -29,6 +42,7 @@ class SensorRegisterRequest(BaseModel):
     hostname: str = Field(..., description="Host name of the sensor")
     mac_address: str = Field(..., description="Primary network MAC address of the sensor")
     timestamp: int = Field(..., description="Epoch timestamp of registration request")
+    location: Optional[LocationSpec] = Field(default_factory=LocationSpec, description="Initial location or GPS coordinates")
 
 class SensorRegisterResponse(BaseModel):
     status: str = Field(..., description="Approval status: pending or approved")
@@ -133,6 +147,7 @@ class SensorConfigUpdate(BaseModel):
     containers: Optional[Dict[str, TargetContainerSpec]] = None
     schedules: Optional[TestSchedulesSpec] = None
     custom_probes: Optional[List[CustomProbeSpec]] = None
+    location: Optional[LocationSpec] = None
 
 class SensorStatusResponse(BaseModel):
     sensor_id: str
@@ -140,6 +155,7 @@ class SensorStatusResponse(BaseModel):
     os: str
     is_online: bool
     reconciled_ok: bool
+    location: LocationSpec = Field(default_factory=LocationSpec)
     reported_containers: Dict[str, RunningContainer]
     target_config: SensorReconcileResponse
 
@@ -186,11 +202,12 @@ class SensorStatusResponseSafe(BaseModel):
     is_online: bool
     reconciled_ok: bool
     status: str
+    location: LocationSpec = Field(default_factory=LocationSpec)
     reported_containers: Dict[str, RunningContainer]
     target_config: SensorReconcileResponseSafe
 
     @classmethod
-    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config):
+    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config, location_val=None):
         """
         Maps the internal DB state of a sensor to an admin-safe response payload,
         invoking from_wifi_spec to scrub credentials from the outgoing target configuration.
@@ -210,6 +227,7 @@ class SensorStatusResponseSafe(BaseModel):
             is_online=is_online,
             reconciled_ok=reconciled_ok,
             status=status_val,
+            location=location_val if location_val is not None else LocationSpec(),
             reported_containers=reported_containers,
             target_config=safe_config
         )
