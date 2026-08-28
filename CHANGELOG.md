@@ -4,19 +4,21 @@ All notable changes to the Open Network Experience (OpenUX) platform will be doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.2.0] — 2026-08-26
+## [0.2.0] — 2026-08-27
 
 ### Added
 - **Dual-NIC Split-Brain Diagnostics**: Wired (`eth0`) control baseline vs. Wireless (`wlan0`) variable testing with policy-based routing (PBR) and `SO_BINDTODEVICE` socket binding.
 - **CAASPP & ELPAC State Testing Readiness** (`caaspp_readiness.py`): Validates network connectivity against California Department of Education / Cambium TDS/TIDE, ETS TOMS, and Smarter Balanced SSO endpoints. Verifies SSL Inspection bypass to prevent Secure Browser certificate pinning failures.
-- **Wi-Fi RRM, DARRP & GSK Radio Optimization Monitor** (`rrm_darrp_monitor.py`): Tracks Fortinet DARRP and Global Spectrum Knowledge (GSK) channel changes, channel dwell stability, co-channel interference (CCI) neighbor collisions, and alerts on RF flapping (>3 switches/hour).
+- **Wi-Fi Radio Resource Management (RRM) & Flapping Monitor** (`rrm_darrp_monitor.py`): Tracks dynamic channel changes, channel dwell stability, co-channel interference (CCI) neighbor collisions, and alerts on RF flapping (>3 switches/hour).
 - **Scheduled Bandwidth Tester** (`iperf3_runner.py`): Throughput and jitter testing with time-window restrictions (e.g. off-peak hours only), bandwidth throttling caps, staggered A/B wired/wireless runs, and on-demand trigger delivery.
 - **Incident-Triggered Packet Capture (PCAP) Daemon** (`pcap_trigger.py`): Continuous 50MB RAM ring buffer (`/dev/shm`) with automatic header slicing (128 bytes) and 60-second snapshot capture on failure or on-demand NOC trigger.
-- **Forensic Evidence Snapshot Bundler** (`evidence_collector.py`): Packages incident PCAP slices, Playwright HARs, systemd journal logs, and Wi-Fi RF state into downloadable `.tar.gz` diagnostic archives.
+- **Forensic Evidence Snapshot Bundler** (`evidence_collector.py`): Packages incident PCAP slices, Playwright HARs, systemd journal logs, Wi-Fi RF state, and Plain-English Executive Incident Cards into downloadable `.tar.gz` diagnostic archives.
 - **CMP PCAP & Evidence API**: Control plane endpoints to trigger remote PCAP snapshots and register forensic evidence packages (`/api/v1/sensors/{id}/pcap/trigger`, `/api/v1/sensors/{id}/evidence`).
 - **Playwright HAR Waterfall & Error Screenshot Capture** (`browser_transaction.py`): Automatically preserves network waterfall HAR files and visual error screenshots on failed web transactions.
-- **Security Gateway / Firewall SNMP Telemetry Poller** (`snmp_collector.py`): Queries core FortiGate / gateway CPU, Memory, Session Setup Rate, and Conserve Mode state to correlate firewall load with synthetic slowness.
+- **Security Gateway / Firewall SNMP Telemetry Poller** (`snmp_collector.py`): Queries core firewall CPU, Memory, Session Setup Rate, and Conserve Mode state to correlate firewall load with synthetic slowness.
 - **Lateral East-West Segmentation Validator** (`segmentation_prober.py`): Performs allowlisted TCP connection checks to verify that student VLANs cannot access switch management SSH, camera subnets, or admin portals.
+- **Multi-Resolver DNS Health & Benchmark Prober** (`dns_multi_resolver_probe.py`): Discovers local DHCP nameservers and benchmarks query latency/RCODE against Cloudflare, Google, Quad9, and OpenDNS.
+- **Real-Time Voice & Video (VoIP / Zoom / Meet) Jitter Prober** (`voip_jitter_probe.py`): Measures UDP RTP media stream jitter, packet loss, and ITU-T G.107 Mean Opinion Score (MOS).
 
 ## [0.1.0] — 2026-08-25
 

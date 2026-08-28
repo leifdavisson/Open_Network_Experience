@@ -41,9 +41,9 @@ async def verify_admin_key(x_api_key: str = Header(..., alias="X-API-Key")):
         raise HTTPException(status_code=401, detail="Invalid or missing admin API key")
 
 app = FastAPI(
-    title="Open UX Central Monitoring Platform API",
-    description="Manages configuration, versions, and registration for edge sensors.",
-    version="1.0.0"
+    title="Open Network Experience CMP API",
+    description="Manages configuration, telemetry reconciliation, and forensic evidence for edge sensors.",
+    version="0.2.0"
 )
 
 # In-Memory DB mock (stores dynamic configs, reset signals, and sensor statuses)
