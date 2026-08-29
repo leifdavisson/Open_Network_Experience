@@ -17,40 +17,40 @@ import time
 import urllib.request
 import urllib.error
 
-# CIPA Compliance Test Targets
+# CIPA Compliance Test Targets (Professional / Compliance Terminology)
 TEST_TARGETS = [
     {
         "id": "caic",
         "category": "csam",
-        "name": "Child Sexual Abuse Material (IWF list)",
+        "name": "CSAM Filtering (IWF Standard)",
         "url": "http://iwf.testfiltering.com",
         "token": "SFf84Q2LRDkv02bVB7KYmvF9mPbO27IZnsueXWxeo5KE174T25Y7ybeaof851oyK"
     },
     {
         "id": "ctiru",
-        "category": "terrorist",
-        "name": "Terrorist Content (CTIRU list)",
+        "category": "threats",
+        "name": "High-Risk Threat Protection (CTIRU)",
         "url": "https://ctiru.testfiltering.com",
         "token": "3MIN0HYnHWTQF4uJDkOpOm0YVB809JGgTaH94P10ge9lKLDf7E8lFZDTm3qU81Ud"
     },
     {
         "id": "porn",
-        "category": "adult",
-        "name": "Pornography & Harmful Content",
+        "category": "restricted_adult",
+        "name": "Restricted Adult Content",
         "url": "https://testfiltering.pornhub.com/",
         "token": "5468v9o44huX499v91e9X35ki0mmlwv21449076I7VMI2LA53200Qd9859S2E4aF"
     },
     {
         "id": "decryption",
-        "category": "decryption",
+        "category": "ssl_inspection",
         "name": "SSL Decryption & Inspection",
         "url": "https://decryption.testfiltering.com/block.php",
         "token": "G3xrNuDIiwhLHrLRlgGu8UEHtT6VHkUiei5l5aQ4s8HnLbDW80imeNPTOjr5Th7w"
     },
     {
         "id": "swear",
-        "category": "obscene",
-        "name": "Profanity & Obscene Content",
+        "category": "restricted_language",
+        "name": "Restricted Explicit Language",
         "url": "https://swearing.testfiltering.com/",
         "token": "hukmdS4T16uGAVg4G2qLb7wGtdggLngHd1khZDO1mId77mtASZt71kXYdyp1Urgo"
     }
@@ -67,7 +67,7 @@ def check_target(target):
     """
     url = target["url"]
     token = target["token"]
-    
+
     # Custom headers to bypass simple cache and simulate real browser request
     req = urllib.request.Request(
         url,
@@ -77,12 +77,12 @@ def check_target(target):
             "Pragma": "no-cache"
         }
     )
-    
+
     try:
         # Use short timeout (5s) as filters often drop packets causing timeouts
         with urllib.request.urlopen(req, timeout=5) as response:
             html = response.read().decode("utf-8", errors="ignore")
-            
+
             if token in html:
                 # Page loaded fully and we found the token. The content is allowed!
                 return False, "Allowed (Verification token matched)"
@@ -116,7 +116,7 @@ def check_internet_connectivity():
 def write_metrics(prom_lines, output_file):
     """Atomically writes Prometheus metrics to output file or stdout."""
     prom_content = "\n".join(prom_lines) + "\n"
-    
+
     if output_file:
         try:
             dirname = os.path.dirname(output_file)
@@ -137,19 +137,19 @@ def write_metrics(prom_lines, output_file):
 def main():
     # Allow user to specify custom output file, default is stdout
     output_file = sys.argv[1] if len(sys.argv) > 1 else None
-    
+
     prom_lines = [
         "# HELP cipa_compliance_status CIPA internet filtering compliance. 1 = Blocked (Compliant), 0 = Allowed (Non-Compliant), -1 = Unknown (No Connectivity)",
         "# TYPE cipa_compliance_status gauge",
         "# HELP cipa_internet_connectivity Whether the sensor has internet connectivity. 1 = Online, 0 = Offline",
         "# TYPE cipa_internet_connectivity gauge"
     ]
-    
+
     # Control probe: verify internet is reachable before testing filters
     print("Running connectivity control probe...")
     has_internet = check_internet_connectivity()
     prom_lines.append(f'cipa_internet_connectivity {1 if has_internet else 0}')
-    
+
     if not has_internet:
         print("\033[93mWARNING: Internet connectivity check FAILED. Reporting UNKNOWN for all categories.\033[0m")
         for target in TEST_TARGETS:
@@ -158,22 +158,22 @@ def main():
             )
         write_metrics(prom_lines, output_file)
         return
-    
+
     print("Connectivity confirmed. Running CIPA Compliance Tests...")
     for target in TEST_TARGETS:
         is_compliant, reason = check_target(target)
         status_val = 1 if is_compliant else 0
-        
+        safe_reason = reason.replace('"', "'")
+
         prom_lines.append(
-            f'cipa_compliance_status{{id="{target["id"]}",category="{target["category"]}",name="{target["name"]}",url="{target["url"]}"}} {status_val}'
+            f'cipa_compliance_status{{id="{target["id"]}",category="{target["category"]}",name="{target["name"]}",reason="{safe_reason}",url="{target["url"]}"}} {status_val}'
         )
-        
+
         # Log to stderr/stdout
         result_str = "\033[92mCOMPLIANT (Blocked)\033[0m" if is_compliant else "\033[91mNON-COMPLIANT (Allowed!)\033[0m"
         print(f" - [{target['name']}]: {result_str} | Reason: {reason}")
-        
+
     write_metrics(prom_lines, output_file)
 
 if __name__ == "__main__":
     main()
-

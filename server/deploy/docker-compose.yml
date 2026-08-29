@@ -13,8 +13,11 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - DB_PATH=/app/data/cmp.db
+      - BACKUP_DIR=/app/data/backups
+    volumes:
+      - cmp-data:/app/data
 
-  # 2. VictoriaMetrics (Prometheus-compatible Time-Series Database)
   # 2. VictoriaMetrics (Prometheus-compatible Time-Series Database)
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.101.0
@@ -24,8 +27,11 @@ services:
       - "8428:8428"
     volumes:
       - vm-data:/victoria-metrics-data
+      - ./scrape.yml:/etc/prometheus/scrape.yml:ro
     command:
       - "-retentionPeriod=13" # In months, matching our retention standard
+      - "-promscrape.config=/etc/prometheus/scrape.yml"
+      - "-promscrape.config.strictParse=false"
 
   # 3. Grafana Loki (Log Ingestion & Logging Endpoint)
   loki:
@@ -62,6 +68,9 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin # Change in production
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     volumes:
       - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
       - ./grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
@@ -72,6 +81,7 @@ services:
       - loki
 
 volumes:
+  cmp-data:
   vm-data:
   loki-data:
   am-data:

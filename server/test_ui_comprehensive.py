@@ -151,7 +151,23 @@ class TestComprehensiveWebUI(unittest.TestCase):
             "closeProbeModal",
             "applyProbeTemplate",
             "handleSaveProbe",
-            "deleteProbe"
+            "deleteProbe",
+            "downloadSystemBackup",
+            "handleRestoreBackupFile",
+            "executeSelectedDiagnostic",
+            "copyDiagLog",
+            "downloadDiagLog",
+            "goToSlide",
+            "nextSlide",
+            "prevSlide",
+            "togglePlayPause",
+            "toggleFullscreenMode",
+            "createCustomGlowMarker",
+            "renderAnalyticsCharts",
+            "zoomToSensor",
+            "goToGrafanaSub",
+            "nextGrafanaSub",
+            "prevGrafanaSub"
         ]
 
         for func in required_functions:

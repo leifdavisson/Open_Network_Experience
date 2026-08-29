@@ -1,0 +1,71 @@
+global:
+  scrape_interval: 10s
+  external_labels:
+    monitor: "open-network-experience-cmp"
+
+scrape_configs:
+  # 1. Scrape Physical & Virtual Sensor Node Exporters
+  - job_name: "sensor-node-metrics"
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["10.98.2.105:9100", "localhost:9100"]
+        labels:
+          sensor_id: "f10325921e2b43b2b5fcf33cadad864b"
+          site: "City Center"
+          room: "IT Operations"
+
+  # 2. Scrape Blackbox ICMP / TCP Gateway Ping
+  - job_name: "blackbox-gateway-ping"
+    metrics_path: /probe
+    params:
+      module: [tcp_connect]
+    static_configs:
+      - targets:
+          - "10.98.2.1:80"
+          - "206.227.2.136:443"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 10.98.2.105:9115
+
+  # 3. Scrape Blackbox DNS Resolvers
+  - job_name: "blackbox-dns-probes"
+    metrics_path: /probe
+    params:
+      module: [dns_udp]
+    static_configs:
+      - targets:
+          - "10.98.98.53"
+          - "10.98.98.54"
+          - "1.1.1.1"
+          - "8.8.8.8"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 10.98.2.105:9115
+
+  # 4. Scrape Blackbox Core K-12 SaaS & State Testing Apps
+  - job_name: "blackbox-saas-apps"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - "https://canvas.instructure.com"
+          - "https://classroom.google.com"
+          - "https://login.i-ready.com"
+          - "https://ca.portal.cambiumtds.com"
+          - "https://zoom.us"
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 10.98.2.105:9115
