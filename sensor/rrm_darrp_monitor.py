@@ -250,6 +250,13 @@ def main():
     if not wifi["connected"]:
         print(f"\033[93mInterface {interface} is not associated to any SSID.\033[0m")
         prom_lines.append(f'wifi_rrm_connected{{interface="{interface}"}} 0')
+        prom_lines.append(f'wifi_rrm_current_channel{{interface="{interface}"}} 0')
+        prom_lines.append(f'wifi_rrm_channel_width_mhz{{interface="{interface}"}} 0')
+        prom_lines.append(f'wifi_rrm_switches_last_hour{{interface="{interface}"}} 0')
+        prom_lines.append(f'wifi_rrm_flapping_detected{{interface="{interface}"}} 0')
+        prom_lines.append(f'wifi_rrm_cochannel_neighbors{{interface="{interface}",channel="0"}} 0')
+        prom_lines.append(f'wifi_rrm_rssi_dbm{{interface="{interface}"}} -100')
+        prom_lines.append(f'wifi_rrm_snr_db{{interface="{interface}"}} 0')
         write_metrics(prom_lines, output_file)
         return
 

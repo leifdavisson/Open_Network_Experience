@@ -1,0 +1,410 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "⬅ Return to NOC Overview Wallboard",
+      "type": "link",
+      "url": "/d/openux-noc/openux-noc-and-diagnostic-dashboard"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "title": "🛡️ CIPA Policy Enforcement & Traffic Light Forensic Drill-Down",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 75
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "avg(cipa_compliance_status{instance=~\"$sensor\",category!=\"ssl_inspection\"}) * 100",
+          "instant": true,
+          "legendFormat": "Enforcement Rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Overall Filter Enforcement Rate",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "🔴 0% BLOCKED (Action Required)"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "🟢 100% BLOCKED (Compliant)"
+                },
+                "-1": {
+                  "color": "orange",
+                  "index": 2,
+                  "text": "🟡 N/A (Offline)"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 18,
+        "x": 6,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "cipa_compliance_status{instance=~\"$sensor\"}",
+          "instant": true,
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "CIPA Policy Traffic Light Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "left",
+            "displayMode": "color-background"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "🔴 0% BLOCKED (Action Required)"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "🟢 100% BLOCKED (Compliant)"
+                },
+                "-1": {
+                  "color": "orange",
+                  "index": 2,
+                  "text": "🟡 N/A (Offline)"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Traffic Light Enforcement"
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Policy Category"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reason"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Technical Reason & Failure Attribution"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Target Endpoint URL"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "fields": [],
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "editorMode": "code",
+          "expr": "cipa_compliance_status{instance=~\"$sensor\"}",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Detailed Policy Category Forensics & Root Cause Breakdown",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "title": "🛠️ Technical Remediation & Policy Guidance",
+      "type": "row"
+    },
+    {
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 6,
+      "options": {
+        "content": "### 🛠️ Firewall & Content Filter Troubleshooting Guide\n\n* **🔴 Red Light on CSAM / Adult / Threats (`0% BLOCKED`)**:\n  - **Root Cause**: Gateway firewall or DNS proxy (e.g. Umbrella, Securly, Lightspeed, Palo Alto) is not actively intercepting outbound HTTP/HTTPS requests from this VLAN.\n  - **Fix**: Verify that the student testing subnet (`10.98.0.0/16`) has web filtering policy enforced on Port 80/443.\n\n* **🔴 Red Light on SSL Decryption & Inspection (`0% BLOCKED` / `Allowed`)**:\n  - **Root Cause**: SSL Deep Packet Inspection (MITM) is enabled on student devices, causing CAASPP Secure Browser certificate validation failures.\n  - **Fix**: Add testing domains (`*.cambiumtds.com`, `*.airast.org`, `*.ets.org`) to the SSL Inspection **Exemption / Bypass List** on your firewall (FortiGate, Palo Alto, Cisco Firepower).\n\n* **🟢 Green Light (`100% BLOCKED`)**:\n  - Filter policy is verified compliant with Federal Children's Internet Protection Act (CIPA) standards.",
+        "mode": "markdown"
+      },
+      "title": "Remediation & Compliance Documentation",
+      "type": "text"
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "cipa",
+    "compliance",
+    "drilldown",
+    "openux",
+    "security"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "VictoriaMetrics"
+        },
+        "definition": "label_values(node_uname_info, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "sensor",
+        "options": [],
+        "query": {
+          "query": "label_values(node_uname_info, instance)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "CIPA Content Filtering — Deep Forensic & Policy Violation Drill-Down",
+  "uid": "openux-cipa-drilldown",
+  "version": 1
+}

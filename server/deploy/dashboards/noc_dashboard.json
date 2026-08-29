@@ -31,23 +31,27 @@
           "color": {
             "mode": "thresholds"
           },
+          "custom": {
+            "align": "left",
+            "displayMode": "color-background"
+          },
           "mappings": [
             {
               "options": {
                 "0": {
                   "color": "red",
                   "index": 1,
-                  "text": "NON-COMPLIANT"
+                  "text": "🔴 0% BLOCKED (Action Required)"
                 },
                 "1": {
                   "color": "green",
                   "index": 0,
-                  "text": "COMPLIANT"
+                  "text": "🟢 100% BLOCKED (Compliant)"
                 },
                 "-1": {
                   "color": "orange",
                   "index": 2,
-                  "text": "OFFLINE / UNKNOWN"
+                  "text": "🟡 N/A (Offline / Unknown)"
                 }
               },
               "type": "value"
@@ -67,7 +71,75 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Traffic Light Enforcement Status"
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "targetBlank": false,
+                    "title": "🔍 Drill Down into CIPA Policy & Failure Forensics",
+                    "url": "/d/openux-cipa-drilldown/cipa-content-filtering-deep-forensic-and-policy-violation-drill-down?var-sensor=${sensor}"
+                  },
+                  {
+                    "targetBlank": true,
+                    "title": "⚡ Open CMP Live Diagnostics Action Center",
+                    "url": "http://10.98.2.125:8000/#view-monitor-ondemand"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Policy Category"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reason"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Diagnostic Reason & Forensics"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "url"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Target Endpoint URL"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 6,
@@ -102,7 +174,7 @@
           "refId": "A"
         }
       ],
-      "title": "CIPA Web Filter Enforcement Status",
+      "title": "CIPA Web Filter Enforcement Status (Traffic Lights & Percentages)",
       "type": "table"
     },
     {
@@ -983,19 +1055,23 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "VictoriaMetrics"
         },
-        "definition": "label_values(cipa_internet_connectivity, instance)",
+        "definition": "label_values(node_uname_info, instance)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "sensor",
         "options": [],
         "query": {
-          "query": "label_values(cipa_internet_connectivity, instance)",
+          "query": "label_values(node_uname_info, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

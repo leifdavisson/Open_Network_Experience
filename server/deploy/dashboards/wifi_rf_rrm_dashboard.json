@@ -503,19 +503,23 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "VictoriaMetrics"
         },
-        "definition": "label_values(wifi_rrm_connected, instance)",
+        "definition": "label_values(node_uname_info, instance)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "sensor",
         "options": [],
         "query": {
-          "query": "label_values(wifi_rrm_connected, instance)",
+          "query": "label_values(node_uname_info, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

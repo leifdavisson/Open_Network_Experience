@@ -419,5 +419,51 @@ class TestCMPFlow(unittest.TestCase):
         self.assertEqual(sensor_entry["location"]["room"], "Room 204")
         self.assertEqual(sensor_entry["location"]["latitude"], 35.3745)
 
+    def test_09_backup_and_disaster_recovery(self):
+        """Tests 1-click JSON backup export and restore disaster recovery endpoints."""
+        # 1. Export backup
+        code, backup_data = self.make_request("/system/backup", method="GET", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertIn("sensors", backup_data)
+        self.assertIn("probes", backup_data)
+        self.assertIn("version", backup_data)
+        self.assertEqual(backup_data["version"], "0.3.0")
+
+        # 2. Restore backup
+        code, restore_res = self.make_request("/system/restore", method="POST", body=backup_data, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertEqual(restore_res["status"], "success")
+        self.assertIn("restored successfully", restore_res["message"].lower())
+
+    def test_10_on_demand_live_diagnostics_runner(self):
+        """Tests executing on-demand live diagnostic probes on a sensor."""
+        # 1. Register and approve a test sensor
+        s_id = f"diag-test-sensor-{int(time.time())}"
+        reg_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "hostname": "diag-runner-node",
+            "mac_address": "00:11:22:33:44:55",
+            "timestamp": int(time.time()),
+            "location": {
+                "district": "Kern County Superintendent of Schools",
+                "site": "City Center",
+                "building": "1300 17th St",
+                "room": "IT Operations"
+            }
+        }
+        self.make_request("/sensors/register", method="POST", body=reg_payload)
+        self.make_request(f"/sensors/{s_id}/approve", method="POST", headers={"X-API-Key": ADMIN_KEY})
+
+        # 2. Run on-demand diagnostics
+        diag_payload = {"test_type": "all", "custom_target": ""}
+        code, data = self.make_request(f"/sensors/{s_id}/diagnostics/run", method="POST", body=diag_payload, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+        self.assertIn("status", data)
+        self.assertIn("details", data)
+        self.assertIn("log_output", data)
+        self.assertTrue(len(data["details"]) > 0)
+        self.assertTrue(any("Gateway" in d.get("name", "") for d in data["details"]))
+
 if __name__ == "__main__":
     unittest.main()

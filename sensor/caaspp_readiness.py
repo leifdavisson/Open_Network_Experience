@@ -217,6 +217,7 @@ def main():
         print(f" - [{target['name']}]: {status_color} ({latency*1000:.1f}ms) | SSL Inspection: {ssl_color} | {issuer_info}")
 
     overall_val = 1 if all_critical_ok else 0
+    prom_lines.append(f'caaspp_readiness_overall {overall_val}')
     overall_str = "\033[92mREADY FOR CAASPP TESTING\033[0m" if all_critical_ok else "\033[91mNOT READY — CRITICAL TEST ENDPOINTS DEGRADED\033[0m"
     print(f"\nOverall Site Status: {overall_str}\n")
 
