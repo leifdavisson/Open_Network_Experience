@@ -116,7 +116,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
         self.assertIn("probe-modal", self.parser.modals)
         self.assertTrue(any(f[0] == "probe-form" and "handleSaveProbe" in str(f[1]) for f in self.parser.forms))
 
-        expected_probe_inputs = ["p-name", "p-type", "p-cadence", "p-target", "p-timeout", "p-scope"]
+        expected_probe_inputs = ["p-template-preset", "p-name", "p-type", "p-cadence", "p-target", "p-timeout", "p-scope"]
         for inp in expected_probe_inputs:
             self.assertTrue(any(i[0] == inp for i in self.parser.inputs), f"Input field '{inp}' missing in Probe modal form.")
 
@@ -148,6 +148,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             "handleSaveLocation",
             "openProbeModal",
             "closeProbeModal",
+            "applyProbeTemplate",
             "handleSaveProbe",
             "deleteProbe"
         ]

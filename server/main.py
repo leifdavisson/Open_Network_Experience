@@ -1024,6 +1024,23 @@ async def serve_admin_ui():
                 <button type="button" class="close-btn" onclick="closeProbeModal()">✕</button>
             </div>
             <form id="probe-form" onsubmit="handleSaveProbe(event)">
+                <div class="form-group" style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+                    <label style="color: var(--accent); font-weight: 700;">📋 Load Pre-Built K-12 Template (Optional)</label>
+                    <select id="p-template-preset" onchange="applyProbeTemplate(this.value)">
+                        <option value="">-- Select a Pre-Configured District App --</option>
+                        <option value="canvas">Canvas LMS Portal (Instructure)</option>
+                        <option value="google_classroom">Google Classroom & Workspace</option>
+                        <option value="iready">i-Ready Assessment Portal</option>
+                        <option value="caaspp">CAASPP / Cambium TDS State Testing</option>
+                        <option value="powerschool">PowerSchool SIS Portal</option>
+                        <option value="aeries">Aeries SIS Portal</option>
+                        <option value="renaissance">Renaissance Star Reading</option>
+                        <option value="nwea">NWEA MAP Growth</option>
+                        <option value="lexia">Lexia Core5 / PowerUp</option>
+                        <option value="kahoot">Kahoot! Live Student Quizzing</option>
+                        <option value="zoom">Zoom Education Video & Web</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>Test Name</label>
                     <input type="text" id="p-name" placeholder="e.g. Canvas LMS Portal" required>
@@ -1393,6 +1410,31 @@ async def serve_admin_ui():
             document.getElementById('probe-modal').style.display = 'flex';
         }
         function closeProbeModal() { document.getElementById('probe-modal').style.display = 'none'; }
+
+        function applyProbeTemplate(presetKey) {
+            const templates = {
+                'canvas': { name: 'Canvas LMS Portal', type: 'http', target: 'https://canvas.instructure.com', cadence: 5, timeout: 4000 },
+                'google_classroom': { name: 'Google Classroom & Docs', type: 'http', target: 'https://classroom.google.com', cadence: 5, timeout: 3000 },
+                'iready': { name: 'i-Ready Assessment Portal', type: 'http', target: 'https://login.i-ready.com', cadence: 5, timeout: 4000 },
+                'caaspp': { name: 'CAASPP / Cambium TDS State Testing', type: 'http', target: 'https://ca.portal.cambiumtds.com', cadence: 5, timeout: 3000 },
+                'powerschool': { name: 'PowerSchool SIS Portal', type: 'http', target: 'https://powerschool.com', cadence: 5, timeout: 5000 },
+                'aeries': { name: 'Aeries SIS Portal', type: 'http', target: 'https://aeries.net', cadence: 5, timeout: 4000 },
+                'renaissance': { name: 'Renaissance Star Reading', type: 'http', target: 'https://global-zone50.renaissance-go.com', cadence: 5, timeout: 4000 },
+                'nwea': { name: 'NWEA MAP Growth Assessment', type: 'http', target: 'https://test.mapnwea.org', cadence: 5, timeout: 3000 },
+                'lexia': { name: 'Lexia Core5 / PowerUp', type: 'http', target: 'https://www.lexiacore5.com', cadence: 5, timeout: 4000 },
+                'kahoot': { name: 'Kahoot! Student Engagement', type: 'http', target: 'https://kahoot.it', cadence: 5, timeout: 3000 },
+                'zoom': { name: 'Zoom Education Web & Media', type: 'http', target: 'https://zoom.us', cadence: 5, timeout: 4000 }
+            };
+
+            const t = templates[presetKey];
+            if (t) {
+                document.getElementById('p-name').value = t.name;
+                document.getElementById('p-type').value = t.type;
+                document.getElementById('p-target').value = t.target;
+                document.getElementById('p-cadence').value = t.cadence;
+                document.getElementById('p-timeout').value = t.timeout;
+            }
+        }
 
         async function handleSaveProbe(e) {
             e.preventDefault();
