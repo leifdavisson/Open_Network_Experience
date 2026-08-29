@@ -121,10 +121,11 @@ class TestComprehensiveWebUI(unittest.TestCase):
             self.assertTrue(any(i[0] == inp for i in self.parser.inputs), f"Input field '{inp}' missing in Probe modal form.")
 
     def test_04_global_controls_and_buttons(self):
-        """Validates that sidebar toggle, dark/light theme button, and global search are present."""
+        """Validates that sidebar toggle, dark/light theme button, global search, and dynamic Grafana link are present."""
         self.assertTrue(any(b[0] == "btn-toggle-sidebar" and "toggleSidebar()" in str(b[1]) for b in self.parser.buttons))
         self.assertTrue(any(b[0] == "theme-btn" and "toggleTheme()" in str(b[1]) for b in self.parser.buttons))
         self.assertTrue(any(i[0] == "global-search" for i in self.parser.inputs))
+        self.assertIn('id="grafana-link"', self.html_content)
 
     def test_05_javascript_syntax_and_event_sanity(self):
         """Validates that all embedded JavaScript functions exist and have valid syntax."""

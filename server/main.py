@@ -629,7 +629,7 @@ async def serve_admin_ui():
             </div>
             <div class="topbar-actions">
                 <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️ Light Mode</button>
-                <a href="http://localhost:3000" target="_blank" class="btn btn-outline btn-sm">📊 Grafana ↗</a>
+                <a href="#" id="grafana-link" target="_blank" class="btn btn-outline btn-sm">📊 Grafana ↗</a>
                 <a href="/docs" target="_blank" class="btn btn-outline btn-sm">📖 Swagger ↗</a>
             </div>
         </header>
@@ -1480,6 +1480,12 @@ async def serve_admin_ui():
             a.setAttribute('href', url);
             a.setAttribute('download', `ONE_District_SLA_Report_${new Date().toISOString().slice(0,10)}.csv`);
             a.click();
+        }
+
+        // Dynamically resolve Grafana dashboard port on current host/IP
+        const grafanaLink = document.getElementById('grafana-link');
+        if (grafanaLink) {
+            grafanaLink.href = `${window.location.protocol}//${window.location.hostname}:3000`;
         }
 
         loadDashboardData();
