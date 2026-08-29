@@ -82,9 +82,11 @@ class TestComprehensiveWebUI(unittest.TestCase):
         expected_views = [
             ("nav-monitor-noc", "monitor-noc", "view-monitor-noc"),
             ("nav-monitor-map", "monitor-map", "view-monitor-map"),
+            ("nav-monitor-ondemand", "monitor-ondemand", "view-monitor-ondemand"),
             ("nav-monitor-reports", "monitor-reports", "view-monitor-reports"),
             ("nav-manage-fleet", "manage-fleet", "view-manage-fleet"),
             ("nav-manage-locations", "manage-locations", "view-manage-locations"),
+            ("nav-manage-schedules", "manage-schedules", "view-manage-schedules"),
             ("nav-configure-probes", "configure-probes", "view-configure-probes"),
             ("nav-configure-osi", "configure-osi", "view-configure-osi"),
             ("nav-setup-server", "setup-server", "view-setup-server"),
