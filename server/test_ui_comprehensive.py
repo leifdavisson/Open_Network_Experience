@@ -86,7 +86,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             ("nav-monitor-reports", "monitor-reports", "view-monitor-reports"),
             ("nav-manage-fleet", "manage-fleet", "view-manage-fleet"),
             ("nav-manage-locations", "manage-locations", "view-manage-locations"),
-            ("nav-manage-schedules", "manage-schedules", "view-manage-schedules"),
+            ("nav-configure-schedules", "configure-schedules", "view-configure-schedules"),
             ("nav-configure-probes", "configure-probes", "view-configure-probes"),
             ("nav-configure-osi", "configure-osi", "view-configure-osi"),
             ("nav-setup-server", "setup-server", "view-setup-server"),
@@ -120,6 +120,14 @@ class TestComprehensiveWebUI(unittest.TestCase):
         for inp in expected_probe_inputs:
             self.assertTrue(any(i[0] == inp for i in self.parser.inputs), f"Input field '{inp}' missing in Probe modal form.")
 
+        # 3. Visual Probe Scheduler Modal
+        self.assertIn("schedule-modal", self.parser.modals)
+        self.assertTrue(any(f[0] == "schedule-form" and "handleSaveSchedule" in str(f[1]) for f in self.parser.forms))
+
+        expected_sch_inputs = ["sch-name", "sch-probe", "sch-daily-time", "sch-scope", "sch-cron-expr"]
+        for inp in expected_sch_inputs:
+            self.assertTrue(any(i[0] == inp for i in self.parser.inputs), f"Input field '{inp}' missing in Schedule modal form.")
+
     def test_04_global_controls_and_buttons(self):
         """Validates that sidebar toggle, dark/light theme button, global search, and dynamic Grafana link are present."""
         self.assertTrue(any(b[0] == "btn-toggle-sidebar" and "toggleSidebar()" in str(b[1]) for b in self.parser.buttons))
@@ -138,6 +146,12 @@ class TestComprehensiveWebUI(unittest.TestCase):
             "toggleTheme",
             "switchView",
             "handleGlobalSearch",
+            "openScheduleModal",
+            "closeScheduleModal",
+            "handleSaveSchedule",
+            "toggleSchedule",
+            "deleteSchedule",
+            "renderSchedulesTable",
             "loadDashboardData",
             "renderDashboard",
             "approveSensor",

@@ -167,6 +167,24 @@ class CustomProbeSpec(BaseModel):
     target_sensors: List[str] = Field(default_factory=lambda: ["all"], description="Target sensor IDs or 'all'")
     enabled: bool = True
 
+# --- Unified Visual Probe Scheduler Schemas ---
+
+class UnifiedScheduleSpec(BaseModel):
+    id: str = Field(..., description="Unique schedule identifier")
+    name: str = Field(..., description="Human-readable schedule name")
+    probe_id: str = Field(..., description="Target probe module or EasyBuilder probe ID")
+    mode: str = Field("daily_once", description="Timing mode: daily_once, window_repeat, continuous_interval, raw_cron")
+    days_of_week: List[str] = Field(default_factory=lambda: ["mon", "tue", "wed", "thu", "fri"], description="List of active days: mon, tue, wed, thu, fri, sat, sun")
+    start_time: str = Field("07:15", description="Start time in 24h format HH:MM")
+    end_time: str = Field("16:00", description="End time in 24h format HH:MM for window_repeat")
+    interval_value: int = Field(15, description="Interval magnitude")
+    interval_unit: str = Field("minutes", description="Interval unit: seconds, minutes, hours, days, weeks")
+    cron_expr: Optional[str] = Field(None, description="Equivalent 5-field cron expression")
+    target_scope: str = Field("all", description="Target sensor scope: all, campus:<id>, or sensor:<id>")
+    guardrails_enabled: bool = Field(True, description="Enforce instructional hours and congestion check guardrails")
+    is_active: bool = Field(True, description="Whether this schedule is currently enabled")
+    created_at: Optional[int] = Field(None, description="Epoch creation timestamp")
+
 class SensorReconcileResponse(BaseModel):
     reset: bool = Field(False, description="Tells the sensor to perform a factory cleanup of all containers")
     wifi: Optional[WifiSpec] = Field(None, description="Wi-Fi configuration profiles")
@@ -190,6 +208,10 @@ class SensorReconcileResponse(BaseModel):
     custom_probes: List[CustomProbeSpec] = Field(
         default_factory=list,
         description="Dynamic custom synthetic probes created via WYSIWYG EasyBuilder"
+    )
+    unified_schedules: List[UnifiedScheduleSpec] = Field(
+        default_factory=list,
+        description="Unified visual probe schedules and timing windows"
     )
 
 class EvidenceBundleInfo(BaseModel):
@@ -257,6 +279,7 @@ class SensorReconcileResponseSafe(BaseModel):
     probing_state: str = "GREEN"
     pcap_trigger: PcapTriggerSpec = Field(default_factory=PcapTriggerSpec)
     custom_probes: List[CustomProbeSpec] = Field(default_factory=list)
+    unified_schedules: List[UnifiedScheduleSpec] = Field(default_factory=list)
 
 class SensorStatusResponseSafe(BaseModel):
     """Admin-facing sensor status with credentials redacted."""
@@ -285,7 +308,8 @@ class SensorStatusResponseSafe(BaseModel):
             adaptive_probing=getattr(target_config, "adaptive_probing", AdaptiveProbingConfig()),
             probing_state=getattr(target_config, "probing_state", probing_state),
             pcap_trigger=getattr(target_config, "pcap_trigger", PcapTriggerSpec()),
-            custom_probes=getattr(target_config, "custom_probes", [])
+            custom_probes=getattr(target_config, "custom_probes", []),
+            unified_schedules=getattr(target_config, "unified_schedules", [])
         )
         return cls(
             sensor_id=sensor_id,

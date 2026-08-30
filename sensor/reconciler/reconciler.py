@@ -624,8 +624,24 @@ def reconcile_custom_probes(custom_probes: list, config: dict):
     except Exception as e:
         print(f"Failed to spawn custom probe runner: {e}")
 
+def reconcile_unified_schedules(unified_schedules: list, config: dict):
+    """Synchronizes unified visual probe schedules from CMP and executes active tests
+    based on visual calendar days, instructional windows, and cadence intervals."""
+    if not unified_schedules:
+        return
+
+    schedules_file = "/etc/sensor/unified_schedules.json"
+    os.makedirs(os.path.dirname(schedules_file), exist_ok=True)
+
+    try:
+        with open(schedules_file + ".tmp", "w") as f:
+            json.dump(unified_schedules, f, indent=2)
+        os.replace(schedules_file + ".tmp", schedules_file)
+    except Exception as e:
+        print(f"Failed to write {schedules_file}: {e}")
+
 def main():
-    print("Starting Sensor Reconciler service with Adaptive Multi-Resolution Probing...")
+    print("Starting Sensor Reconciler service with Adaptive Multi-Resolution Probing & Unified Scheduler...")
     config = load_config()
     adaptive_engine = AdaptiveResolutionEngine(config)
     last_commanded_state = None
@@ -667,6 +683,7 @@ def main():
             reconcile_schedules(target_state.get("schedules", {}), config)
             reconcile_pcap_trigger(target_state.get("pcap_trigger", {}), config)
             reconcile_custom_probes(target_state.get("custom_probes", []), config)
+            reconcile_unified_schedules(target_state.get("unified_schedules", []), config)
 
         # Dynamic sleep based on active state (1s in RED/ON_DEMAND, 5s in AMBER, 15s in GREEN, 300s in BLACKOUT)
         sleep_interval = adaptive_engine.get_sleep_interval()
