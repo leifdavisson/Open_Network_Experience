@@ -143,6 +143,22 @@ The interactive wizard guides technicians step-by-step through:
 4. **Live Wi-Fi Site Survey**: Scans nearby SSIDs, signal strength, and configures [wpa_supplicant](https://w1.fi/wpa_supplicant) for WPA2/WPA3 Personal or 802.1X Enterprise.
 5. **Instant Zero-Touch Registration & ZTP Check**: Evaluates registration and provisions API keys automatically.
 
+#### Option C: USB Flash Drive Auto-Staging (Assembly-Line Fleet Staging)
+For staging large batches of sensors (20 to 100+ Raspberry Pis / x86 Mini-PCs) rapidly before sending them out to school campuses:
+
+1. In the CMP Web Dashboard (View 5), click **`💾 Download USB Kit (.zip)`** or curl the archive:
+   ```bash
+   curl -sSL "http://<YOUR_CMP_SERVER_IP>:8000/api/v1/onboarding/usb-kit.zip?site=West+High&room=Room+204" -o usb_staging_kit.zip
+   ```
+2. Unzip the contents directly onto any standard FAT32 / exFAT USB flash drive.
+3. Plug the USB flash drive into a newly booted Ubuntu / Raspberry Pi sensor and execute:
+   ```bash
+   sudo ./setup.sh
+   # (Or if already in a subfolder: sudo /media/*/*/setup.sh)
+   ```
+4. The auto-provisioner automatically copies offline synthetic probes, provisions Wi-Fi, registers with the CMP, and writes a physical audit receipt (`provisioned_sensors.csv`) back to the USB drive with the sensor's MAC, UUID, and assigned IP address.
+5. Unplug the USB drive and insert it into the next sensor!
+
 > [!NOTE]
 > The bootstrapper automatically detects hardware specs, installs dependencies, downloads synthetic probe modules from the CMP server, writes `/etc/sensor/reconciler.json`, symlinks `/usr/local/bin/one-wizard`, and activates `sensor-reconciler.service`.
 

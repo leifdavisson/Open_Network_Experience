@@ -22,7 +22,7 @@ Organized into 4 Core Buckets:
 """
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request, Query, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, FileResponse, Response
 from typing import Dict, List, Optional, Any
 from contextlib import asynccontextmanager
 import time
@@ -30,6 +30,8 @@ import copy
 import secrets
 import json
 import os
+import io
+import zipfile
 import socket
 import urllib.request
 
@@ -432,6 +434,10 @@ async def get_sensor_script(script_name: str):
         search_paths.insert(0, os.path.join(sensor_dir, "reconciler", "reconciler.py"))
     elif script_name == "wizard.py":
         search_paths.insert(0, os.path.join(sensor_dir, "onboarding", "wizard.py"))
+    elif script_name == "usb_provisioner.py":
+        search_paths.insert(0, os.path.join(sensor_dir, "onboarding", "usb_provisioner.py"))
+    elif script_name == "setup.sh":
+        search_paths.insert(0, os.path.join(sensor_dir, "onboarding", "setup.sh"))
 
     for target_path in search_paths:
         if os.path.exists(target_path) and os.path.isfile(target_path):
@@ -439,6 +445,112 @@ async def get_sensor_script(script_name: str):
                 return PlainTextResponse(f.read(), media_type="text/plain")
 
     raise HTTPException(status_code=404, detail=f"Script '{script_name}' not found")
+
+@app.get("/api/v1/onboarding/usb-kit.zip", summary="Generate & Download USB Flash Drive Staging Kit (.zip)")
+@app.get("/download/usb-kit.zip", summary="Generate & Download USB Flash Drive Staging Kit (.zip)")
+async def download_usb_staging_kit(
+    request: Request,
+    site: Optional[str] = Query(None, alias="site"),
+    campus: Optional[str] = Query(None, alias="campus"),
+    building: Optional[str] = Query(None, alias="building"),
+    room: Optional[str] = Query(None, alias="room"),
+    rooms: Optional[str] = Query(None, alias="rooms"),
+    district: Optional[str] = Query(None, alias="district"),
+    notes: Optional[str] = Query(None, alias="notes"),
+    token: Optional[str] = Query(None, alias="token"),
+    wifi_ssid: Optional[str] = Query(None, alias="wifi_ssid"),
+    wifi_psk: Optional[str] = Query(None, alias="wifi_psk")
+):
+    """Generates an in-memory zip bundle ready to extract onto a FAT32 USB drive for assembly-line auto-staging."""
+    base_url = str(request.base_url).rstrip("/")
+    cmp_api_url = f"{base_url}/api/v1"
+
+    target_site = site or campus or "Main Campus"
+    target_building = building or "Main Building"
+    target_room = room or "Room 101"
+    room_pool = [r.strip() for r in rooms.split(",") if r.strip()] if rooms else []
+
+    bootstrap_data = {
+        "cmp_url": cmp_api_url,
+        "enrollment_token": token or "",
+        "check_interval_seconds": 15,
+        "location": {
+            "district": district or "Kern County Superintendent of Schools",
+            "site": target_site,
+            "building": target_building,
+            "room": target_room,
+            "notes": notes or "Auto-Provisioned via ONE USB Staging Kit"
+        },
+        "auto_eject_and_sync": True
+    }
+    if room_pool:
+        bootstrap_data["room_pool"] = room_pool
+    if wifi_ssid:
+        bootstrap_data["wifi"] = {
+            "ssid": wifi_ssid,
+            "security": "psk" if wifi_psk else "open",
+            "psk": wifi_psk or ""
+        }
+
+    sensor_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "sensor"))
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        # 1. Add one-bootstrap.json
+        zf.writestr("one-bootstrap.json", json.dumps(bootstrap_data, indent=4))
+
+        # 2. Add README_USB_STAGING.txt
+        readme_text = f"""================================================================
+  🚀 OPEN NETWORK EXPERIENCE (ONE) - USB STAGING KIT
+================================================================
+
+HOW TO RAPID-STAGE SENSORS:
+1. Extract ALL files from this zip onto the root of any FAT32 / exFAT USB flash drive.
+2. Boot your Raspberry Pi 5 or x86 SBC (with fresh Ubuntu Server or Raspberry Pi OS).
+3. Insert this USB drive into the sensor.
+4. Open the terminal and run:
+     sudo ./setup.sh
+   (Or from any directory: sudo /media/*/*/setup.sh)
+5. The provisioner will automatically:
+   • Deploy synthetic diagnostic probes
+   • Configure Wi-Fi credentials ({wifi_ssid or 'Wired Ethernet'})
+   • Connect and register with CMP ({cmp_api_url})
+   • Log the sensor UUID, MAC, and IP onto 'provisioned_sensors.csv' on this USB drive!
+6. Once green confirmation appears, unplug the USB drive and insert into the next sensor.
+"""
+        zf.writestr("README_USB_STAGING.txt", readme_text)
+
+        # 3. Add probe scripts and onboarding runners
+        files_to_pack = [
+            ("install.sh", os.path.join(sensor_dir, "install.sh")),
+            ("setup.sh", os.path.join(sensor_dir, "onboarding", "setup.sh")),
+            ("usb_provisioner.py", os.path.join(sensor_dir, "onboarding", "usb_provisioner.py")),
+            ("wizard.py", os.path.join(sensor_dir, "onboarding", "wizard.py")),
+            ("reconciler.py", os.path.join(sensor_dir, "reconciler", "reconciler.py")),
+            ("cipa_compliance.py", os.path.join(sensor_dir, "cipa_compliance.py")),
+            ("caaspp_readiness.py", os.path.join(sensor_dir, "caaspp_readiness.py")),
+            ("iperf3_runner.py", os.path.join(sensor_dir, "iperf3_runner.py")),
+            ("wifi_dhcp_exporter.py", os.path.join(sensor_dir, "wifi_dhcp_exporter.py")),
+            ("rrm_darrp_monitor.py", os.path.join(sensor_dir, "rrm_darrp_monitor.py")),
+            ("pcap_trigger.py", os.path.join(sensor_dir, "pcap_trigger.py")),
+            ("evidence_collector.py", os.path.join(sensor_dir, "evidence_collector.py")),
+            ("segmentation_prober.py", os.path.join(sensor_dir, "segmentation_prober.py")),
+            ("dns_multi_resolver_probe.py", os.path.join(sensor_dir, "dns_multi_resolver_probe.py")),
+            ("voip_jitter_probe.py", os.path.join(sensor_dir, "voip_jitter_probe.py")),
+            ("custom_probe_runner.py", os.path.join(sensor_dir, "custom_probe_runner.py")),
+            ("gps_location_collector.py", os.path.join(sensor_dir, "gps_location_collector.py"))
+        ]
+
+        for arcname, fpath in files_to_pack:
+            if os.path.exists(fpath) and os.path.isfile(fpath):
+                zf.write(fpath, arcname=arcname)
+
+    zip_buffer.seek(0)
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=one_usb_staging_kit.zip"}
+    )
 
 # --- Edge Sensor API Endpoints ---
 
@@ -2551,6 +2663,7 @@ async def serve_admin_ui():
                             </div>
                         </div>
                         <div class="btn-group">
+                            <button class="btn btn-outline btn-sm" onclick="downloadUsbKit()" title="Download ready-to-copy offline USB Staging Kit (.zip)">💾 Download USB Kit (.zip)</button>
                             <button class="btn btn-outline btn-sm" onclick="toggleOnboardingDetails()">📖 Tech Cheat Sheet</button>
                         </div>
                     </div>
@@ -4828,6 +4941,17 @@ async def serve_admin_ui():
                     btn.style.background = 'var(--accent)';
                 }, 2000);
             }
+        }
+
+        function downloadUsbKit() {
+            const campus = (document.getElementById('ob-campus')?.value || '').trim();
+            const building = (document.getElementById('ob-building')?.value || '').trim();
+            const room = (document.getElementById('ob-room')?.value || '').trim();
+            const params = new URLSearchParams();
+            if (campus) params.append('site', campus);
+            if (building) params.append('building', building);
+            if (room) params.append('room', room);
+            window.location.href = `/api/v1/onboarding/usb-kit.zip?${params.toString()}`;
         }
 
         const grafanaLink = document.getElementById('grafana-link');
