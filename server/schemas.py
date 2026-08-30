@@ -6,7 +6,7 @@ and safe administrative responses that redact sensitive credentials.
 """
 
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 # --- Sensor Reports (Incoming from Edge) ---
 
@@ -35,6 +35,41 @@ class SensorReportRequest(BaseModel):
         default_factory=dict,
         description="Map of container names to their running specs"
     )
+
+class ChromebookDeviceInfo(BaseModel):
+    serial_number: Optional[str] = None
+    asset_id: Optional[str] = None
+    annotated_location: Optional[str] = None
+    annotated_user: Optional[str] = None
+    directory_device_id: Optional[str] = None
+    hostname: Optional[str] = None
+    mac_address: Optional[str] = None
+    is_managed: bool = False
+    user_agent: Optional[str] = None
+
+class ChromebookWifiTelemetry(BaseModel):
+    connected: bool = True
+    ssid: Optional[str] = None
+    bssid: Optional[str] = None
+    rssi_dbm: Optional[int] = None
+    signal_strength_pct: Optional[int] = None
+    frequency_mhz: Optional[int] = None
+    channel: Optional[int] = None
+    band: Optional[str] = None
+    security: Optional[str] = None
+    roamed_recently: bool = False
+
+class ChromebookTelemetryReport(BaseModel):
+    sensor_id: str = Field(..., description="Unique hardware or enterprise serial UUID")
+    sensor_type: str = Field("chromebook", description="Sensor form factor: chromebook or linux_edge")
+    os: str = Field("ChromeOS", description="Operating system")
+    timestamp: int = Field(..., description="Epoch timestamp of report")
+    campus_id: Optional[str] = Field("CAMPUS-CHROMEBOOK-FLEET", description="Associated campus ID")
+    device_info: Optional[ChromebookDeviceInfo] = Field(default_factory=ChromebookDeviceInfo)
+    location: Optional[LocationSpec] = Field(default_factory=LocationSpec)
+    wifi: Optional[ChromebookWifiTelemetry] = Field(default_factory=ChromebookWifiTelemetry)
+    hardware: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    probes: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class SensorRegisterRequest(BaseModel):
     sensor_id: str = Field(..., description="Unique hardware UUID of the sensor")
@@ -167,6 +202,13 @@ class CustomProbeSpec(BaseModel):
     target_sensors: List[str] = Field(default_factory=lambda: ["all"], description="Target sensor IDs or 'all'")
     enabled: bool = True
 
+class SensorIngestResponse(BaseModel):
+    status: str = "received"
+    sensor_id: str
+    timestamp: int
+    probing_state: str = "GREEN"
+    custom_probes: List[CustomProbeSpec] = Field(default_factory=list, description="WYSIWYG custom synthetic probes configured in CMP")
+
 # --- Unified Visual Probe Scheduler Schemas ---
 
 class UnifiedScheduleSpec(BaseModel):
@@ -221,6 +263,43 @@ class EvidenceBundleInfo(BaseModel):
     reason: str
     filename: str
     size_bytes: int
+
+class ChromebookFleetItemResponse(BaseModel):
+    sensor_id: str
+    serial_number: Optional[str] = "UNTAGGED"
+    asset_id: Optional[str] = "UNTAGGED"
+    annotated_location: Optional[str] = "Mobile Fleet"
+    annotated_user: Optional[str] = None
+    hostname: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
+    is_online: bool = True
+    last_seen: int = 0
+    campus_id: Optional[str] = "CAMPUS-CHROMEBOOK-FLEET"
+    wifi_ssid: Optional[str] = None
+    wifi_bssid: Optional[str] = None
+    wifi_rssi_dbm: Optional[int] = None
+    wifi_signal_pct: Optional[int] = None
+    wifi_channel: Optional[int] = None
+    wifi_band: Optional[str] = None
+    battery_level_pct: Optional[int] = None
+    battery_charging: Optional[bool] = None
+    cpu_usage_pct: Optional[float] = None
+    memory_usage_pct: Optional[float] = None
+    webrtc_mos: Optional[float] = None
+    webrtc_mos_grade: Optional[str] = None
+    app_sla_pct: Optional[float] = None
+    roamed_recently: bool = False
+    location: Optional[LocationSpec] = None
+
+class RoamingEventResponse(BaseModel):
+    sensor_id: str
+    serial_number: Optional[str] = None
+    old_bssid: Optional[str] = None
+    new_bssid: Optional[str] = None
+    ssid: Optional[str] = None
+    timestamp: int
+    campus_id: Optional[str] = None
 
 # --- Management / Administrative API Schemas ---
 

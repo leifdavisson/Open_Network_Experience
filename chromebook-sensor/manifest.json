@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "Open Network Experience (ONE) - Chromebook Sensor",
+  "version": "1.0.0",
+  "description": "ChromeOS Fleet Synthetic Diagnostic & Wi-Fi Experience Sensor for K-12 Districts and Enterprises.",
+  "author": "Open Network Experience (ONE) Contributors",
+  "homepage_url": "https://github.com/leifdavisson/Open_Network_Experience",
+  "permissions": [
+    "storage",
+    "alarms",
+    "offscreen",
+    "enterprise.deviceAttributes",
+    "enterprise.networkingAttributes",
+    "system.cpu",
+    "system.memory",
+    "system.network",
+    "system.storage",
+    "system.display",
+    "unlimitedStorage"
+  ],
+  "optional_permissions": [
+    "networkingPrivate"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service_worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "ONE Chromebook Sensor Diagnostics",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "storage": {
+    "managed_schema": "schema.json"
+  },
+  "minimum_chrome_version": "116"
+}

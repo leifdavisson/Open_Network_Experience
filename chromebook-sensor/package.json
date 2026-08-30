@@ -1,0 +1,21 @@
+{
+  "name": "one-chromebook-sensor",
+  "version": "1.0.0",
+  "description": "ChromeOS Fleet Synthetic Diagnostic & Wi-Fi Experience Sensor for Open Network Experience (ONE)",
+  "type": "module",
+  "main": "src/background/service_worker.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "chromeos",
+    "chromebook",
+    "wifi-monitoring",
+    "synthetic-monitoring",
+    "webrtc",
+    "uxi-alternative",
+    "k12-edtech"
+  ],
+  "author": "Open Network Experience (ONE) Contributors",
+  "license": "AGPL-3.0-only"
+}

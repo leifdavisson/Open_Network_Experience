@@ -33,10 +33,86 @@ DEFAULT_CONFIG = {
 
 GLOBAL_DISCOVERY_URL = "https://discovery.openux.org/api/v1"
 
+def parse_option43_tlv_or_string(raw_val: str) -> Optional[dict]:
+    """
+    Parses Option 43 / Option 224 raw string or hex TLV payload.
+    Supports:
+      - Plain text ASCII URLs (e.g. 'http://10.98.2.125:8000/api/v1')
+      - Colon-separated or continuous hex streams
+      - RFC 2132 Sub-Option TLVs:
+          Sub-option 1 (0x01): CMP Server URL (String)
+          Sub-option 2 (0x02): Campus / Site Name (String)
+          Sub-option 3 (0x03): Building Name (String)
+          Sub-option 4 (0x04): Room / Drop ID (String)
+          Sub-option 5 (0x05): Enrollment Token (String)
+    """
+    clean_val = raw_val.replace('"', '').strip()
+    if not clean_val:
+        return None
+
+    # Case 1: Direct ASCII URL
+    if clean_val.startswith("http://") or clean_val.startswith("https://"):
+        url = clean_val if "/api/v1" in clean_val else f"{clean_val.rstrip('/')}/api/v1"
+        return {"cmp_url": url}
+
+    # Case 2: Hex string decoding
+    hex_str = clean_val.replace(":", "").replace(" ", "").replace("0x", "")
+    try:
+        raw_bytes = bytes.fromhex(hex_str)
+    except ValueError:
+        raw_bytes = None
+
+    if raw_bytes:
+        # Check if entire byte stream is an ASCII URL
+        try:
+            ascii_text = raw_bytes.decode("utf-8", errors="strict").strip()
+            if ascii_text.startswith("http://") or ascii_text.startswith("https://"):
+                url = ascii_text if "/api/v1" in ascii_text else f"{ascii_text.rstrip('/')}/api/v1"
+                return {"cmp_url": url}
+        except Exception:
+            pass
+
+        # Parse Sub-Option TLV bytes (Type, Length, Value)
+        parsed = {}
+        idx = 0
+        while idx + 2 <= len(raw_bytes):
+            opt_type = raw_bytes[idx]
+            opt_len = raw_bytes[idx + 1]
+            val_start = idx + 2
+            val_end = val_start + opt_len
+            if val_end > len(raw_bytes):
+                break
+            val_bytes = raw_bytes[val_start:val_end]
+            try:
+                decoded_str = val_bytes.decode("utf-8", errors="ignore").strip()
+                if opt_type == 1:
+                    parsed["cmp_url"] = decoded_str if "/api/v1" in decoded_str else f"{decoded_str.rstrip('/')}/api/v1"
+                elif opt_type == 2:
+                    parsed["campus"] = decoded_str
+                elif opt_type == 3:
+                    parsed["building"] = decoded_str
+                elif opt_type == 4:
+                    parsed["room"] = decoded_str
+                elif opt_type == 5:
+                    parsed["token"] = decoded_str
+            except Exception:
+                pass
+            idx = val_end
+
+        if parsed.get("cmp_url"):
+            return parsed
+
+    return None
+
 def discover_cmp_via_dhcp_option43():
-    """Attempts to discover CMP server URL from DHCP Option 43 (Vendor Specific Information)."""
-    # 1. Inspect systemd-networkd lease files
-    lease_dirs = ["/run/systemd/netif/leases", "/var/lib/dhcp", "/var/lib/NetworkManager"]
+    """Attempts to discover CMP server URL from DHCP Option 43 (Vendor Specific Information) or Option 224."""
+    lease_dirs = [
+        "/run/systemd/netif/leases",
+        "/var/lib/dhcp",
+        "/var/lib/NetworkManager",
+        "/var/lib/dhclient",
+        "/var/run/dhcpcd"
+    ]
     for l_dir in lease_dirs:
         if os.path.exists(l_dir):
             for root, _, files in os.walk(l_dir):
@@ -44,12 +120,12 @@ def discover_cmp_via_dhcp_option43():
                     try:
                         with open(os.path.join(root, f_name), "r", errors="ignore") as f:
                             content = f.read()
-                            # Check for OPTION_43 or vendor_encapsulated_options
                             for line in content.split("\n"):
-                                if "OPTION_43=" in line or "vendor-encapsulated-options" in line or "OPTION_224=" in line:
-                                    val = line.split("=", 1)[-1].replace('"', '').strip()
-                                    if val.startswith("http://") or val.startswith("https://"):
-                                        return val if "/api/v1" in val else f"{val}/api/v1"
+                                if any(k in line for k in ("OPTION_43=", "vendor-encapsulated-options", "OPTION_224=", "OPTION_225=", "new_vendor_encapsulated_options", "new_site_option_224")):
+                                    val = line.split("=", 1)[-1].strip()
+                                    res = parse_option43_tlv_or_string(val)
+                                    if res and res.get("cmp_url"):
+                                        return res.get("cmp_url")
                     except Exception:
                         pass
     return None
@@ -68,15 +144,23 @@ def discover_domain():
     return None
 
 def resolve_cmp_via_dns():
-    """Attempts L2/L3 DNS discovery by resolving openux-cmp.<search-domain>."""
+    """Attempts L2/L3 DNS discovery by resolving openux-cmp.<search-domain>, one-cmp.<domain>, or local mDNS."""
     import socket
     domain = discover_domain()
+    candidates = []
     if domain:
-        hostname = f"openux-cmp.{domain}"
+        candidates.extend([
+            f"openux-cmp.{domain}",
+            f"one-cmp.{domain}",
+            f"cmp.{domain}"
+        ])
+    candidates.append("one-cmp.local")
+
+    for host in candidates:
         try:
-            socket.gethostbyname(hostname)
-            return f"http://{hostname}:8000/api/v1"
-        except socket.gaierror:
+            socket.gethostbyname(host)
+            return f"http://{host}:8000/api/v1"
+        except (socket.gaierror, Exception):
             pass
     return None
 
@@ -360,6 +444,10 @@ def register_sensor(config, cmp_url):
         "mac_address": mac_addr,
         "timestamp": int(time.time())
     }
+    if "initial_location" in config and isinstance(config["initial_location"], dict):
+        payload["location"] = config["initial_location"]
+    elif "location" in config and isinstance(config["location"], dict):
+        payload["location"] = config["location"]
 
     req = urllib.request.Request(
         url,
@@ -496,6 +584,10 @@ def phone_home(config, cmp_url, probing_state: str = "GREEN"):
         "probing_state": probing_state,
         "containers": get_running_containers()
     }
+    if "initial_location" in config and isinstance(config["initial_location"], dict):
+        payload["location"] = config["initial_location"]
+    elif "location" in config and isinstance(config["location"], dict):
+        payload["location"] = config["location"]
 
     req = urllib.request.Request(
         url,

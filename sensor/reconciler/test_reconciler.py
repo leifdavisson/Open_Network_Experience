@@ -84,6 +84,33 @@ def test_03_dhcp_option43_discovery(tmp_path):
         url = discover_cmp_via_dhcp_option43()
         assert url == "http://cmp.district.k12.ca.us:8000/api/v1"
 
+def test_03b_dhcp_option43_hex_tlv_discovery(tmp_path):
+    """Verifies parsing of RFC 2132 Sub-Option TLV hex streams in Option 43."""
+    # Sub-option 1 (0x01), length 30 (0x1e) -> http://10.98.2.125:8000/api/v1
+    # Sub-option 2 (0x02), length 9 (0x09) -> West High
+    hex_payload = "01:1e:68:74:74:70:3a:2f:2f:31:30:2e:39:38:2e:32:2e:31:32:35:3a:38:30:30:30:2f:61:70:69:2f:76:31:02:09:57:65:73:74:20:48:69:67:68"
+    lease_content = f'vendor-encapsulated-options="{hex_payload}"\n'
+
+    with patch("os.path.exists", return_value=True), \
+         patch("os.walk", return_value=[("/run/systemd/netif/leases", [], ["eth0.lease"])]), \
+         patch("builtins.open", mock_open(read_data=lease_content)):
+        url = discover_cmp_via_dhcp_option43()
+        assert url == "http://10.98.2.125:8000/api/v1"
+
+    parsed = reconciler.parse_option43_tlv_or_string(hex_payload)
+    assert parsed["cmp_url"] == "http://10.98.2.125:8000/api/v1"
+    assert parsed["campus"] == "West High"
+
+def test_03c_option224_private_option_discovery(tmp_path):
+    """Verifies parsing of site-specific private DHCP Option 224."""
+    lease_content = 'OPTION_224="http://10.200.0.5:8000/api/v1"\n'
+
+    with patch("os.path.exists", return_value=True), \
+         patch("os.walk", return_value=[("/var/lib/dhcp", [], ["dhclient.leases"])]), \
+         patch("builtins.open", mock_open(read_data=lease_content)):
+        url = discover_cmp_via_dhcp_option43()
+        assert url == "http://10.200.0.5:8000/api/v1"
+
 def test_04_dns_domain_resolution():
     """Verifies resolving openux-cmp via DNS domain suffix."""
     with patch("reconciler.discover_domain", return_value="district.k12.ca.us"):

@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-03/schema#",
+  "type": "object",
+  "properties": {
+    "cmp_server_url": {
+      "type": "string",
+      "title": "ONE Central Monitoring Platform (CMP) Server URL",
+      "description": "Base HTTPS URL of the Central Monitoring Platform API (e.g., https://cmp.district.edu:8000)",
+      "default": "http://localhost:8000"
+    },
+    "api_key": {
+      "type": "string",
+      "title": "Sensor Fleet API Key",
+      "description": "Enrollment or Sensor API key for authenticated metric submission to CMP",
+      "default": ""
+    },
+    "campus_id": {
+      "type": "string",
+      "title": "Campus Identifier / Site Tag",
+      "description": "Default campus ID override if not resolved via device location (e.g., CAMPUS-WEST-HIGH)",
+      "default": "CAMPUS-CHROMEBOOK-FLEET"
+    },
+    "probe_interval_seconds": {
+      "type": "integer",
+      "title": "Synthetic Probe Cadence (seconds)",
+      "description": "Frequency in seconds for running synthetic sweeps and Wi-Fi RF telemetry reports",
+      "default": 60,
+      "minimum": 15,
+      "maximum": 3600
+    },
+    "stun_servers": {
+      "type": "array",
+      "title": "WebRTC STUN / Media Testing Servers",
+      "description": "List of STUN URIs used for latency, jitter, packet loss, and MOS scoring",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "stun:stun.l.google.com:19302",
+        "stun:stun1.l.google.com:19302"
+      ]
+    },
+    "synthetic_http_targets": {
+      "type": "array",
+      "title": "Synthetic Diagnostic Target Endpoints",
+      "description": "List of district web applications to monitor via Resource & Navigation Timing APIs",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "title": "Application Name" },
+          "url": { "type": "string", "title": "Target URL" },
+          "category": { "type": "string", "title": "App Category (e.g., LMS, Testing, Identity, SaaS)" },
+          "timeout_ms": { "type": "integer", "title": "Timeout (ms)", "default": 5000 }
+        },
+        "required": ["name", "url"]
+      },
+      "default": [
+        {
+          "name": "Google Classroom & Workspace",
+          "url": "https://classroom.google.com",
+          "category": "Google Workspace",
+          "timeout_ms": 5000
+        },
+        {
+          "name": "CAASPP / Cambium TDS Portal",
+          "url": "https://caaspp.org",
+          "category": "Testing",
+          "timeout_ms": 5000
+        },
+        {
+          "name": "Clever K-12 Identity",
+          "url": "https://clever.com",
+          "category": "Identity",
+          "timeout_ms": 5000
+        },
+        {
+          "name": "Lightspeed Filter Portal",
+          "url": "https://relay.lightspeedsystems.com",
+          "category": "Security / Filter",
+          "timeout_ms": 5000
+        }
+      ]
+    },
+    "enable_webrtc_probing": {
+      "type": "boolean",
+      "title": "Enable WebRTC Quality & MOS Diagnostic",
+      "description": "Periodically evaluate WebRTC media channel latency, jitter, and MOS score via offscreen document",
+      "default": true
+    },
+    "enable_offline_buffer": {
+      "type": "boolean",
+      "title": "Enable Offline IndexedDB Buffer",
+      "description": "Cache telemetry locally when Wi-Fi is roaming or disconnected and replay to CMP upon reconnection",
+      "default": true
+    },
+    "max_offline_records": {
+      "type": "integer",
+      "title": "Max Offline Buffer Records",
+      "description": "Maximum telemetry events buffered in IndexedDB before FIFO eviction",
+      "default": 1000,
+      "minimum": 50,
+      "maximum": 10000
+    }
+  }
+}
