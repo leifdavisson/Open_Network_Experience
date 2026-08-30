@@ -11,6 +11,7 @@ Validates:
 import os
 import sys
 import time
+import json
 import tempfile
 import pytest
 from fastapi.testclient import TestClient
@@ -214,8 +215,41 @@ def test_sensor_script_distribution():
     assert res.status_code == 200
     assert "one-wizard" in res.text
 
+    res = client.get("/sensor/scripts/usb_provisioner.py")
+    assert res.status_code == 200
+    assert "USB AUTO-PROVISIONER" in res.text
+
     res = client.get("/sensor/scripts/cipa_compliance.py")
     assert res.status_code == 200
+
+def test_download_usb_staging_kit():
+    """Validates dynamic generation of in-memory USB Staging Kit zip file."""
+    import zipfile
+    import io
+
+    res = client.get("/api/v1/onboarding/usb-kit.zip?site=West+High&room=Room+204&wifi_ssid=School-Staff&wifi_psk=Secret88")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "application/zip"
+    assert "attachment; filename=one_usb_staging_kit.zip" in res.headers.get("content-disposition", "")
+
+    # Inspect zip contents in memory
+    zip_bytes = io.BytesIO(res.content)
+    with zipfile.ZipFile(zip_bytes, "r") as zf:
+        file_list = zf.namelist()
+        assert "one-bootstrap.json" in file_list
+        assert "setup.sh" in file_list
+        assert "usb_provisioner.py" in file_list
+        assert "wizard.py" in file_list
+        assert "reconciler.py" in file_list
+        assert "README_USB_STAGING.txt" in file_list
+
+        # Validate bootstrap json content
+        bootstrap_raw = zf.read("one-bootstrap.json").decode("utf-8")
+        bootstrap_cfg = json.loads(bootstrap_raw)
+        assert bootstrap_cfg["location"]["site"] == "West High"
+        assert bootstrap_cfg["location"]["room"] == "Room 204"
+        assert bootstrap_cfg["wifi"]["ssid"] == "School-Staff"
+        assert bootstrap_cfg["wifi"]["psk"] == "Secret88"
 
 def test_visual_schedule_crud_and_toggle():
     """Validates Visual Probe Schedule CRUD, timing modes, and toggle endpoints."""

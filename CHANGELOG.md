@@ -4,6 +4,14 @@ All notable changes to the Open Network Experience (OpenUX) platform will be doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] — 2026-08-30
+
+### Added
+- **USB Flash Drive Auto-Staging Engine (`usb_provisioner.py` & `setup.sh`)**: Rapid assembly-line fleet imprinting from any standard FAT32/exFAT USB flash drive containing `one-bootstrap.json`. Supports offline synthetic probe deployment, Wi-Fi configuration, sequential Room Pool assignment, and physical CSV audit receipts (`provisioned_sensors.csv`).
+- **1-Click "Download USB Staging Kit (.zip)"** (`/api/v1/onboarding/usb-kit.zip`): Generates in-memory ready-to-copy USB staging bundles directly from the CMP Web Console with pre-filled campus, room, and Wi-Fi presets.
+- **Enterprise DHCP Option 43 & DNS-SD Zero-Touch Discovery Guide**: First-principles architectural guide ([`docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md`](file:///data/Open_Network_Experience/docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md)) with trade-offs matrix, interactive decision tree, cautionary VoIP/AP collision rules, and configuration templates across Microsoft Windows Server DHCP, ISC Kea, dnsmasq, Cisco IOS-XE, Fortinet FortiOS, MikroTik, and Infoblox.
+- **USB Auto-Provisioner Test Suite** (`sensor/onboarding/test_usb_provisioner.py`): 7 unit tests verifying mount discovery, bootstrap parsing, room pool popping, Wi-Fi configuration, offline probe staging, and audit receipt logging.
+
 ## [0.4.0] — 2026-08-30
 
 ### Added
