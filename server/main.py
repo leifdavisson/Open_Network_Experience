@@ -280,6 +280,22 @@ async def lifespan(app: FastAPI):
                 "guardrails_enabled": True,
                 "is_active": True,
                 "created_at": int(time.time())
+            },
+            {
+                "id": "sched_google_workspace",
+                "name": "Google Workspace & ChromeOS Health Sweep",
+                "probe_id": "google_workspace",
+                "mode": "continuous_interval",
+                "days_of_week": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "interval_value": 15,
+                "interval_unit": "minutes",
+                "cron_expr": None,
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
             }
         ]
         for ds in default_schedules:
@@ -2406,9 +2422,10 @@ async def serve_admin_ui():
                         <option value="m365_teams">Microsoft Teams Web & Signaling</option>
                         <option value="m365_outlook">Microsoft Outlook Web Access (OWA)</option>
                         <option value="m365_sharepoint">SharePoint Online Portal</option>
-                        <option value="m365_graph">Microsoft Graph & Entra ID API</option>
                         <option value="wu_catalog">Windows Update Catalog (WaaS)</option>
                         <option value="do_p2p_mesh">Delivery Optimization Peer Mesh (DO)</option>
+                        <option value="gmeet_media">Google Meet WebRTC Media (UDP STUN)</option>
+                        <option value="chrome_dm">Chrome Enterprise Device Management (DM)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -2488,6 +2505,7 @@ async def serve_admin_ui():
                             <option value="rrm_darrp">📡 Wi-Fi RF Flapping & DARRP Monitor (rrm_darrp_monitor.py)</option>
                             <option value="segmentation">🔒 East-West Lateral VLAN Isolation Sweep (segmentation_prober.py)</option>
                             <option value="windows_update_do">🔄 Windows Update, BITS & Delivery Optimization (windows_update_do_probe.py)</option>
+                            <option value="google_workspace">🌐 Google Workspace & ChromeOS (google_workspace_chromeos_probe.py)</option>
                             <option value="iperf3">📊 Off-Peak iperf3 Bandwidth Throughput (iperf3_runner.py)</option>
                         </optgroup>
                         <optgroup label="WYSIWYG EasyBuilder Custom Probes" id="sch-custom-probes-optgroup">
@@ -3862,9 +3880,10 @@ async def serve_admin_ui():
                 'm365_teams': { name: 'Microsoft Teams Web & Signaling', type: 'http', target: 'https://teams.microsoft.com', cadence: 5, timeout: 3000 },
                 'm365_outlook': { name: 'Microsoft Outlook Web Access (OWA)', type: 'http', target: 'https://outlook.office.com', cadence: 5, timeout: 3000 },
                 'm365_sharepoint': { name: 'SharePoint Online Portal', type: 'http', target: 'https://sharepoint.com', cadence: 5, timeout: 3000 },
-                'm365_graph': { name: 'Microsoft Graph & Entra ID API', type: 'http', target: 'https://graph.microsoft.com/v1.0/$metadata', cadence: 5, timeout: 3000 },
                 'wu_catalog': { name: 'Windows Update Catalog Service', type: 'http', target: 'https://windowsupdate.microsoft.com', cadence: 60, timeout: 3000 },
-                'do_p2p_mesh': { name: 'Delivery Optimization Peer Mesh (DO)', type: 'tcp', target: 'do.dsp.mp.microsoft.com', cadence: 15, timeout: 3000 }
+                'do_p2p_mesh': { name: 'Delivery Optimization Peer Mesh (DO)', type: 'tcp', target: 'do.dsp.mp.microsoft.com', cadence: 15, timeout: 3000 },
+                'gmeet_media': { name: 'Google Meet WebRTC Media (STUN)', type: 'tcp', target: 'stun.l.google.com', cadence: 5, timeout: 3000 },
+                'chrome_dm': { name: 'Chrome Enterprise Device Management (DM)', type: 'http', target: 'https://device-management.googleapis.com', cadence: 15, timeout: 3000 }
             };
 
             const t = templates[presetKey];
