@@ -19,6 +19,11 @@ import datetime
 import subprocess
 from typing import Dict, Any, Optional, List, Tuple
 
+try:
+    from safety_guardrails import NetworkSafetyGuardrails
+except ImportError:
+    from sensor.safety_guardrails import NetworkSafetyGuardrails
+
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/iperf3.prom"
 
 def is_within_allowed_hours(allowed_hours: Optional[List[str]]) -> bool:
@@ -188,7 +193,39 @@ def main():
         "# TYPE openux_iperf3_test_status gauge"
     ]
 
-    # Check time window
+    # 1. Guardrail 1: Instructional Hours Lockout
+    can_proceed, reason = NetworkSafetyGuardrails.check_instructional_lockout(allow_override=args.force)
+    if not can_proceed:
+        print(f"🛡️ SAFETY GUARDRAIL: {reason}")
+        for iface in args.interfaces:
+            prom_lines.append(f'openux_iperf3_test_status{{interface="{iface}",server="{args.server}"}} -1')
+        write_metrics(prom_lines, args.output)
+        return
+
+    # 2. Guardrail: Thermal Safety
+    is_safe, temp_c, thermal_reason = NetworkSafetyGuardrails.check_thermal_safety()
+    if not is_safe and not args.force:
+        print(f"🛡️ SAFETY GUARDRAIL: {thermal_reason}. Skipping high-load throughput test.")
+        for iface in args.interfaces:
+            prom_lines.append(f'openux_iperf3_test_status{{interface="{iface}",server="{args.server}"}} -2')
+        write_metrics(prom_lines, args.output)
+        return
+
+    # 3. Guardrail 2: Pre-Flight Congestion Check
+    is_clean, preflight_msg, avg_rtt, loss_pct = NetworkSafetyGuardrails.check_preflight_congestion()
+    if not is_clean and not args.force:
+        print(f"🛡️ SAFETY GUARDRAIL: {preflight_msg}. Aborting to protect active classroom traffic.")
+        for iface in args.interfaces:
+            prom_lines.append(f'openux_iperf3_test_status{{interface="{iface}",server="{args.server}"}} -3')
+        write_metrics(prom_lines, args.output)
+        return
+
+    # 4. Guardrail 4: Bandwidth Speed Ceilings & Duration Clamping
+    safe_cap, safe_duration = NetworkSafetyGuardrails.clamp_parameters(args.bandwidth_cap, args.duration)
+    if safe_cap != args.bandwidth_cap or safe_duration != args.duration:
+        print(f"🛡️ SAFETY GUARDRAIL: Parameter clamped to ceiling: {safe_cap} Mbps / {safe_duration}s duration.")
+
+    # Check custom time window if provided
     if not args.force and not is_within_allowed_hours(args.allowed_hours):
         print("Current time is outside allowed maintenance window. Skipping test.")
         for iface in args.interfaces:
@@ -196,7 +233,7 @@ def main():
         write_metrics(prom_lines, args.output)
         return
 
-    print(f"Starting Scheduled Bandwidth Test against {args.server}:{args.port} (Cap: {args.bandwidth_cap} Mbps)...")
+    print(f"Starting Scheduled Bandwidth Test against {args.server}:{args.port} (Cap: {safe_cap} Mbps, Duration: {safe_duration}s)...")
 
     for i, iface in enumerate(args.interfaces):
         if i > 0:
@@ -215,8 +252,8 @@ def main():
         res = run_iperf3_test(
             server=args.server,
             port=args.port,
-            duration=args.duration,
-            bandwidth_cap_mbps=args.bandwidth_cap,
+            duration=safe_duration,
+            bandwidth_cap_mbps=safe_cap,
             bind_ip=bind_ip
         )
 
