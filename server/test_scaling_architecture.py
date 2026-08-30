@@ -10,6 +10,7 @@ Validates:
 
 import os
 import sys
+import time
 import tempfile
 import pytest
 from fastapi.testclient import TestClient
@@ -22,8 +23,9 @@ import db
 import main
 from reconciler import AdaptiveResolutionEngine
 
+ADMIN_KEY = "admin-noc-key-change-me"
 client = TestClient(main.app)
-ADMIN_HEADERS = {"X-API-Key": "admin-noc-key-change-me"}
+ADMIN_HEADERS = {"X-API-Key": ADMIN_KEY}
 
 @pytest.fixture(autouse=True)
 def setup_test_db(tmp_path, monkeypatch):
@@ -33,6 +35,7 @@ def setup_test_db(tmp_path, monkeypatch):
     db.init_db()
     main.SENSORS_DB.clear()
     main.PROBES_DB.clear()
+    main.SCHEDULES_DB.clear()
 
 def test_campus_hierarchy_crud():
     """Validates adding, listing, and rolling up campus statistics."""
@@ -190,3 +193,89 @@ def test_sensor_script_distribution():
 
     res = client.get("/sensor/scripts/cipa_compliance.py")
     assert res.status_code == 200
+
+def test_visual_schedule_crud_and_toggle():
+    """Validates Visual Probe Schedule CRUD, timing modes, and toggle endpoints."""
+    sch_payload = {
+        "id": "sched_test_unit",
+        "name": "State Testing Pre-Flight Sweep",
+        "probe_id": "caaspp_readiness",
+        "mode": "daily_once",
+        "days_of_week": ["mon", "tue", "wed", "thu", "fri"],
+        "start_time": "07:15",
+        "end_time": "16:00",
+        "interval_value": 15,
+        "interval_unit": "minutes",
+        "cron_expr": "15 7 * * 1-5",
+        "target_scope": "all",
+        "guardrails_enabled": True,
+        "is_active": True
+    }
+
+    # 1. Create Schedule
+    res = client.post("/api/v1/schedules", json=sch_payload, headers={"X-API-Key": ADMIN_KEY})
+    assert res.status_code == 200
+
+    # 2. List Schedules
+    res = client.get("/api/v1/schedules", headers={"X-API-Key": ADMIN_KEY})
+    assert res.status_code == 200
+    schedules = res.json()
+    assert any(s["id"] == "sched_test_unit" for s in schedules)
+
+    # 3. Toggle Active State
+    res = client.put("/api/v1/schedules/sched_test_unit/toggle", headers={"X-API-Key": ADMIN_KEY})
+    assert res.status_code == 200
+    assert res.json()["is_active"] is False
+
+    # 4. Re-enable
+    res = client.put("/api/v1/schedules/sched_test_unit/toggle", headers={"X-API-Key": ADMIN_KEY})
+    assert res.status_code == 200
+    assert res.json()["is_active"] is True
+
+    # 5. Delete Schedule
+    res = client.delete("/api/v1/schedules/sched_test_unit", headers={"X-API-Key": ADMIN_KEY})
+    assert res.status_code == 200
+
+def test_edge_reconciliation_unified_schedules():
+    """Validates that edge sensor reconciliation receives active unified visual schedules."""
+    # Create an active schedule
+    sch_payload = {
+        "id": "sched_reconcile_check",
+        "name": "CAASPP Testing Check",
+        "probe_id": "caaspp_readiness",
+        "mode": "daily_once",
+        "days_of_week": ["mon", "tue", "wed", "thu", "fri"],
+        "start_time": "07:15",
+        "target_scope": "all",
+        "guardrails_enabled": True,
+        "is_active": True
+    }
+    client.post("/api/v1/schedules", json=sch_payload, headers={"X-API-Key": ADMIN_KEY})
+
+    # Register & approve a test sensor
+    reg_payload = {
+        "sensor_id": "sensor-sched-test-01",
+        "os": "linux",
+        "hostname": "sched-sensor",
+        "mac_address": "dc:a6:32:ee:ff:01",
+        "timestamp": int(time.time()),
+        "location": {"site": "Bakersfield High", "room": "Room 101"}
+    }
+    reg_res = client.post("/api/v1/sensors/register", json=reg_payload)
+    client.post("/api/v1/sensors/sensor-sched-test-01/approve", headers={"X-API-Key": ADMIN_KEY})
+    re_reg = client.post("/api/v1/sensors/register", json=reg_payload)
+    api_key = re_reg.json()["api_key"]
+
+    # Check-in and reconcile
+    report_payload = {
+        "sensor_id": "sensor-sched-test-01",
+        "os": "linux",
+        "timestamp": int(time.time()),
+        "containers": {}
+    }
+    rec_res = client.post("/api/v1/sensors/reconcile", json=report_payload, headers={"X-API-Key": api_key})
+    assert rec_res.status_code == 200
+    target_config = rec_res.json()
+    assert "unified_schedules" in target_config
+    assert len(target_config["unified_schedules"]) > 0
+    assert any(s["probe_id"] == "caaspp_readiness" for s in target_config["unified_schedules"])

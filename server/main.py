@@ -52,7 +52,8 @@ from schemas import (
     SubnetAutoEnrollRule,
     BatchApprovalRequest,
     OnDemandBurstTrigger,
-    AdaptiveProbingConfig
+    AdaptiveProbingConfig,
+    UnifiedScheduleSpec
 )
 import db
 
@@ -66,6 +67,7 @@ async def verify_admin_key(x_api_key: str = Header(..., alias="X-API-Key")):
 # In-Memory Active Caches (Synchronized with SQLite)
 SENSORS_DB: Dict[str, dict] = {}
 PROBES_DB: Dict[str, dict] = {}
+SCHEDULES_DB: Dict[str, dict] = {}
 EVIDENCE_DB: Dict[str, List[dict]] = {}
 
 DEFAULT_TARGET_CONTAINERS = {
@@ -159,6 +161,98 @@ async def lifespan(app: FastAPI):
 
     loaded_probes = db.load_all_probes()
     PROBES_DB.update(loaded_probes)
+
+    loaded_schedules = db.load_all_schedules()
+    for sch in loaded_schedules:
+        SCHEDULES_DB[sch["id"]] = sch
+
+    # Seed initial default schedules if database is fresh
+    if not SCHEDULES_DB:
+        default_schedules = [
+            {
+                "id": "sched_caaspp_morning",
+                "name": "Morning State Testing (CAASPP) Pre-Flight",
+                "probe_id": "caaspp_readiness",
+                "mode": "daily_once",
+                "days_of_week": ["mon", "tue", "wed", "thu", "fri"],
+                "start_time": "07:15",
+                "end_time": "16:00",
+                "interval_value": 15,
+                "interval_unit": "minutes",
+                "cron_expr": "15 7 * * 1-5",
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
+            },
+            {
+                "id": "sched_classroom_voip",
+                "name": "Classroom VoIP & Zoom Stream Monitor",
+                "probe_id": "voip_jitter",
+                "mode": "window_repeat",
+                "days_of_week": ["mon", "tue", "wed", "thu", "fri"],
+                "start_time": "08:00",
+                "end_time": "16:00",
+                "interval_value": 1,
+                "interval_unit": "minutes",
+                "cron_expr": "*/1 8-16 * * 1-5",
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
+            },
+            {
+                "id": "sched_continuous_gw_ping",
+                "name": "Continuous Dual-NIC Gateway Latency Ping",
+                "probe_id": "dual_nic_ping",
+                "mode": "continuous_interval",
+                "days_of_week": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "interval_value": 15,
+                "interval_unit": "seconds",
+                "cron_expr": None,
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
+            },
+            {
+                "id": "sched_weekend_speedtest",
+                "name": "Off-Peak iperf3 Bandwidth Capacity Test",
+                "probe_id": "iperf3",
+                "mode": "daily_once",
+                "days_of_week": ["sat"],
+                "start_time": "02:00",
+                "end_time": "04:00",
+                "interval_value": 60,
+                "interval_unit": "minutes",
+                "cron_expr": "0 2 * * 6",
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
+            },
+            {
+                "id": "sched_cipa_audit",
+                "name": "CIPA Safety & Content Filter Audit",
+                "probe_id": "cipa_compliance",
+                "mode": "continuous_interval",
+                "days_of_week": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "interval_value": 4,
+                "interval_unit": "hours",
+                "cron_expr": None,
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
+            }
+        ]
+        for ds in default_schedules:
+            SCHEDULES_DB[ds["id"]] = ds
+            db.save_schedule(ds)
 
     loaded_evidence = db.load_all_evidence()
     EVIDENCE_DB.update(loaded_evidence)
@@ -283,6 +377,12 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
         if p.get("enabled", True) and ("all" in p.get("target_sensors", ["all"]) or report.sensor_id in p.get("target_sensors", []))
     ]
     response.custom_probes = [CustomProbeSpec(**p) for p in active_probes]
+
+    active_schedules = [
+        s for s in SCHEDULES_DB.values()
+        if s.get("is_active", True) and (s.get("target_scope") == "all" or report.sensor_id in s.get("target_scope", "") or (sensor.get("campus_id") and sensor.get("campus_id") in s.get("target_scope", "")))
+    ]
+    response.unified_schedules = [UnifiedScheduleSpec(**s) for s in active_schedules]
 
     db.save_sensor(sensor)
     return response
@@ -911,6 +1011,56 @@ async def delete_custom_probe(probe_id: str):
         return {"status": "success", "message": f"Probe '{probe_id}' deleted."}
     raise HTTPException(status_code=404, detail="Probe not found")
 
+# --- Unified Visual Probe Schedules Endpoints ---
+
+@app.get(
+    "/api/v1/schedules",
+    response_model=List[UnifiedScheduleSpec],
+    summary="List Visual Probe Schedules",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def list_schedules():
+    """Lists all configured probe schedules with calendar days, timing windows, and guardrails."""
+    return list(SCHEDULES_DB.values())
+
+@app.post(
+    "/api/v1/schedules",
+    summary="Create/Update Visual Probe Schedule",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def save_schedule_endpoint(schedule: UnifiedScheduleSpec):
+    """Saves or updates a visual calendar or interval probe schedule."""
+    sch_dict = schedule.model_dump()
+    SCHEDULES_DB[schedule.id] = sch_dict
+    db.save_schedule(sch_dict)
+    return {"status": "success", "message": f"Schedule '{schedule.name}' saved.", "schedule": sch_dict}
+
+@app.delete(
+    "/api/v1/schedules/{schedule_id}",
+    summary="Delete Probe Schedule",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def delete_schedule_endpoint(schedule_id: str):
+    """Deletes a probe schedule."""
+    if schedule_id in SCHEDULES_DB:
+        del SCHEDULES_DB[schedule_id]
+        db.delete_schedule(schedule_id)
+        return {"status": "success", "message": f"Schedule '{schedule_id}' deleted."}
+    raise HTTPException(status_code=404, detail="Schedule not found")
+
+@app.put(
+    "/api/v1/schedules/{schedule_id}/toggle",
+    summary="Toggle Probe Schedule Active Status",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def toggle_schedule_endpoint(schedule_id: str):
+    """Enables or disables a probe schedule."""
+    if schedule_id in SCHEDULES_DB:
+        new_state = db.toggle_schedule(schedule_id)
+        SCHEDULES_DB[schedule_id]["is_active"] = new_state
+        return {"status": "success", "is_active": new_state, "message": f"Schedule '{schedule_id}' is now {'active' if new_state else 'paused'}."}
+    raise HTTPException(status_code=404, detail="Schedule not found")
+
 # --- System Persistence, Backup & Disaster Recovery Endpoints ---
 
 @app.get(
@@ -1317,6 +1467,68 @@ async def serve_admin_ui():
         .dot-amber { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
         .dot-green { background: #10b981; box-shadow: 0 0 10px #10b981; }
         @keyframes blinkRed { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+        /* VISUAL SCHEDULE BUILDER STYLES */
+        .day-pill-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .day-pill {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+        }
+        .day-pill:hover { border-color: var(--accent); color: var(--text-main); }
+        .day-pill.active {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: var(--accent);
+        }
+        .preset-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover { background: var(--bg-hover); }
+        .timing-mode-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background: var(--bg-input);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .timing-mode-card:hover { border-color: var(--accent); }
+        .timing-mode-card.active-mode {
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.08);
+        }
+        .summary-preview-box {
+            background: var(--bg-input);
+            border-left: 4px solid var(--accent);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-main);
+            margin-top: 12px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -1353,12 +1565,12 @@ async def serve_admin_ui():
             <a class="nav-item" id="nav-manage-locations" onclick="switchView('manage-locations')" title="Campus & Room Hierarchy">
                 <span class="nav-icon">📍</span> <span class="nav-text">Campus Hierarchy</span>
             </a>
-            <a class="nav-item" id="nav-manage-schedules" onclick="switchView('manage-schedules')" title="Test Schedules & Time Windows">
-                <span class="nav-icon">⏱️</span> <span class="nav-text">Test Schedules</span>
-            </a>
 
             <!-- 3. CONFIGURE BUCKET -->
             <div class="bucket-label">3. Configure</div>
+            <a class="nav-item" id="nav-configure-schedules" onclick="switchView('configure-schedules')" title="Visual Probe & Test Scheduler">
+                <span class="nav-icon">📅</span> <span class="nav-text">Probe Scheduler</span>
+            </a>
             <a class="nav-item" id="nav-configure-probes" onclick="switchView('configure-probes')" title="WYSIWYG Custom Probes">
                 <span class="nav-icon">🛠️</span> <span class="nav-text">EasyBuilder Tests</span>
             </a>
@@ -1903,46 +2115,33 @@ async def serve_admin_ui():
                 </div>
             </div>
 
-            <!-- VIEW 7: MANAGE - TEST SCHEDULES -->
-            <div class="view-section" id="view-manage-schedules">
+            <!-- VIEW 7: CONFIGURE - TEST & PROBE SCHEDULER -->
+            <div class="view-section" id="view-configure-schedules">
                 <div class="section-card">
                     <div class="section-header">
-                        <div class="section-title">⏱️ Automated Test Schedules & Maintenance Windows</div>
+                        <div>
+                            <div class="section-title">📅 Unified Probe & Test Scheduler</div>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                Configure visual calendar days, instructional time windows, cadence intervals, and network safety guardrails for all edge diagnostic probes.
+                            </p>
+                        </div>
+                        <button class="btn" onclick="openScheduleModal()">+ Create New Schedule</button>
                     </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>Test Module</th>
-                                <th>Cadence</th>
-                                <th>Execution Window</th>
+                                <th>Schedule Name</th>
+                                <th>Target Probe</th>
+                                <th>Active Days & Timing</th>
+                                <th>Cadence / Recurrence</th>
+                                <th>Scope</th>
+                                <th>Guardrails</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>CAASPP State Testing Check</strong></td>
-                                <td>Every 5 Minutes</td>
-                                <td>24 / 7 Continuous</td>
-                                <td><span class="status-pill status-online">🟢 Active</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>CIPA Compliance Prober</strong></td>
-                                <td>Every 5 Minutes</td>
-                                <td>24 / 7 Continuous</td>
-                                <td><span class="status-pill status-online">🟢 Active</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Off-Peak iperf3 Throughput</strong></td>
-                                <td>Every 60 Minutes</td>
-                                <td><code>20:00 - 06:00</code> (Off-Peak Only)</td>
-                                <td><span class="status-pill status-online">🟢 Active</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>VoIP RTP Jitter Monitor</strong></td>
-                                <td>Continuous (20ms bursts)</td>
-                                <td>24 / 7 Continuous</td>
-                                <td><span class="status-pill status-online">🟢 Active</span></td>
-                            </tr>
+                        <tbody id="schedules-table-body">
+                            <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading probe schedules...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2223,6 +2422,156 @@ async def serve_admin_ui():
         </div>
     </div>
 
+    <!-- Unified Visual Probe Scheduler Modal -->
+    <div class="modal-overlay" id="schedule-modal" onclick="handleBackdropClick(event, 'schedule-modal')">
+        <div class="modal" style="max-width: 680px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">📅 Configure Probe Schedule & Timing</h2>
+                <button type="button" class="close-btn" onclick="closeScheduleModal()">✕</button>
+            </div>
+            <form id="schedule-form" onsubmit="handleSaveSchedule(event)">
+                <input type="hidden" id="sch-id">
+
+                <div class="form-group">
+                    <label>Schedule Name</label>
+                    <input type="text" id="sch-name" placeholder="e.g. Morning State Testing (CAASPP) Pre-Flight" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Target Diagnostic Probe</label>
+                    <select id="sch-probe" required onchange="handleProbeSelectionChange(this.value)">
+                        <optgroup label="Core Built-In Diagnostic Probes">
+                            <option value="caaspp_readiness">🎓 CAASPP / Cambium Testing Readiness (caaspp_readiness.py)</option>
+                            <option value="voip_jitter">🎥 VoIP & Zoom RTP Stream Monitor (voip_jitter_probe.py)</option>
+                            <option value="dual_nic_ping">🌐 Dual-NIC Gateway Latency Ping (eth0 vs wlan0)</option>
+                            <option value="dns_multi_resolver">🔍 Multi-Resolver DNS Health Probe (dns_multi_resolver.py)</option>
+                            <option value="cipa_compliance">🛡️ CIPA Safety & Content Filter Audit (cipa_compliance.py)</option>
+                            <option value="wifi_dhcp">⏱️ Wi-Fi 802.1X Auth & DHCP DORA Timer (wifi_dhcp_exporter.py)</option>
+                            <option value="rrm_darrp">📡 Wi-Fi RF Flapping & DARRP Monitor (rrm_darrp_monitor.py)</option>
+                            <option value="segmentation">🔒 East-West Lateral VLAN Isolation Sweep (segmentation_prober.py)</option>
+                            <option value="iperf3">📊 Off-Peak iperf3 Bandwidth Throughput (iperf3_runner.py)</option>
+                        </optgroup>
+                        <optgroup label="WYSIWYG EasyBuilder Custom Probes" id="sch-custom-probes-optgroup">
+                            <!-- Populated dynamically -->
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="margin-bottom:0;">Active Days of the Week</label>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="preset-btn" onclick="applyDayPreset('weekdays')">🎒 Weekdays (M-F)</button>
+                            <button type="button" class="preset-btn" onclick="applyDayPreset('everyday')">📆 Every Day</button>
+                            <button type="button" class="preset-btn" onclick="applyDayPreset('weekends')">🏖️ Weekends</button>
+                        </div>
+                    </div>
+                    <div class="day-pill-group" id="sch-day-pills">
+                        <div class="day-pill active" data-day="mon" onclick="toggleDayPill('mon')">Mon</div>
+                        <div class="day-pill active" data-day="tue" onclick="toggleDayPill('tue')">Tue</div>
+                        <div class="day-pill active" data-day="wed" onclick="toggleDayPill('wed')">Wed</div>
+                        <div class="day-pill active" data-day="thu" onclick="toggleDayPill('thu')">Thu</div>
+                        <div class="day-pill active" data-day="fri" onclick="toggleDayPill('fri')">Fri</div>
+                        <div class="day-pill" data-day="sat" onclick="toggleDayPill('sat')">Sat</div>
+                        <div class="day-pill" data-day="sun" onclick="toggleDayPill('sun')">Sun</div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 14px;">
+                    <label>Execution Timing Mode</label>
+
+                    <!-- Timing Mode 1: Daily Once -->
+                    <div class="timing-mode-card active-mode" id="card-mode-daily" onclick="setTimingMode('daily_once')">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sch-timing-mode" id="mode-daily" value="daily_once" checked onchange="setTimingMode('daily_once')">
+                            <strong>Run Once Daily</strong>
+                            <span style="font-size:11px; color:var(--text-muted);">(e.g. Morning pre-flight before school starts)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-left: 24px;">
+                            <span style="font-size:13px; color:var(--text-muted);">Execute At:</span>
+                            <input type="time" id="sch-daily-time" value="07:15" style="max-width: 140px;" oninput="updateScheduleSummary()">
+                        </div>
+                    </div>
+
+                    <!-- Timing Mode 2: Repeating Window -->
+                    <div class="timing-mode-card" id="card-mode-window" onclick="setTimingMode('window_repeat')">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sch-timing-mode" id="mode-window" value="window_repeat" onchange="setTimingMode('window_repeat')">
+                            <strong>Instructional Repeating Time Window</strong>
+                            <span style="font-size:11px; color:var(--text-muted);">(e.g. During school hours only)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; margin-left: 24px;">
+                            <span style="font-size:13px; color:var(--text-muted);">Between</span>
+                            <input type="time" id="sch-window-start" value="08:00" style="max-width: 130px;" oninput="updateScheduleSummary()">
+                            <span style="font-size:13px; color:var(--text-muted);">and</span>
+                            <input type="time" id="sch-window-end" value="16:00" style="max-width: 130px;" oninput="updateScheduleSummary()">
+                            <span style="font-size:13px; color:var(--text-muted); margin-left: 8px;">Repeat Every</span>
+                            <input type="number" min="1" max="1440" id="sch-window-val" value="15" style="max-width: 70px;" oninput="updateScheduleSummary()">
+                            <select id="sch-window-unit" style="max-width: 110px;" onchange="updateScheduleSummary()">
+                                <option value="minutes" selected>Minutes</option>
+                                <option value="hours">Hours</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Timing Mode 3: Continuous Interval -->
+                    <div class="timing-mode-card" id="card-mode-continuous" onclick="setTimingMode('continuous_interval')">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sch-timing-mode" id="mode-continuous" value="continuous_interval" onchange="setTimingMode('continuous_interval')">
+                            <strong>Continuous 24/7 Interval</strong>
+                            <span style="font-size:11px; color:var(--text-muted);">(e.g. Round-the-clock gateway / DNS metrics)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-left: 24px;">
+                            <span style="font-size:13px; color:var(--text-muted);">Every</span>
+                            <input type="number" min="1" max="10000" id="sch-cont-val" value="15" style="max-width: 80px;" oninput="updateScheduleSummary()">
+                            <select id="sch-cont-unit" style="max-width: 120px;" onchange="updateScheduleSummary()">
+                                <option value="seconds">Seconds</option>
+                                <option value="minutes" selected>Minutes</option>
+                                <option value="hours">Hours</option>
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Target Sensor Scope</label>
+                        <select id="sch-scope">
+                            <option value="all">Entire District Fleet (All Sensors)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; margin-top: 24px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="sch-guardrails" checked style="width: 18px; height: 18px;">
+                            <span>🛡️ Enforce Safety Guardrails (Congestion Aborts & Caps)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Live Plain-English Summary Box -->
+                <div class="summary-preview-box" id="sch-summary-preview">
+                    💬 "Runs once daily at 7:15 AM on Monday through Friday across all fleet sensors."
+                </div>
+
+                <!-- Collapsible Advanced Cron Editor -->
+                <details style="margin-top: 14px; background: var(--bg-input); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border);">
+                    <summary style="font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer;">⚙️ Advanced: View / Edit Raw Cron Expression</summary>
+                    <div style="margin-top: 8px;">
+                        <input type="text" id="sch-cron-expr" placeholder="15 7 * * 1-5" style="font-family: monospace; font-size: 13px;" oninput="handleRawCronInput(this.value)">
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Standard 5-field cron syntax (Minute Hour Day Month Day-of-Week).</span>
+                    </div>
+                </details>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeScheduleModal()">Cancel</button>
+                    <button type="submit" class="btn">💾 Save & Deploy Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const ADMIN_KEY = "admin-noc-key-change-me";
         let SENSORS_CACHE = [];
@@ -2438,6 +2787,7 @@ async def serve_admin_ui():
             if (e.key === 'Escape') {
                 closeLocationModal();
                 closeProbeModal();
+                closeScheduleModal();
                 if (document.body.classList.contains('wallboard-fullscreen')) {
                     toggleFullscreenMode();
                 }
@@ -2451,6 +2801,331 @@ async def serve_admin_ui():
                 togglePlayPause();
             }
         });
+
+        // --- VISUAL PROBE SCHEDULER CONTROLLER ---
+        let SCHEDULES_CACHE = [];
+        let ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+        let CURRENT_TIMING_MODE = 'daily_once';
+
+        const PROBE_DISPLAY_NAMES = {
+            'caaspp_readiness': '🎓 CAASPP / Cambium State Testing',
+            'voip_jitter': '🎥 VoIP & Zoom RTP Jitter Stream',
+            'dual_nic_ping': '🌐 Dual-NIC Gateway Latency Ping',
+            'dns_multi_resolver': '🔍 Multi-Resolver DNS Health',
+            'cipa_compliance': '🛡️ CIPA Safety & Content Filter Audit',
+            'wifi_dhcp': '⏱️ Wi-Fi 802.1X & DHCP DORA Timer',
+            'rrm_darrp': '📡 Wi-Fi RF Flapping & DARRP Monitor',
+            'segmentation': '🔒 East-West VLAN Isolation Sweep',
+            'iperf3': '📊 Off-Peak iperf3 Bandwidth Throughput'
+        };
+
+        function openScheduleModal(scheduleData = null) {
+            const form = document.getElementById('schedule-form');
+            if (!form) return;
+            form.reset();
+
+            if (scheduleData) {
+                document.getElementById('sch-id').value = scheduleData.id;
+                document.getElementById('sch-name').value = scheduleData.name;
+                document.getElementById('sch-probe').value = scheduleData.probe_id;
+                ACTIVE_SCHEDULE_DAYS = [...(scheduleData.days_of_week || ['mon', 'tue', 'wed', 'thu', 'fri'])];
+                setTimingMode(scheduleData.mode || 'daily_once');
+                if (scheduleData.mode === 'daily_once') {
+                    document.getElementById('sch-daily-time').value = scheduleData.start_time || '07:15';
+                } else if (scheduleData.mode === 'window_repeat') {
+                    document.getElementById('sch-window-start').value = scheduleData.start_time || '08:00';
+                    document.getElementById('sch-window-end').value = scheduleData.end_time || '16:00';
+                    document.getElementById('sch-window-val').value = scheduleData.interval_value || 15;
+                    document.getElementById('sch-window-unit').value = scheduleData.interval_unit || 'minutes';
+                } else if (scheduleData.mode === 'continuous_interval') {
+                    document.getElementById('sch-cont-val').value = scheduleData.interval_value || 15;
+                    document.getElementById('sch-cont-unit').value = scheduleData.interval_unit || 'minutes';
+                }
+                document.getElementById('sch-scope').value = scheduleData.target_scope || 'all';
+                document.getElementById('sch-guardrails').checked = scheduleData.guardrails_enabled !== false;
+                document.getElementById('sch-cron-expr').value = scheduleData.cron_expr || '';
+            } else {
+                document.getElementById('sch-id').value = 'sched_' + Date.now().toString().slice(-8);
+                document.getElementById('sch-name').value = '';
+                ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+                setTimingMode('daily_once');
+                document.getElementById('sch-daily-time').value = '07:15';
+                document.getElementById('sch-window-start').value = '08:00';
+                document.getElementById('sch-window-end').value = '16:00';
+                document.getElementById('sch-window-val').value = 15;
+                document.getElementById('sch-window-unit').value = 'minutes';
+                document.getElementById('sch-cont-val').value = 15;
+                document.getElementById('sch-cont-unit').value = 'seconds';
+                document.getElementById('sch-guardrails').checked = true;
+                document.getElementById('sch-cron-expr').value = '15 7 * * 1-5';
+            }
+
+            renderDayPills();
+            updateScheduleSummary();
+            document.getElementById('schedule-modal').style.display = 'flex';
+        }
+
+        function closeScheduleModal() {
+            const modal = document.getElementById('schedule-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function toggleDayPill(day) {
+            const index = ACTIVE_SCHEDULE_DAYS.indexOf(day);
+            if (index > -1) {
+                if (ACTIVE_SCHEDULE_DAYS.length > 1) {
+                    ACTIVE_SCHEDULE_DAYS.splice(index, 1);
+                }
+            } else {
+                ACTIVE_SCHEDULE_DAYS.push(day);
+            }
+            renderDayPills();
+            updateScheduleSummary();
+        }
+
+        function applyDayPreset(preset) {
+            if (preset === 'weekdays') {
+                ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+            } else if (preset === 'everyday') {
+                ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+            } else if (preset === 'weekends') {
+                ACTIVE_SCHEDULE_DAYS = ['sat', 'sun'];
+            }
+            renderDayPills();
+            updateScheduleSummary();
+        }
+
+        function renderDayPills() {
+            const pills = document.querySelectorAll('#sch-day-pills .day-pill');
+            pills.forEach(pill => {
+                const d = pill.getAttribute('data-day');
+                if (ACTIVE_SCHEDULE_DAYS.includes(d)) {
+                    pill.classList.add('active');
+                } else {
+                    pill.classList.remove('active');
+                }
+            });
+        }
+
+        function setTimingMode(mode) {
+            CURRENT_TIMING_MODE = mode;
+            document.querySelectorAll('.timing-mode-card').forEach(c => c.classList.remove('active-mode'));
+            const card = document.getElementById('card-mode-' + (mode === 'daily_once' ? 'daily' : (mode === 'window_repeat' ? 'window' : 'continuous')));
+            if (card) card.classList.add('active-mode');
+
+            const radio = document.getElementById('mode-' + (mode === 'daily_once' ? 'daily' : (mode === 'window_repeat' ? 'window' : 'continuous')));
+            if (radio) radio.checked = true;
+
+            updateScheduleSummary();
+        }
+
+        function handleProbeSelectionChange(probeId) {
+            const nameInput = document.getElementById('sch-name');
+            if (nameInput && (!nameInput.value || nameInput.value.includes('Pre-Flight') || nameInput.value.includes('Monitor') || nameInput.value.includes('Test') || nameInput.value.includes('Schedule'))) {
+                const displayName = PROBE_DISPLAY_NAMES[probeId] || probeId;
+                nameInput.value = `${displayName} Schedule`;
+            }
+            updateScheduleSummary();
+        }
+
+        function updateScheduleSummary() {
+            const preview = document.getElementById('sch-summary-preview');
+            const cronInput = document.getElementById('sch-cron-expr');
+            if (!preview) return;
+
+            const dayNames = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+            let daysText = '';
+            if (ACTIVE_SCHEDULE_DAYS.length === 7) {
+                daysText = 'every day';
+            } else if (ACTIVE_SCHEDULE_DAYS.length === 5 && !ACTIVE_SCHEDULE_DAYS.includes('sat') && !ACTIVE_SCHEDULE_DAYS.includes('sun')) {
+                daysText = 'on Weekdays (Mon–Fri)';
+            } else if (ACTIVE_SCHEDULE_DAYS.length === 2 && ACTIVE_SCHEDULE_DAYS.includes('sat') && ACTIVE_SCHEDULE_DAYS.includes('sun')) {
+                daysText = 'on Weekends (Sat–Sun)';
+            } else {
+                daysText = 'on ' + ACTIVE_SCHEDULE_DAYS.map(d => dayNames[d]).join(', ');
+            }
+
+            let timingSentence = '';
+            let cronComputed = '';
+
+            const dayCronMap = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 };
+            const cronDays = ACTIVE_SCHEDULE_DAYS.map(d => dayCronMap[d]).sort().join(',');
+
+            if (CURRENT_TIMING_MODE === 'daily_once') {
+                const dailyTime = document.getElementById('sch-daily-time').value || '07:15';
+                const [h, m] = dailyTime.split(':');
+                const ampm = parseInt(h) >= 12 ? 'PM' : 'AM';
+                const h12 = (parseInt(h) % 12) || 12;
+                timingSentence = `Runs once daily at <strong>${h12}:${m} ${ampm}</strong> ${daysText}`;
+                cronComputed = `${parseInt(m)} ${parseInt(h)} * * ${cronDays}`;
+            } else if (CURRENT_TIMING_MODE === 'window_repeat') {
+                const wStart = document.getElementById('sch-window-start').value || '08:00';
+                const wEnd = document.getElementById('sch-window-end').value || '16:00';
+                const wVal = document.getElementById('sch-window-val').value || '15';
+                const wUnit = document.getElementById('sch-window-unit').value || 'minutes';
+                timingSentence = `Runs every <strong>${wVal} ${wUnit}</strong> between <strong>${wStart}</strong> and <strong>${wEnd}</strong> ${daysText}`;
+                const [sh, sm] = wStart.split(':');
+                const [eh, em] = wEnd.split(':');
+                cronComputed = `*/${wVal} ${parseInt(sh)}-${parseInt(eh)} * * ${cronDays}`;
+            } else if (CURRENT_TIMING_MODE === 'continuous_interval') {
+                const cVal = document.getElementById('sch-cont-val').value || '15';
+                const cUnit = document.getElementById('sch-cont-unit').value || 'seconds';
+                timingSentence = `Runs continuously every <strong>${cVal} ${cUnit}</strong> (24/7)`;
+                if (cUnit === 'minutes') {
+                    cronComputed = `*/${cVal} * * * *`;
+                } else if (cUnit === 'hours') {
+                    cronComputed = `0 */${cVal} * * *`;
+                } else {
+                    cronComputed = `*/1 * * * * (Continuous ${cVal} ${cUnit})`;
+                }
+            }
+
+            const scopeElem = document.getElementById('sch-scope');
+            const scopeText = scopeElem ? scopeElem.options[scopeElem.selectedIndex]?.text || 'All Fleet Sensors' : 'All Fleet Sensors';
+
+            preview.innerHTML = `💬 "${timingSentence} across <strong>${scopeText}</strong>."`;
+            if (cronInput && !document.activeElement?.isEqualNode(cronInput)) {
+                cronInput.value = cronComputed;
+            }
+        }
+
+        function handleRawCronInput(val) {
+            // Power user cron synchronization
+        }
+
+        async function handleSaveSchedule(e) {
+            e.preventDefault();
+            const id = document.getElementById('sch-id').value || ('sched_' + Date.now().toString().slice(-8));
+            const name = document.getElementById('sch-name').value;
+            const probe_id = document.getElementById('sch-probe').value;
+            const mode = CURRENT_TIMING_MODE;
+            const days_of_week = ACTIVE_SCHEDULE_DAYS;
+            let start_time = "07:15";
+            let end_time = "16:00";
+            let interval_value = 15;
+            let interval_unit = "minutes";
+
+            if (mode === 'daily_once') {
+                start_time = document.getElementById('sch-daily-time').value || "07:15";
+            } else if (mode === 'window_repeat') {
+                start_time = document.getElementById('sch-window-start').value || "08:00";
+                end_time = document.getElementById('sch-window-end').value || "16:00";
+                interval_value = parseInt(document.getElementById('sch-window-val').value) || 15;
+                interval_unit = document.getElementById('sch-window-unit').value || "minutes";
+            } else if (mode === 'continuous_interval') {
+                interval_value = parseInt(document.getElementById('sch-cont-val').value) || 15;
+                interval_unit = document.getElementById('sch-cont-unit').value || "seconds";
+            }
+
+            const target_scope = document.getElementById('sch-scope').value || "all";
+            const guardrails_enabled = document.getElementById('sch-guardrails').checked;
+            const cron_expr = document.getElementById('sch-cron-expr').value;
+
+            const payload = {
+                id,
+                name,
+                probe_id,
+                mode,
+                days_of_week,
+                start_time,
+                end_time,
+                interval_value,
+                interval_unit,
+                cron_expr,
+                target_scope,
+                guardrails_enabled,
+                is_active: true,
+                created_at: Math.floor(Date.now() / 1000)
+            };
+
+            await fetch('/api/v1/schedules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                body: JSON.stringify(payload)
+            });
+
+            closeScheduleModal();
+            loadDashboardData();
+        }
+
+        async function deleteSchedule(scheduleId) {
+            if (confirm(`Delete probe schedule '${scheduleId}'?`)) {
+                await fetch(`/api/v1/schedules/${scheduleId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
+                loadDashboardData();
+            }
+        }
+
+        async function toggleSchedule(scheduleId) {
+            await fetch(`/api/v1/schedules/${scheduleId}/toggle`, { method: 'PUT', headers: { 'X-API-Key': ADMIN_KEY } });
+            loadDashboardData();
+        }
+
+        function renderSchedulesTable(schedules) {
+            const tbody = document.getElementById('schedules-table-body');
+            if (!tbody) return;
+
+            if (!schedules || schedules.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No probe schedules created yet. Click "+ Create New Schedule" above.</td></tr>';
+                return;
+            }
+
+            const rows = schedules.map(sch => {
+                const probeName = PROBE_DISPLAY_NAMES[sch.probe_id] || sch.probe_id;
+                const statusPill = sch.is_active ?
+                    '<span class="status-pill status-online">🟢 Active</span>' :
+                    '<span class="status-pill status-offline">⏸️ Paused</span>';
+
+                const guardrailBadge = sch.guardrails_enabled ?
+                    '<span style="color:#10b981; font-size:12px; font-weight:700;">🛡️ Active</span>' :
+                    '<span style="color:var(--warning); font-size:12px; font-weight:700;">⚠️ Disabled</span>';
+
+                let timingDesc = '';
+                if (sch.mode === 'daily_once') {
+                    timingDesc = `Daily @ ${sch.start_time}`;
+                } else if (sch.mode === 'window_repeat') {
+                    timingDesc = `${sch.start_time} - ${sch.end_time}`;
+                } else {
+                    timingDesc = '24/7 Round-the-Clock';
+                }
+
+                let cadenceDesc = '';
+                if (sch.mode === 'daily_once') {
+                    cadenceDesc = 'Once Daily';
+                } else {
+                    cadenceDesc = `Every ${sch.interval_value} ${sch.interval_unit}`;
+                }
+
+                const daysList = (sch.days_of_week || []).map(d => d.toUpperCase().slice(0, 2)).join(' ');
+                const schJsonStr = JSON.stringify(sch).replace(/"/g, '&quot;');
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>${sch.name}</strong>
+                            <div style="font-size:11px; color:var(--text-muted); font-family:monospace;">${sch.id}</div>
+                        </td>
+                        <td><span class="badge" style="background:var(--bg-input); border:1px solid var(--border); font-size:12px;">${probeName}</span></td>
+                        <td>
+                            <div>${timingDesc}</div>
+                            <div style="font-size:11px; color:var(--accent); font-weight:700;">[ ${daysList || 'DAILY'} ]</div>
+                        </td>
+                        <td><strong>${cadenceDesc}</strong></td>
+                        <td><span style="font-size:12px; color:var(--text-muted);">${sch.target_scope === 'all' ? '🌐 Entire Fleet' : sch.target_scope}</span></td>
+                        <td>${guardrailBadge}</td>
+                        <td>${statusPill}</td>
+                        <td>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-outline btn-sm" onclick="toggleSchedule('${sch.id}')">${sch.is_active ? '⏸ Pause' : '▶ Enable'}</button>
+                                <button class="btn btn-outline btn-sm" onclick="openScheduleModal(${schJsonStr})">✏️ Edit</button>
+                                <button class="btn btn-outline btn-sm" style="border-color:var(--danger); color:var(--danger);" onclick="deleteSchedule('${sch.id}')">✕</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rows.join('');
+        }
 
         function handleGlobalSearch() {
             const q = document.getElementById('global-search').value.toLowerCase();
@@ -2568,6 +3243,18 @@ async def serve_admin_ui():
 
                 const resProbes = await fetch('/api/v1/probes', { headers: { 'X-API-Key': ADMIN_KEY } });
                 const probes = await resProbes.json();
+
+                const resSchedules = await fetch('/api/v1/schedules', { headers: { 'X-API-Key': ADMIN_KEY } });
+                const schedules = await resSchedules.json();
+                SCHEDULES_CACHE = schedules;
+                renderSchedulesTable(schedules);
+
+                const customOptGroup = document.getElementById('sch-custom-probes-optgroup');
+                if (customOptGroup && probes) {
+                    customOptGroup.innerHTML = probes.length > 0 ?
+                        probes.map(p => `<option value="${p.id}">🛠️ ${p.name} (${p.probe_type.toUpperCase()})</option>`).join('') :
+                        '<option disabled>No custom probes defined</option>';
+                }
 
                 let liveStats = null;
                 try {
@@ -2797,8 +3484,12 @@ async def serve_admin_ui():
                 }
             }
 
-            document.getElementById('p-scope').innerHTML = scopeOptions.join('');
-            document.getElementById('diag-sensor-select').innerHTML = diagSelectOptions.join('');
+            const pScope = document.getElementById('p-scope');
+            if (pScope) pScope.innerHTML = scopeOptions.join('');
+            const schScope = document.getElementById('sch-scope');
+            if (schScope) schScope.innerHTML = scopeOptions.join('');
+            const diagSelect = document.getElementById('diag-sensor-select');
+            if (diagSelect) diagSelect.innerHTML = diagSelectOptions.join('');
 
             if (pendingCount > 0) {
                 document.getElementById('pending-section').style.display = 'block';
