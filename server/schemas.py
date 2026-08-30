@@ -64,6 +64,61 @@ class TargetContainerSpec(BaseModel):
     env: Dict[str, str] = Field(default_factory=dict, description="Environment variables passed to container")
     command: Optional[str] = Field(None, description="Command overrides run on execution")
 
+# --- Adaptive Probing & Dynamic Resolution Schemas ---
+
+class AdaptiveProbingConfig(BaseModel):
+    enabled: bool = Field(True, description="Enable dynamic camera-shutter resolution scaling")
+    green_ping_interval_seconds: int = Field(15, description="Ping cadence in Green/Quiescent state")
+    amber_ping_interval_seconds: int = Field(5, description="Ping cadence in Amber/Triage state")
+    red_ping_interval_seconds: int = Field(1, description="High-resolution 1-second cadence during Active Incident")
+    blackout_interval_seconds: int = Field(300, description="Dampened backoff cadence (5 min) during complete WAN/Gateway failure")
+    cooldown_seconds: int = Field(90, description="Seconds of healthy metrics before stepping down from Red->Amber->Green")
+    on_demand_burst_duration_seconds: int = Field(60, description="Duration of 1 Hz burst when triggered by NOC on-demand")
+
+class ProbingStateEnum(str):
+    GREEN = "GREEN"         # Normal baseline
+    AMBER = "AMBER"         # Triage (minor jitter / 1 packet loss)
+    RED = "RED"             # Forensic (SLA breach / active failure / 1 Hz)
+    BLACKOUT = "BLACKOUT"   # Hard-down / Gateway dead (5-15 min backoff)
+    ON_DEMAND = "ON_DEMAND" # NOC triggered high-frequency burst
+
+# --- Multi-Campus Hierarchy Schemas ---
+
+class CampusCreate(BaseModel):
+    campus_id: str = Field(..., description="Unique campus ID, e.g. 'CAMPUS-WEST-HIGH'")
+    name: str = Field(..., description="Campus display name, e.g. 'West High School'")
+    category: str = Field("High School", description="High School, Middle School, Elementary, Admin, DataCenter")
+    district: str = Field("Default District", description="Parent district or LEA")
+    latitude: float = Field(..., description="GIS Latitude")
+    longitude: float = Field(..., description="GIS Longitude")
+    address: Optional[str] = Field(None, description="Street address")
+    contact_email: Optional[str] = Field(None, description="Site tech coordinator email")
+
+class CampusResponse(CampusCreate):
+    sensor_count: int = 0
+    online_count: int = 0
+    degraded_count: int = 0
+    offline_count: int = 0
+    sla_percentage: float = 100.0
+
+class SubnetAutoEnrollRule(BaseModel):
+    id: Optional[str] = None
+    subnet_cidr: str = Field(..., description="CIDR block, e.g. '10.142.10.0/24'")
+    campus_id: str = Field(..., description="Target campus ID for sensors on this subnet")
+    campus_name: str = Field(..., description="Campus display name")
+    building_default: str = Field("Main Building", description="Default building tag")
+    auto_approve: bool = Field(True, description="Automatically approve new sensors without manual TOFU queue")
+
+class BatchApprovalRequest(BaseModel):
+    sensor_ids: List[str] = Field(..., description="List of pending sensor IDs to approve in bulk")
+    campus_id: Optional[str] = Field(None, description="Optional campus to assign all approved sensors to")
+    building: Optional[str] = Field(None, description="Optional building assignment")
+
+class OnDemandBurstTrigger(BaseModel):
+    sensor_ids: List[str] = Field(default_factory=lambda: ["all"], description="Target sensor IDs or ['all']")
+    duration_seconds: int = Field(60, description="Duration of high-frequency 1-second burst capture")
+    reason: str = Field("manual_noc_drilldown", description="Incident triage reason")
+
 # --- Test Scheduling Schemas ---
 
 class BandwidthScheduleSpec(BaseModel):
@@ -123,6 +178,11 @@ class SensorReconcileResponse(BaseModel):
         default_factory=TestSchedulesSpec,
         description="Dynamic test schedules and bandwidth testing parameters"
     )
+    adaptive_probing: AdaptiveProbingConfig = Field(
+        default_factory=AdaptiveProbingConfig,
+        description="Adaptive multi-resolution probing configuration"
+    )
+    probing_state: str = Field("GREEN", description="Current or commanded probing state: GREEN, AMBER, RED, BLACKOUT, ON_DEMAND")
     pcap_trigger: PcapTriggerSpec = Field(
         default_factory=PcapTriggerSpec,
         description="One-shot incident PCAP capture trigger"
@@ -146,6 +206,8 @@ class SensorConfigUpdate(BaseModel):
     wifi: Optional[WifiSpec] = None
     containers: Optional[Dict[str, TargetContainerSpec]] = None
     schedules: Optional[TestSchedulesSpec] = None
+    adaptive_probing: Optional[AdaptiveProbingConfig] = None
+    probing_state: Optional[str] = None
     custom_probes: Optional[List[CustomProbeSpec]] = None
     location: Optional[LocationSpec] = None
 
@@ -191,6 +253,8 @@ class SensorReconcileResponseSafe(BaseModel):
     wifi: Optional[WifiSpecSafe] = None
     containers: Dict[str, TargetContainerSpec] = Field(default_factory=dict)
     schedules: TestSchedulesSpec = Field(default_factory=TestSchedulesSpec)
+    adaptive_probing: AdaptiveProbingConfig = Field(default_factory=AdaptiveProbingConfig)
+    probing_state: str = "GREEN"
     pcap_trigger: PcapTriggerSpec = Field(default_factory=PcapTriggerSpec)
     custom_probes: List[CustomProbeSpec] = Field(default_factory=list)
 
@@ -202,12 +266,13 @@ class SensorStatusResponseSafe(BaseModel):
     is_online: bool
     reconciled_ok: bool
     status: str
+    probing_state: str = "GREEN"
     location: LocationSpec = Field(default_factory=LocationSpec)
     reported_containers: Dict[str, RunningContainer]
     target_config: SensorReconcileResponseSafe
 
     @classmethod
-    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config, location_val=None):
+    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config, location_val=None, probing_state="GREEN"):
         """
         Maps the internal DB state of a sensor to an admin-safe response payload,
         invoking from_wifi_spec to scrub credentials from the outgoing target configuration.
@@ -217,6 +282,8 @@ class SensorStatusResponseSafe(BaseModel):
             wifi=WifiSpecSafe.from_wifi_spec(target_config.wifi),
             containers=target_config.containers,
             schedules=getattr(target_config, "schedules", TestSchedulesSpec()),
+            adaptive_probing=getattr(target_config, "adaptive_probing", AdaptiveProbingConfig()),
+            probing_state=getattr(target_config, "probing_state", probing_state),
             pcap_trigger=getattr(target_config, "pcap_trigger", PcapTriggerSpec()),
             custom_probes=getattr(target_config, "custom_probes", [])
         )
@@ -227,6 +294,7 @@ class SensorStatusResponseSafe(BaseModel):
             is_online=is_online,
             reconciled_ok=reconciled_ok,
             status=status_val,
+            probing_state=probing_state,
             location=location_val if location_val is not None else LocationSpec(),
             reported_containers=reported_containers,
             target_config=safe_config

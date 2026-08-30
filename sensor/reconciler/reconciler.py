@@ -33,6 +33,27 @@ DEFAULT_CONFIG = {
 
 GLOBAL_DISCOVERY_URL = "https://discovery.openux.org/api/v1"
 
+def discover_cmp_via_dhcp_option43():
+    """Attempts to discover CMP server URL from DHCP Option 43 (Vendor Specific Information)."""
+    # 1. Inspect systemd-networkd lease files
+    lease_dirs = ["/run/systemd/netif/leases", "/var/lib/dhcp", "/var/lib/NetworkManager"]
+    for l_dir in lease_dirs:
+        if os.path.exists(l_dir):
+            for root, _, files in os.walk(l_dir):
+                for f_name in files:
+                    try:
+                        with open(os.path.join(root, f_name), "r", errors="ignore") as f:
+                            content = f.read()
+                            # Check for OPTION_43 or vendor_encapsulated_options
+                            for line in content.split("\n"):
+                                if "OPTION_43=" in line or "vendor-encapsulated-options" in line or "OPTION_224=" in line:
+                                    val = line.split("=", 1)[-1].replace('"', '').strip()
+                                    if val.startswith("http://") or val.startswith("https://"):
+                                        return val if "/api/v1" in val else f"{val}/api/v1"
+                    except Exception:
+                        pass
+    return None
+
 def discover_domain():
     """Reads /etc/resolv.conf to find the search domain suffix."""
     if os.path.exists("/etc/resolv.conf"):
@@ -61,19 +82,28 @@ def resolve_cmp_via_dns():
 
 def get_cmp_url(config):
     """
-    Three-way cloud discovery:
+    Four-way Zero-Touch Discovery:
       1. Explicitly configured cmp_url in reconciler.json
-      2. Local DHCP Search Domain resolution (openux-cmp.<search-domain>)
-      3. Global fallback discovery cloud service
+      2. DHCP Option 43 (Vendor Specific Information)
+      3. Local DHCP Search Domain resolution (openux-cmp.<search-domain>)
+      4. Global fallback discovery cloud service
     """
     url = config.get("cmp_url", "")
-    # If the cmp_url is default/local or empty, check DNS options
+    # If the cmp_url is default/local or empty, run discovery pipeline
     if not url or "central-monitoring-platform.local" in url:
+        # Step 1: DHCP Option 43
+        dhcp_url = discover_cmp_via_dhcp_option43()
+        if dhcp_url:
+            print(f"Discovered CMP via DHCP Option 43: {dhcp_url}")
+            return dhcp_url
+
+        # Step 2: DNS Search Domain
         discovered = resolve_cmp_via_dns()
         if discovered:
-            print(f"Discovered cloud CMP via DNS: {discovered}")
+            print(f"Discovered CMP via DNS: {discovered}")
             return discovered
-        # Fallback to public global discovery url if local discovery fails
+
+        # Step 3: Fallback to public global discovery url if local discovery fails
         if not url:
             print(f"No local discovery. Fallback to global portal: {GLOBAL_DISCOVERY_URL}")
             return GLOBAL_DISCOVERY_URL
@@ -348,7 +378,113 @@ def register_sensor(config, cmp_url):
         print(f"Registration poll failed: {e}")
     return None
 
-def phone_home(config, cmp_url):
+class AdaptiveResolutionEngine:
+    """
+    Dynamic 'Camera Shutter' Resolution Scaling Engine:
+      - GREEN (Quiescent): 15s interval, low overhead.
+      - AMBER (Triage): 5s interval upon minor jitter / 1 packet drop.
+      - RED (Forensic): 1s (1 Hz) high-resolution burst during active incident / SLA breach.
+      - BLACKOUT (Hard Down): 300s (5-15 min) backoff when default gateway is unreachable.
+      - ON_DEMAND: 1s burst triggered by NOC for forensic drilldown.
+    """
+    def __init__(self, config: dict):
+        self.state = "GREEN"
+        self.consecutive_failures = 0
+        self.consecutive_successes = 0
+        self.last_state_change = time.time()
+        self.on_demand_until = 0
+        self.config = config
+        self.gateway_ip = self.detect_default_gateway()
+
+    def detect_default_gateway(self) -> str:
+        """Finds default gateway IP from /proc/net/route or ip route."""
+        try:
+            with open("/proc/net/route", "r") as f:
+                for line in f.readlines()[1:]:
+                    fields = line.strip().split()
+                    if fields[1] == "00000000": # Default route
+                        import socket
+                        import struct
+                        gw_hex = int(fields[2], 16)
+                        return socket.inet_ntoa(struct.pack("<L", gw_hex))
+        except Exception:
+            pass
+        return "1.1.1.1" # Fallback
+
+    def check_gateway_reachability(self) -> tuple:
+        """Rapid ICMP / TCP reachability test against default gateway."""
+        import socket
+        start = time.time()
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1.5)
+            # Try port 80 or fallback ping
+            res = sock.connect_ex((self.gateway_ip, 80))
+            latency = (time.time() - start) * 1000
+            sock.close()
+            # If socket connects or returns connection refused, the host is reachable at L3
+            return True, latency
+        except Exception:
+            pass
+
+        # Fallback to ICMP ping subprocess
+        try:
+            start = time.time()
+            out = subprocess.run(["ping", "-c", "1", "-W", "1", self.gateway_ip], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            latency = (time.time() - start) * 1000
+            return (out.returncode == 0), latency
+        except Exception:
+            return False, 0.0
+
+    def evaluate_state(self, commanded_state: Optional[str] = None) -> str:
+        """Evaluates network health and transitions probing resolution state."""
+        now = time.time()
+
+        # Check for active On-Demand NOC burst
+        if commanded_state == "ON_DEMAND" or now < self.on_demand_until:
+            if commanded_state == "ON_DEMAND" and now >= self.on_demand_until:
+                self.on_demand_until = now + 60.0 # 60-second default burst
+            self.state = "ON_DEMAND"
+            return self.state
+
+        is_reachable, latency_ms = self.check_gateway_reachability()
+
+        if not is_reachable:
+            self.consecutive_failures += 1
+            self.consecutive_successes = 0
+            if self.consecutive_failures >= 3:
+                self.state = "BLACKOUT"
+            else:
+                self.state = "RED"
+        else:
+            self.consecutive_successes += 1
+            self.consecutive_failures = 0
+
+            if latency_ms > 80.0:
+                self.state = "AMBER"
+            elif self.state in ("RED", "BLACKOUT", "AMBER"):
+                # Cooldown logic: Require 3 consecutive healthy checks before stepping down
+                if self.consecutive_successes >= 3:
+                    self.state = "GREEN"
+            else:
+                self.state = "GREEN"
+
+        return self.state
+
+    def get_sleep_interval(self) -> int:
+        """Returns the appropriate polling interval based on the active resolution state."""
+        if self.state == "ON_DEMAND":
+            return 1 # 1 Hz burst
+        elif self.state == "RED":
+            return 1 # 1 Hz forensic capture
+        elif self.state == "AMBER":
+            return 5 # 5-second triage
+        elif self.state == "BLACKOUT":
+            return 300 # 5-minute dampened backoff
+        else:
+            return self.config.get("check_interval_seconds", 15) # Green baseline
+
+def phone_home(config, cmp_url, probing_state: str = "GREEN"):
     """Reaches out to the CMP API to report status and get target configuration."""
     url = f"{cmp_url}/sensors/reconcile"
 
@@ -357,6 +493,7 @@ def phone_home(config, cmp_url):
         "sensor_id": config["sensor_id"],
         "os": sys.platform,
         "timestamp": int(time.time()),
+        "probing_state": probing_state,
         "containers": get_running_containers()
     }
 
@@ -488,8 +625,10 @@ def reconcile_custom_probes(custom_probes: list, config: dict):
         print(f"Failed to spawn custom probe runner: {e}")
 
 def main():
-    print("Starting Sensor Reconciler service...")
+    print("Starting Sensor Reconciler service with Adaptive Multi-Resolution Probing...")
     config = load_config()
+    adaptive_engine = AdaptiveResolutionEngine(config)
+    last_commanded_state = None
 
     while True:
         # Dynamically discover the cloud server location
@@ -508,10 +647,16 @@ def main():
                 time.sleep(config["check_interval_seconds"])
                 continue
 
-        # Authenticated reconcile loop
-        target_state = phone_home(config, cmp_url)
+        # Evaluate local network health and calculate adaptive resolution state
+        current_state = adaptive_engine.evaluate_state(last_commanded_state)
+
+        # Authenticated reconcile loop with current state telemetry
+        target_state = phone_home(config, cmp_url, probing_state=current_state)
 
         if target_state:
+            # Update commanded state from CMP (e.g. ON_DEMAND burst)
+            last_commanded_state = target_state.get("probing_state")
+
             # Check for reset trigger
             if target_state.get("reset", False):
                 wipe_and_reset()
@@ -523,7 +668,9 @@ def main():
             reconcile_pcap_trigger(target_state.get("pcap_trigger", {}), config)
             reconcile_custom_probes(target_state.get("custom_probes", []), config)
 
-        time.sleep(config["check_interval_seconds"])
+        # Dynamic sleep based on active state (1s in RED/ON_DEMAND, 5s in AMBER, 15s in GREEN, 300s in BLACKOUT)
+        sleep_interval = adaptive_engine.get_sleep_interval()
+        time.sleep(sleep_interval)
 
 if __name__ == "__main__":
     main()

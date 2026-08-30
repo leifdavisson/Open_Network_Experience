@@ -7,7 +7,7 @@ global:
   # smtp_auth_password: 'your-email-password'
 
 route:
-  group_by: ['alertname', 'site', 'sensor_id']
+  group_by: ['alertname', 'site', 'campus_id', 'sensor_id']
   group_wait: 10s
   group_interval: 30s
   repeat_interval: 2h
@@ -22,6 +22,22 @@ route:
         alertname: WiFiFlappingDetected
       receiver: 'noc-rf-team'
       repeat_interval: 30m
+
+inhibit_rules:
+  # 1. ROOT CAUSE SUPPRESSION: If Campus Gateway / WAN is Down, suppress all downstream SaaS/DNS/App alerts for that campus
+  - source_match:
+      alertname: 'CampusGatewayDown'
+      severity: 'critical'
+    target_match_re:
+      alertname: 'SaaSAppUnreachable|DNSResolutionFailure|CIPAInspectionFailure|WiFiSSIDMissing|CambiumPortalDown|CanvasLMSUnreachable'
+    equal: ['campus_id', 'site']
+
+  # 2. SENSOR OFFLINE SUPPRESSION: If a sensor is completely unreachable, suppress individual service/probe degradation alarms
+  - source_match:
+      alertname: 'SensorAgentOffline'
+    target_match_re:
+      alertname: '.*Probe.*|.*Jitter.*|.*Latency.*'
+    equal: ['sensor_id']
 
 receivers:
   - name: 'default-receiver'
