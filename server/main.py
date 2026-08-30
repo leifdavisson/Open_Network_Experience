@@ -296,6 +296,22 @@ async def lifespan(app: FastAPI):
                 "guardrails_enabled": True,
                 "is_active": True,
                 "created_at": int(time.time())
+            },
+            {
+                "id": "sched_clever_identity",
+                "name": "Clever K-12 Identity, Badges & SSO Health Sweep",
+                "probe_id": "clever_identity",
+                "mode": "continuous_interval",
+                "days_of_week": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "interval_value": 15,
+                "interval_unit": "minutes",
+                "cron_expr": None,
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
             }
         ]
         for ds in default_schedules:
@@ -2423,9 +2439,10 @@ async def serve_admin_ui():
                         <option value="m365_outlook">Microsoft Outlook Web Access (OWA)</option>
                         <option value="m365_sharepoint">SharePoint Online Portal</option>
                         <option value="wu_catalog">Windows Update Catalog (WaaS)</option>
-                        <option value="do_p2p_mesh">Delivery Optimization Peer Mesh (DO)</option>
                         <option value="gmeet_media">Google Meet WebRTC Media (UDP STUN)</option>
                         <option value="chrome_dm">Chrome Enterprise Device Management (DM)</option>
+                        <option value="clever_badger">Clever Badges QR Scanner Service</option>
+                        <option value="clever_portal">Clever District SSO Portal Gateway</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -2506,6 +2523,7 @@ async def serve_admin_ui():
                             <option value="segmentation">🔒 East-West Lateral VLAN Isolation Sweep (segmentation_prober.py)</option>
                             <option value="windows_update_do">🔄 Windows Update, BITS & Delivery Optimization (windows_update_do_probe.py)</option>
                             <option value="google_workspace">🌐 Google Workspace & ChromeOS (google_workspace_chromeos_probe.py)</option>
+                            <option value="clever_identity">🎓 Clever K-12 Identity, Badges & SSO (clever_identity_probe.py)</option>
                             <option value="iperf3">📊 Off-Peak iperf3 Bandwidth Throughput (iperf3_runner.py)</option>
                         </optgroup>
                         <optgroup label="WYSIWYG EasyBuilder Custom Probes" id="sch-custom-probes-optgroup">
@@ -3883,7 +3901,9 @@ async def serve_admin_ui():
                 'wu_catalog': { name: 'Windows Update Catalog Service', type: 'http', target: 'https://windowsupdate.microsoft.com', cadence: 60, timeout: 3000 },
                 'do_p2p_mesh': { name: 'Delivery Optimization Peer Mesh (DO)', type: 'tcp', target: 'do.dsp.mp.microsoft.com', cadence: 15, timeout: 3000 },
                 'gmeet_media': { name: 'Google Meet WebRTC Media (STUN)', type: 'tcp', target: 'stun.l.google.com', cadence: 5, timeout: 3000 },
-                'chrome_dm': { name: 'Chrome Enterprise Device Management (DM)', type: 'http', target: 'https://device-management.googleapis.com', cadence: 15, timeout: 3000 }
+                'chrome_dm': { name: 'Chrome Enterprise Device Management (DM)', type: 'http', target: 'https://device-management.googleapis.com', cadence: 15, timeout: 3000 },
+                'clever_badger': { name: 'Clever Badges QR Scanner Service', type: 'http', target: 'https://badger.clever.com', cadence: 5, timeout: 3000 },
+                'clever_portal': { name: 'Clever District SSO Portal Gateway', type: 'http', target: 'https://clever.com', cadence: 5, timeout: 3000 }
             };
 
             const t = templates[presetKey];
