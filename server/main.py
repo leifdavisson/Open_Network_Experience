@@ -248,6 +248,22 @@ async def lifespan(app: FastAPI):
                 "guardrails_enabled": True,
                 "is_active": True,
                 "created_at": int(time.time())
+            },
+            {
+                "id": "sched_m365_health",
+                "name": "Microsoft 365 & Teams Media Health Sweep",
+                "probe_id": "m365_connectivity",
+                "mode": "continuous_interval",
+                "days_of_week": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                "start_time": "00:00",
+                "end_time": "23:59",
+                "interval_value": 15,
+                "interval_unit": "minutes",
+                "cron_expr": None,
+                "target_scope": "all",
+                "guardrails_enabled": True,
+                "is_active": True,
+                "created_at": int(time.time())
             }
         ]
         for ds in default_schedules:
@@ -2442,6 +2458,7 @@ async def serve_admin_ui():
                     <select id="sch-probe" required onchange="handleProbeSelectionChange(this.value)">
                         <optgroup label="Core Built-In Diagnostic Probes">
                             <option value="caaspp_readiness">🎓 CAASPP / Cambium Testing Readiness (caaspp_readiness.py)</option>
+                            <option value="m365_connectivity">☁️ Microsoft 365 & Office 365 A5 (m365_connectivity_probe.py)</option>
                             <option value="voip_jitter">🎥 VoIP & Zoom RTP Stream Monitor (voip_jitter_probe.py)</option>
                             <option value="dual_nic_ping">🌐 Dual-NIC Gateway Latency Ping (eth0 vs wlan0)</option>
                             <option value="dns_multi_resolver">🔍 Multi-Resolver DNS Health Probe (dns_multi_resolver.py)</option>
