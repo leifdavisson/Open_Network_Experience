@@ -106,34 +106,61 @@ To ensure reliable driver support for Wi-Fi 6/6E adapters, USB GPS receivers, an
 > [!TIP]
 > **Why 64-bit Headless?** Modern headless Chromium and Playwright binaries require a 64-bit architecture (`arm64` or `x86_64`). Running a headless "Server" or "Lite" image keeps idle OS memory footprint under 250 MB, leaving maximum headroom for packet captures and browser transactions.
 
-### 3. Run the 1-Line Remote Sensor Bootstrap (Recommended)
-On the edge sensor machine (via SSH or console):
+### 3. Deploying Sensors (Helpdesk-Friendly Methods)
+
+#### Option A: 1-Line URL-Preset Web Bootstrapper (Zero-Touch)
+Generate and copy the exact 1-line command from the CMP Web Console (**Fleet & Registration** tab) or run:
 
 ```bash
-# 1-Line Zero-Touch Remote Provisioning (with campus tags)
+# 1-Line Remote Provisioning with URL Presets:
+curl -sSL "http://<YOUR_CMP_SERVER_IP>:8000/install.sh?site=West+High+School&room=Room+204&building=Science+Wing" | sudo bash
+```
+
+Or pass explicit CLI flags:
+```bash
 curl -sSL http://<YOUR_CMP_SERVER_IP>:8000/install.sh | sudo bash -s -- \
-  --cmp http://<YOUR_CMP_SERVER_IP>:8000/api/v1 \
   --site "West High School" \
-  --room "Room 102"
+  --room "Room 204" \
+  --wifi-ssid "School-Staff" \
+  --wifi-psk "SecurePassword123"
 ```
 
-Or for automated DHCP Option 43 auto-discovery:
+#### Option B: Interactive Terminal Setup Wizard (`one-wizard`)
+For field technicians unboxing a new Raspberry Pi or troubleshooting on-site, launch the guided terminal wizard:
+
 ```bash
-curl -sSL http://<YOUR_CMP_SERVER_IP>:8000/install.sh | sudo bash
+# Run wizard directly via installer:
+curl -sSL http://<YOUR_CMP_SERVER_IP>:8000/install.sh | sudo bash -s -- --wizard
+
+# Or re-run anytime on an already provisioned sensor:
+sudo one-wizard
 ```
+
+The interactive wizard guides technicians step-by-step through:
+1. **Hardware & Interface Diagnostics**: Real-time Ethernet link status, Wi-Fi radio detection, MAC address, and persistent hardware UUID.
+2. **CMP Control Plane Discovery & Health Check**: Automatic DHCP Option 43 & DNS resolution with live ping/latency verification.
+3. **Campus Location & Drop ID Tagging**: District, campus, building, room number, and asset notes.
+4. **Live Wi-Fi Site Survey**: Scans nearby SSIDs, signal strength, and configures [wpa_supplicant](https://w1.fi/wpa_supplicant) for WPA2/WPA3 Personal or 802.1X Enterprise.
+5. **Instant Zero-Touch Registration & ZTP Check**: Evaluates registration and provisions API keys automatically.
 
 > [!NOTE]
-> The installer automatically detects CPU/RAM, installs all dependencies, downloads the 12 synthetic diagnostic modules from the CMP server, writes `/etc/sensor/reconciler.json`, and starts the `sensor-reconciler.service` daemon.
+> The bootstrapper automatically detects hardware specs, installs dependencies, downloads synthetic probe modules from the CMP server, writes `/etc/sensor/reconciler.json`, symlinks `/usr/local/bin/one-wizard`, and activates `sensor-reconciler.service`.
+
+> [!TIP]
+> **Enterprise Zero-Touch DHCP & DNS Setup**: For step-by-step instructions on setting up DHCP Option 43/60 and DNS discovery without impacting VoIP phones or Wi-Fi APs, see the comprehensive [DHCP Option 43 & DNS Discovery Guide](file:///data/Open_Network_Experience/docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md) (`file:///data/Open_Network_Experience/docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md`).
 
 ### 4. Zero-Touch & TOFU Approval
 
-1. **Subnet Auto-Approval**: If the sensor IP matches an auto-enrollment subnet CIDR configured in CMP (`/api/v1/subnets`), it is **approved instantly** and assigned to its campus site without technician interaction.
-2. **1-Click Web UI Approval**: If manual TOFU is enabled, go to `http://<YOUR_CMP_SERVER_IP>:8000` and click **`[✓ Approve]`** or **`[Batch Approve]`** to activate the sensor.
+1. **Subnet Auto-Approval (ZTP)**: If the sensor IP matches an auto-enrollment subnet CIDR configured in CMP (`/api/v1/subnets`), it is **approved instantly** and assigned to its campus site without technician interaction.
+2. **1-Click Web UI Approval (TOFU)**: If manual approval is enabled, open the CMP Dashboard at `http://<YOUR_CMP_SERVER_IP>:8000` and click **`[✓ Approve]`** or **`[Batch Approve]`** in the Pending Approval queue.
 
 ### 5. Monitor Live Sensor Activity
 ```bash
 # Stream live adaptive resolution state transitions and check-in logs
 sudo journalctl -u sensor-reconciler -f
+
+# Check sensor systemd daemon status
+sudo systemctl status sensor-reconciler
 ```
 
 ---

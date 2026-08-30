@@ -2,11 +2,19 @@
 #
 # Open Network Experience Platform - 1-Line Zero-Touch Edge Sensor Installer & Bootstrap
 #
+# Copyright (C) 2026 Open Network Experience Authors.
+# Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
+# See LICENSE in the project root for full license details.
+#
 # Usage:
 #   1-Line Remote Install (from SSH):
-#     curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- --cmp http://10.98.2.125:8000/api/v1 --site "West High" --room "MDF 101"
+#     curl -sSL http://<cmp>:8000/install.sh | sudo bash -s -- --site "West High" --room "204"
 #
-#   Local Install:
+#   Interactive Wizard Mode:
+#     curl -sSL http://<cmp>:8000/install.sh | sudo bash -s -- --wizard
+#     sudo ./install.sh --wizard
+#
+#   Local Install with parameters:
 #     sudo ./install.sh --cmp http://10.98.2.125:8000/api/v1 --site "City Center" --room "IT Ops"
 #
 
@@ -18,10 +26,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 echo -e "${CYAN}================================================================${NC}"
-echo -e "${CYAN}   🚀 Open Network Experience (ONE) Edge Sensor 1-Line Installer ${NC}"
+echo -e "${CYAN}   🚀 Open Network Experience (ONE) Edge Sensor Installer        ${NC}"
 echo -e "${CYAN}================================================================${NC}"
 
 # Root verification
@@ -30,40 +39,70 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Default Argument Values
+# Default Argument Values (Can be replaced by server dynamic query injector)
 CMP_URL=""
 SITE_NAME="Main Campus"
 BUILDING_NAME="Main Building"
 ROOM_NAME="Room 101"
-DISTRICT_NAME="Default District"
+DISTRICT_NAME="Kern County Superintendent of Schools"
+LOCATION_NOTES="Ceiling AP Drop"
 ENROLL_TOKEN=""
+WIFI_SSID=""
+WIFI_PSK=""
 FORCE_INSTALL=0
+LAUNCH_WIZARD=0
+EXPLICIT_ARGS=0
 
 # Parse Command Line Arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
+    --wizard|-w)
+      LAUNCH_WIZARD=1
+      shift
+      ;;
     --cmp|-c)
       CMP_URL="$2"
+      EXPLICIT_ARGS=1
       shift 2
       ;;
-    --site|-s)
+    --site|-s|--campus)
       SITE_NAME="$2"
+      EXPLICIT_ARGS=1
       shift 2
       ;;
     --building|-b)
       BUILDING_NAME="$2"
+      EXPLICIT_ARGS=1
       shift 2
       ;;
     --room|-r)
       ROOM_NAME="$2"
+      EXPLICIT_ARGS=1
       shift 2
       ;;
     --district|-d)
       DISTRICT_NAME="$2"
+      EXPLICIT_ARGS=1
+      shift 2
+      ;;
+    --notes)
+      LOCATION_NOTES="$2"
+      EXPLICIT_ARGS=1
       shift 2
       ;;
     --token|-t)
       ENROLL_TOKEN="$2"
+      EXPLICIT_ARGS=1
+      shift 2
+      ;;
+    --wifi-ssid)
+      WIFI_SSID="$2"
+      EXPLICIT_ARGS=1
+      shift 2
+      ;;
+    --wifi-psk)
+      WIFI_PSK="$2"
+      EXPLICIT_ARGS=1
       shift 2
       ;;
     --force|-f)
@@ -82,13 +121,14 @@ if [[ -z "$CMP_URL" ]]; then
     CMP_URL="http://central-monitoring-platform.local/api/v1"
 fi
 
-echo -e "${BLUE}Configuration Parameters:${NC}"
-echo -e "  • CMP Control Plane: ${CYAN}${CMP_URL}${NC}"
-echo -e "  • District:          ${CYAN}${DISTRICT_NAME}${NC}"
-echo -e "  • Campus / Site:     ${CYAN}${SITE_NAME}${NC}"
-echo -e "  • Building:          ${CYAN}${BUILDING_NAME}${NC}"
-echo -e "  • Room / Location:   ${CYAN}${ROOM_NAME}${NC}"
-echo ""
+# If run interactively on a TTY without explicit site/room args, ask if technician wants the wizard
+if [[ "$EXPLICIT_ARGS" -eq 0 && "$LAUNCH_WIZARD" -eq 0 && -t 0 ]]; then
+    echo -e "${YELLOW}No deployment location specified.${NC}"
+    read -r -p "Would you like to run the Interactive Setup Wizard (one-wizard)? [Y/n]: " WIZ_CHOICE || WIZ_CHOICE="y"
+    if [[ "$WIZ_CHOICE" =~ ^([yY][eE][sS]|[yY]|"")$ ]]; then
+        LAUNCH_WIZARD=1
+    fi
+fi
 
 # Hardware compliance check
 echo -e "${BLUE}1. Checking Hardware Specs...${NC}"
@@ -102,18 +142,18 @@ echo -e "  • CPU Cores: ${GREEN}${CPU_CORES}${NC}"
 echo -e "  • Memory:    ${GREEN}${TOTAL_MEM_GB} GB${NC}"
 echo -e "  • Disk:      ${GREEN}${TOTAL_DISK_GB} GB${NC}"
 
-if [[ "$CPU_CORES" -lt 2 || "$TOTAL_MEM_KB" -lt 3670016 ]]; then
+if [[ "$CPU_CORES" -lt 2 || "$TOTAL_MEM_KB" -lt 1800000 ]]; then
     if [[ "$FORCE_INSTALL" -eq 1 ]]; then
-        echo -e "  ${YELLOW}⚠️ Hardware below recommended 4-core/8GB spec, but --force was specified. Proceeding...${NC}"
+        echo -e "  ${YELLOW}⚠️ Hardware below recommended spec, but --force was specified. Proceeding...${NC}"
     else
-        echo -e "  ${YELLOW}⚠️ Notice: Optimal production performance requires 4 cores / 8GB RAM. Use --force to override.${NC}"
+        echo -e "  ${YELLOW}⚠️ Notice: Standard sensor spec is 2-4 cores / 2-8GB RAM. Low memory single-board detected.${NC}"
     fi
 fi
 
 # Install system dependencies
 echo -e "\n${BLUE}2. Installing System Dependencies & Network Tools...${NC}"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq > /dev/null 2>&1
+apt-get update -qq > /dev/null 2>&1 || true
 apt-get install -y -qq \
     wpasupplicant \
     iperf3 \
@@ -125,15 +165,18 @@ apt-get install -y -qq \
     python3-pip \
     iproute2 \
     systemd \
-    > /dev/null 2>&1
+    wireless-tools \
+    > /dev/null 2>&1 || true
 echo -e "  • Packages installed: ${GREEN}OK${NC}"
 
 # Install Docker if missing
 if ! command -v docker &> /dev/null; then
     echo -n "  • Installing Docker engine... "
-    curl -fsSL https://get.docker.com | sh > /dev/null 2>&1
-    systemctl enable docker > /dev/null 2>&1
-    systemctl start docker > /dev/null 2>&1
+    curl -fsSL https://get.docker.com | sh > /dev/null 2>&1 || true
+    if command -v systemctl &> /dev/null; then
+        systemctl enable docker > /dev/null 2>&1 || true
+        systemctl start docker > /dev/null 2>&1 || true
+    fi
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "  • Docker engine: ${GREEN}Already installed${NC}"
@@ -141,6 +184,7 @@ fi
 
 # Prepare Sensor Directories
 mkdir -p /etc/sensor
+mkdir -p /etc/wpa_supplicant
 mkdir -p /usr/local/bin
 mkdir -p /var/lib/node_exporter/textfile_collector
 mkdir -p /var/lib/sensor/snapshots
@@ -149,14 +193,15 @@ mkdir -p /var/lib/sensor/evidence_bundles
 # Identify Script Source (Local git repository or Remote CMP Download)
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")" 2>/dev/null || echo ".")"
 IS_LOCAL=0
-if [[ -f "${SCRIPT_DIR}/reconciler/reconciler.py" ]]; then
+if [[ -f "${SCRIPT_DIR}/reconciler/reconciler.py" || -f "${SCRIPT_DIR}/onboarding/wizard.py" ]]; then
     IS_LOCAL=1
 fi
 
-echo -e "\n${BLUE}3. Deploying Edge Probes & Synthetic Engine...${NC}"
+echo -e "\n${BLUE}3. Deploying Edge Probes, Synthetic Engine & Setup Wizard...${NC}"
 
 PROBE_SCRIPTS=(
     "reconciler/reconciler.py:reconciler.py"
+    "onboarding/wizard.py:wizard.py"
     "cipa_compliance.py:cipa_compliance.py"
     "caaspp_readiness.py:caaspp_readiness.py"
     "iperf3_runner.py:iperf3_runner.py"
@@ -187,7 +232,55 @@ for item in "${PROBE_SCRIPTS[@]}"; do
     fi
     chmod +x "/usr/local/bin/${DEST_NAME}" 2>/dev/null || true
 done
-echo -e "  • 12 Synthetic Probes Installed: ${GREEN}OK${NC}"
+
+# Create global one-wizard symlink
+ln -sf /usr/local/bin/wizard.py /usr/local/bin/one-wizard
+chmod +x /usr/local/bin/one-wizard 2>/dev/null || true
+
+echo -e "  • Synthetic Probes & one-wizard Installed: ${GREEN}OK${NC}"
+
+# If Wi-Fi credentials supplied, configure wpa_supplicant
+if [[ -n "$WIFI_SSID" ]]; then
+    echo -e "\n${BLUE}4. Configuring Wi-Fi Credentials...${NC}"
+    if [[ -n "$WIFI_PSK" ]]; then
+        cat << EOF > /etc/wpa_supplicant/wpa_supplicant.conf
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=US
+
+network={
+    ssid="${WIFI_SSID}"
+    psk="${WIFI_PSK}"
+    key_mgmt=WPA-PSK
+}
+EOF
+    else
+        cat << EOF > /etc/wpa_supplicant/wpa_supplicant.conf
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=US
+
+network={
+    ssid="${WIFI_SSID}"
+    key_mgmt=NONE
+}
+EOF
+    fi
+    echo -e "  • Wi-Fi configured for SSID: ${GREEN}${WIFI_SSID}${NC}"
+fi
+
+# Check if launching wizard
+if [[ "$LAUNCH_WIZARD" -eq 1 ]]; then
+    echo -e "\n${GREEN}Launching Interactive Setup Wizard...${NC}\n"
+    if [[ -f /usr/local/bin/one-wizard ]]; then
+        exec /usr/bin/python3 /usr/local/bin/one-wizard
+    elif [[ -f "${SCRIPT_DIR}/onboarding/wizard.py" ]]; then
+        exec /usr/bin/python3 "${SCRIPT_DIR}/onboarding/wizard.py"
+    fi
+fi
+
+# Non-interactive / Default provisioning
+echo -e "\n${BLUE}4. Writing Sensor Configuration & Identity...${NC}"
 
 # Derive Hardware Sensor ID
 if [[ -f /etc/machine-id ]]; then
@@ -210,7 +303,8 @@ cat << EOF > /etc/sensor/reconciler.json
         "district": "${DISTRICT_NAME}",
         "site": "${SITE_NAME}",
         "building": "${BUILDING_NAME}",
-        "room": "${ROOM_NAME}"
+        "room": "${ROOM_NAME}",
+        "notes": "${LOCATION_NOTES}"
     }
 }
 EOF
@@ -236,17 +330,21 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable sensor-reconciler.service > /dev/null 2>&1
-systemctl restart sensor-reconciler.service
+if command -v systemctl &> /dev/null; then
+    systemctl daemon-reload > /dev/null 2>&1 || true
+    systemctl enable sensor-reconciler.service > /dev/null 2>&1 || true
+    systemctl restart sensor-reconciler.service > /dev/null 2>&1 || true
+fi
 
 echo -e "\n${CYAN}================================================================${NC}"
 echo -e "${GREEN}🎉 Sensor Provisioning Complete & Online!${NC}"
 echo -e "${CYAN}================================================================${NC}"
 echo -e "  • Sensor ID:       ${YELLOW}${SENSOR_UUID}${NC}"
+echo -e "  • Campus Location: ${CYAN}${DISTRICT_NAME} / ${SITE_NAME} / ${ROOM_NAME}${NC}"
 echo -e "  • Service Status:  ${GREEN}Active & Running (systemctl status sensor-reconciler)${NC}"
 echo -e "  • CMP Check-In:    ${CYAN}${CMP_URL}${NC}"
 echo ""
-echo -e "${YELLOW}To monitor live check-ins & adaptive probing:${NC}"
-echo -e "  ${CYAN}journalctl -u sensor-reconciler -f${NC}"
+echo -e "${YELLOW}Helpdesk Quick Commands:${NC}"
+echo -e "  • Live Logs:        ${BOLD}journalctl -u sensor-reconciler -f${NC}"
+echo -e "  • Re-run Wizard:    ${BOLD}sudo one-wizard${NC}"
 echo ""

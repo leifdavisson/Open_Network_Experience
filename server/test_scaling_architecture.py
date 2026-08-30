@@ -181,15 +181,38 @@ def test_install_script_endpoint():
     """Validates that CMP serves the 1-line curl installer script."""
     res = client.get("/install.sh")
     assert res.status_code == 200
-    assert "Open Network Experience (ONE) Edge Sensor 1-Line Installer" in res.text
+    assert "Open Network Experience (ONE) Edge Sensor Installer" in res.text
     assert "--cmp" in res.text
     assert "--site" in res.text
+    assert "--wizard" in res.text
+
+def test_install_script_with_query_params():
+    """Validates dynamic substitution of campus, room, and wizard flags via query parameters."""
+    res = client.get("/install.sh?site=West+High+School&room=Room+204&building=Science+Wing&wizard=true")
+    assert res.status_code == 200
+    assert 'SITE_NAME="West High School"' in res.text
+    assert 'ROOM_NAME="Room 204"' in res.text
+    assert 'BUILDING_NAME="Science Wing"' in res.text
+    assert 'LAUNCH_WIZARD=1' in res.text
+
+def test_health_check_endpoint():
+    """Validates platform health and readiness endpoint."""
+    res = client.get("/api/v1/health")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert "active_sensors" in data
+    assert "version" in data
 
 def test_sensor_script_distribution():
     """Validates that CMP serves edge synthetic probe scripts for remote curl bootstrap."""
     res = client.get("/sensor/scripts/reconciler.py")
     assert res.status_code == 200
     assert "AdaptiveResolutionEngine" in res.text
+
+    res = client.get("/sensor/scripts/wizard.py")
+    assert res.status_code == 200
+    assert "one-wizard" in res.text
 
     res = client.get("/sensor/scripts/cipa_compliance.py")
     assert res.status_code == 200

@@ -4,6 +4,15 @@ All notable changes to the Open Network Experience (OpenUX) platform will be doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] — 2026-08-30
+
+### Added
+- **1-Line Remote Web Bootstrapper with URL Query Presets**: CMP Control Plane `/install.sh` and `/bootstrap.sh` endpoints now support dynamic parameter injection (e.g. `?site=West+High&room=204&wizard=true`), enabling 1-click generation of custom bootstrap commands.
+- **Interactive Terminal Setup Wizard (`one-wizard`)** (`sensor/onboarding/wizard.py`): Guided CLI tool for helpdesk technicians and field administrators featuring automated hardware/NIC inspection, 4-way CMP auto-discovery with live latency checks, campus/room tagging, live Wi-Fi SSID site surveys with [wpa_supplicant](https://w1.fi/wpa_supplicant) configuration, and instant Zero-Touch Provisioning (ZTP) feedback.
+- **Zero-Touch Onboarding & Helpdesk Provisioner UI Card**: Dedicated control card in the CMP Web Console (**Fleet & Registration** tab) with interactive 1-line command generator, clipboard copy, and field technician protocol cheat sheet.
+- **CMP Platform Health Probe** (`/api/v1/health` and `/health`): Lightweight readiness endpoint returning active fleet counts and server timestamp for field connectivity verification.
+- **Comprehensive Wizard Test Suite** (`sensor/onboarding/test_wizard.py`): 11 unit and integration tests validating diagnostic discovery, HTTP reachability testing, Wi-Fi config generation, and batch provisioning.
+
 ## [0.3.0] — 2026-08-27
 
 ### Added

@@ -291,5 +291,21 @@ class TestComprehensiveWebUI(unittest.TestCase):
         with urllib.request.urlopen(req, timeout=5) as resp:
             self.assertEqual(resp.status, 200)
 
+    def test_07_chromebook_fleet_view_and_modal_elements(self):
+        """Validates that Chromebook fleet view, Wallboard Slide 6, and diagnostic modal exist."""
+        # 1. Slide 6 and nav button
+        self.assertIn('id="tab-slide-5"', self.html_content)
+        self.assertIn('id="slide-5"', self.html_content)
+        self.assertIn('id="cb-wallboard-table-body"', self.html_content)
+        self.assertIn('id="cb-roaming-feed"', self.html_content)
+
+        # 2. Fleet sub-filters and Chromebook table
+        self.assertIn('id="fleet-filter-all"', self.html_content)
+        self.assertIn('id="fleet-filter-cb"', self.html_content)
+        self.assertIn('id="cb-fleet-table-body"', self.html_content)
+
+        # 3. Diagnostic modal
+        self.assertIn('id="cb-detail-modal"', self.html_content)
+
 if __name__ == "__main__":
     unittest.main()

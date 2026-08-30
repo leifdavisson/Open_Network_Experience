@@ -465,5 +465,108 @@ class TestCMPFlow(unittest.TestCase):
         self.assertTrue(len(data["details"]) > 0)
         self.assertTrue(any("Gateway" in d.get("name", "") for d in data["details"]))
 
+    def test_11_chromebook_sensor_telemetry_report(self):
+        """Tests Chromebook extension telemetry ingestion at /sensors/report and /chromebook/metrics."""
+        cb_id = f"chromebook-sn-test{int(time.time())}"
+        report_payload = {
+            "sensor_id": cb_id,
+            "sensor_type": "chromebook",
+            "os": "ChromeOS",
+            "timestamp": int(time.time()),
+            "campus_id": "CAMPUS-WEST-HIGH",
+            "device_info": {
+                "serial_number": "5CD9440ABC",
+                "asset_id": "ASSET-CB-90210",
+                "annotated_location": "West High Room 204",
+                "hostname": "cb-student-204-01",
+                "is_managed": True,
+                "user_agent": "Mozilla/5.0 (X11; CrOS x86_64 14542.0.0)"
+            },
+            "wifi": {
+                "connected": True,
+                "ssid": "District-Secure-WiFi",
+                "bssid": "00:1A:2B:3C:4D:5E",
+                "rssi_dbm": -58,
+                "signal_strength_pct": 85,
+                "frequency_mhz": 5240,
+                "channel": 48,
+                "band": "5GHz",
+                "security": "WPA-Enterprise",
+                "roamed_recently": False
+            },
+            "hardware": {
+                "battery": {
+                    "level_percent": 94,
+                    "charging": True
+                },
+                "cpu": {
+                    "usage_percent": 18.5
+                },
+                "memory": {
+                    "usage_percent": 50.0
+                }
+            },
+            "probes": {
+                "synthetic_http": [
+                    {"name": "Google Classroom", "url": "https://classroom.google.com", "latency_ms": 32, "success": True},
+                    {"name": "CAASPP Testing", "url": "https://caaspp.org", "latency_ms": 55, "success": True}
+                ],
+                "webrtc": {
+                    "success": True,
+                    "rtt_ms": 22.4,
+                    "jitter_ms": 1.8,
+                    "mos": 4.39,
+                    "mos_grade": "Excellent"
+                }
+            }
+        }
+
+        # 1. Ingest via /sensors/report
+        code, data = self.make_request("/sensors/report", method="POST", body=report_payload)
+        self.assertEqual(code, 200)
+        self.assertEqual(data["status"], "received")
+        self.assertEqual(data["sensor_id"], cb_id)
+
+        # 2. Ingest via /chromebook/metrics
+        code2, data2 = self.make_request("/chromebook/metrics", method="POST", body=report_payload)
+        self.assertEqual(code2, 200)
+        self.assertEqual(data2["status"], "received")
+
+        # 3. Verify sensor is in active fleet list
+        code3, sensors_list = self.make_request("/sensors", method="GET", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code3, 200)
+        matching = [s for s in sensors_list if s["sensor_id"] == cb_id]
+        self.assertTrue(len(matching) > 0)
+        self.assertEqual(matching[0]["os"], "ChromeOS")
+
+        # 4. Verify /chromebooks endpoint returns formatted fleet item
+        code4, cb_fleet = self.make_request("/chromebooks", method="GET")
+        self.assertEqual(code4, 200)
+        cb_item = next((c for c in cb_fleet if c["sensor_id"] == cb_id), None)
+        self.assertIsNotNone(cb_item)
+        self.assertEqual(cb_item["serial_number"], "5CD9440ABC")
+        self.assertEqual(cb_item["asset_id"], "ASSET-CB-90210")
+        self.assertEqual(cb_item["wifi_bssid"], "00:1A:2B:3C:4D:5E")
+        self.assertEqual(cb_item["battery_level_pct"], 94)
+
+        # 5. Verify /chromebooks/{sensor_id} detailed inspection
+        code5, cb_detail = self.make_request(f"/chromebooks/{cb_id}", method="GET")
+        self.assertEqual(code5, 200)
+        self.assertEqual(cb_detail["sensor_id"], cb_id)
+        self.assertEqual(cb_detail["serial_number"], "5CD9440ABC")
+
+        # 6. Ingest roaming event and verify /chromebooks/roaming-trail
+        roam_payload = dict(report_payload)
+        roam_payload["wifi"] = dict(report_payload["wifi"])
+        roam_payload["wifi"]["roamed_recently"] = True
+        roam_payload["wifi"]["old_bssid"] = "00:1A:2B:3C:4D:5E"
+        roam_payload["wifi"]["bssid"] = "00:1A:2B:99:88:77"
+        self.make_request("/sensors/report", method="POST", body=roam_payload)
+
+        code6, roam_trail = self.make_request("/chromebooks/roaming-trail", method="GET")
+        self.assertEqual(code6, 200)
+        self.assertTrue(len(roam_trail) > 0)
+        self.assertEqual(roam_trail[-1]["new_bssid"], "00:1A:2B:99:88:77")
+
 if __name__ == "__main__":
     unittest.main()

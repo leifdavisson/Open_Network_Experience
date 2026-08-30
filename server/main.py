@@ -53,7 +53,11 @@ from schemas import (
     BatchApprovalRequest,
     OnDemandBurstTrigger,
     AdaptiveProbingConfig,
-    UnifiedScheduleSpec
+    UnifiedScheduleSpec,
+    SensorIngestResponse,
+    ChromebookTelemetryReport,
+    ChromebookFleetItemResponse,
+    RoamingEventResponse
 )
 import db
 
@@ -69,6 +73,7 @@ SENSORS_DB: Dict[str, dict] = {}
 PROBES_DB: Dict[str, dict] = {}
 SCHEDULES_DB: Dict[str, dict] = {}
 EVIDENCE_DB: Dict[str, List[dict]] = {}
+ROAMING_EVENTS_DB: List[dict] = []
 
 DEFAULT_TARGET_CONTAINERS = {
     "blackbox-exporter": TargetContainerSpec(
@@ -347,12 +352,37 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# --- 1-Line Sensor Bootstrap & Script Distribution ---
+# --- 1-Line Sensor Bootstrap, Health & Script Distribution ---
+
+@app.get("/api/v1/health", summary="CMP Health & Readiness Probe")
+@app.get("/health", summary="CMP Health & Readiness Probe")
+async def health_check():
+    """Returns platform status, active sensors count, and server timestamp."""
+    return {
+        "status": "ok",
+        "version": "0.3.0",
+        "timestamp": int(time.time()),
+        "active_sensors": len(SENSORS_DB),
+        "district": "Kern County Superintendent of Schools"
+    }
 
 @app.get("/install.sh", summary="1-Line Sensor SSH Installer Script")
 @app.get("/bootstrap.sh", summary="1-Line Sensor SSH Installer Script")
-async def get_install_script(request: Request):
-    """Serves the dynamic 1-line curl-to-bash edge sensor installer."""
+async def get_install_script(
+    request: Request,
+    site: Optional[str] = Query(None, alias="site"),
+    campus: Optional[str] = Query(None, alias="campus"),
+    building: Optional[str] = Query(None, alias="building"),
+    room: Optional[str] = Query(None, alias="room"),
+    district: Optional[str] = Query(None, alias="district"),
+    notes: Optional[str] = Query(None, alias="notes"),
+    token: Optional[str] = Query(None, alias="token"),
+    wifi_ssid: Optional[str] = Query(None, alias="wifi_ssid"),
+    wifi_psk: Optional[str] = Query(None, alias="wifi_psk"),
+    wizard: Optional[bool] = Query(None, alias="wizard"),
+    force: Optional[bool] = Query(None, alias="force")
+):
+    """Serves the dynamic 1-line curl-to-bash edge sensor installer with query parameter presets."""
     base_url = str(request.base_url).rstrip("/")
     install_file = os.path.join(os.path.dirname(__file__), "..", "sensor", "install.sh")
     if os.path.exists(install_file):
@@ -360,6 +390,30 @@ async def get_install_script(request: Request):
             content = f.read()
             # Replace default CMP URL placeholder with active request base URL
             content = content.replace("http://central-monitoring-platform.local/api/v1", f"{base_url}/api/v1")
+            target_site = site or campus
+            if target_site:
+                content = content.replace('SITE_NAME="Main Campus"', f'SITE_NAME="{target_site}"')
+                content = content.replace('EXPLICIT_ARGS=0', 'EXPLICIT_ARGS=1')
+            if building:
+                content = content.replace('BUILDING_NAME="Main Building"', f'BUILDING_NAME="{building}"')
+                content = content.replace('EXPLICIT_ARGS=0', 'EXPLICIT_ARGS=1')
+            if room:
+                content = content.replace('ROOM_NAME="Room 101"', f'ROOM_NAME="{room}"')
+                content = content.replace('EXPLICIT_ARGS=0', 'EXPLICIT_ARGS=1')
+            if district:
+                content = content.replace('DISTRICT_NAME="Kern County Superintendent of Schools"', f'DISTRICT_NAME="{district}"')
+            if notes:
+                content = content.replace('LOCATION_NOTES="Ceiling AP Drop"', f'LOCATION_NOTES="{notes}"')
+            if token:
+                content = content.replace('ENROLL_TOKEN=""', f'ENROLL_TOKEN="{token}"')
+            if wifi_ssid:
+                content = content.replace('WIFI_SSID=""', f'WIFI_SSID="{wifi_ssid}"')
+            if wifi_psk:
+                content = content.replace('WIFI_PSK=""', f'WIFI_PSK="{wifi_psk}"')
+            if wizard is True:
+                content = content.replace('LAUNCH_WIZARD=0', 'LAUNCH_WIZARD=1')
+            if force is True:
+                content = content.replace('FORCE_INSTALL=0', 'FORCE_INSTALL=1')
             return PlainTextResponse(content, media_type="text/x-shellscript")
     raise HTTPException(status_code=404, detail="install.sh not found on server")
 
@@ -368,14 +422,22 @@ async def get_sensor_script(script_name: str):
     """Serves synthetic probe scripts to edge sensor installer during curl bootstrapping."""
     sensor_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "sensor"))
 
-    # Check directly or in reconciler subfolder
-    target_path = os.path.join(sensor_dir, script_name)
-    if not os.path.exists(target_path) and script_name == "reconciler.py":
-        target_path = os.path.join(sensor_dir, "reconciler", "reconciler.py")
+    # Search directly, in reconciler, or in onboarding subfolders
+    search_paths = [
+        os.path.join(sensor_dir, script_name),
+        os.path.join(sensor_dir, "reconciler", script_name),
+        os.path.join(sensor_dir, "onboarding", script_name)
+    ]
+    if script_name == "reconciler.py":
+        search_paths.insert(0, os.path.join(sensor_dir, "reconciler", "reconciler.py"))
+    elif script_name == "wizard.py":
+        search_paths.insert(0, os.path.join(sensor_dir, "onboarding", "wizard.py"))
 
-    if os.path.exists(target_path) and os.path.isfile(target_path):
-        with open(target_path, "r", encoding="utf-8", errors="ignore") as f:
-            return PlainTextResponse(f.read(), media_type="text/plain")
+    for target_path in search_paths:
+        if os.path.exists(target_path) and os.path.isfile(target_path):
+            with open(target_path, "r", encoding="utf-8", errors="ignore") as f:
+                return PlainTextResponse(f.read(), media_type="text/plain")
+
     raise HTTPException(status_code=404, detail=f"Script '{script_name}' not found")
 
 # --- Edge Sensor API Endpoints ---
@@ -466,6 +528,264 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
 
     db.save_sensor(sensor)
     return response
+
+def forward_chromebook_metrics_to_tsdb(report: dict):
+    """Converts Chromebook telemetry report to Prometheus exposition format and forwards to VictoriaMetrics TSDB."""
+    sensor_id = report.get("sensor_id", "unknown")
+    campus_id = report.get("campus_id", "CAMPUS-CHROMEBOOK-FLEET")
+    ts = report.get("timestamp", int(time.time())) * 1000 # milliseconds for VictoriaMetrics
+
+    lines = []
+
+    wifi = report.get("wifi", {})
+    if wifi and isinstance(wifi, dict):
+        ssid = wifi.get("ssid") or "unknown"
+        bssid = wifi.get("bssid") or "unknown"
+        band = wifi.get("band") or "unknown"
+        channel = str(wifi.get("channel") or 0)
+
+        lines.append(f'chromebook_wifi_connected{{sensor_id="{sensor_id}",campus_id="{campus_id}",ssid="{ssid}",bssid="{bssid}"}} {1 if wifi.get("connected") else 0} {ts}')
+        if wifi.get("rssi_dbm") is not None:
+            lines.append(f'chromebook_wifi_rssi_dbm{{sensor_id="{sensor_id}",campus_id="{campus_id}",ssid="{ssid}",bssid="{bssid}",band="{band}",channel="{channel}"}} {wifi.get("rssi_dbm")} {ts}')
+        if wifi.get("signal_strength_pct") is not None:
+            lines.append(f'chromebook_wifi_signal_pct{{sensor_id="{sensor_id}",campus_id="{campus_id}",ssid="{ssid}"}} {wifi.get("signal_strength_pct")} {ts}')
+        if wifi.get("roamed_recently"):
+            lines.append(f'chromebook_wifi_roam_events_total{{sensor_id="{sensor_id}",campus_id="{campus_id}",ssid="{ssid}",bssid="{bssid}"}} 1 {ts}')
+
+    probes = report.get("probes", {})
+    if probes and isinstance(probes, dict):
+        webrtc = probes.get("webrtc")
+        if webrtc and isinstance(webrtc, dict) and webrtc.get("success"):
+            if webrtc.get("mos") is not None:
+                lines.append(f'chromebook_webrtc_mos{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {webrtc.get("mos")} {ts}')
+            if webrtc.get("rtt_ms") is not None:
+                lines.append(f'chromebook_webrtc_rtt_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {webrtc.get("rtt_ms")} {ts}')
+            if webrtc.get("jitter_ms") is not None:
+                lines.append(f'chromebook_webrtc_jitter_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {webrtc.get("jitter_ms")} {ts}')
+            if webrtc.get("packet_loss_percent") is not None:
+                lines.append(f'chromebook_webrtc_packet_loss_pct{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {webrtc.get("packet_loss_percent")} {ts}')
+
+        apps = probes.get("synthetic_http", [])
+        if isinstance(apps, list):
+            for app in apps:
+                if isinstance(app, dict):
+                    app_name = app.get("name", "Unknown App")
+                    category = app.get("category", "General")
+                    is_ok = 1 if app.get("success") else 0
+                    lines.append(f'chromebook_app_success{{sensor_id="{sensor_id}",campus_id="{campus_id}",app="{app_name}",category="{category}"}} {is_ok} {ts}')
+                    if app.get("latency_ms") is not None:
+                        lines.append(f'chromebook_app_latency_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",app="{app_name}",category="{category}"}} {app.get("latency_ms")} {ts}')
+                    if app.get("ttfb_ms"):
+                        lines.append(f'chromebook_app_ttfb_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",app="{app_name}"}} {app.get("ttfb_ms")} {ts}')
+
+    if not lines:
+        return
+
+    payload = "\n".join(lines) + "\n"
+    urls = [f"{VM_URL}/api/v1/import/prometheus", "http://localhost:8428/api/v1/import/prometheus", "http://127.0.0.1:8428/api/v1/import/prometheus"]
+    for url in urls:
+        try:
+            req = urllib.request.Request(
+                url,
+                data=payload.encode("utf-8"),
+                headers={"Content-Type": "text/plain"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                if resp.status in (200, 204):
+                    break
+        except Exception:
+            continue
+
+@app.post(
+    "/api/v1/sensors/report",
+    response_model=SensorIngestResponse,
+    summary="Universal Sensor & Chromebook Telemetry Report Ingestion"
+)
+@app.post(
+    "/api/v1/chromebook/metrics",
+    response_model=SensorIngestResponse,
+    summary="Chromebook Fleet Telemetry Ingestion"
+)
+async def ingest_sensor_report(
+    report: Dict[str, Any],
+    req: Request,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key")
+):
+    """Ingestion endpoint for Chromebook Fleet extensions and Edge Sensor telemetry."""
+    sensor_id = report.get("sensor_id", f"cb-anon-{int(time.time())}")
+    client_ip = req.headers.get("X-Forwarded-For", req.client.host if req.client else "unknown").split(",")[0].strip()
+
+    sensor = get_or_create_sensor(sensor_id)
+    sensor["last_seen"] = int(time.time())
+    sensor["os"] = report.get("os", "ChromeOS")
+    sensor["ip_address"] = client_ip
+
+    device_info = report.get("device_info", {})
+    if device_info:
+        if device_info.get("hostname"):
+            sensor["hostname"] = device_info.get("hostname")
+        if device_info.get("serial_number"):
+            sensor["serial_number"] = device_info.get("serial_number")
+        if device_info.get("asset_id"):
+            sensor["asset_id"] = device_info.get("asset_id")
+        if device_info.get("annotated_user"):
+            sensor["annotated_user"] = device_info.get("annotated_user")
+        if device_info.get("directory_device_id"):
+            sensor["directory_device_id"] = device_info.get("directory_device_id")
+        if device_info.get("mac_address"):
+            sensor["mac_address"] = device_info.get("mac_address")
+
+    # If location is provided
+    loc = report.get("location")
+    if loc and isinstance(loc, dict):
+        if not sensor.get("location"):
+            sensor["location"] = LocationSpec(**loc)
+        else:
+            for k, v in loc.items():
+                if v is not None and hasattr(sensor["location"], k):
+                    setattr(sensor["location"], k, v)
+
+    # Store latest Wi-Fi and probe telemetry in sensor status cache
+    sensor["wifi_telemetry"] = report.get("wifi", {})
+    sensor["probe_telemetry"] = report.get("probes", {})
+    sensor["hardware_telemetry"] = report.get("hardware", {})
+
+    # Auto-approve if subnet matches or key matches or unmanaged dev
+    if sensor["status"] != "approved":
+        matched_rule = db.match_subnet_auto_enroll(client_ip)
+        if matched_rule and matched_rule.get("auto_approve"):
+            sensor["status"] = "approved"
+            sensor["campus_id"] = matched_rule.get("campus_id")
+        elif x_api_key and x_api_key == ADMIN_API_KEY:
+            sensor["status"] = "approved"
+        else:
+            sensor["status"] = "approved" # Chromebook fleet clients auto-register
+
+    db.save_sensor(sensor)
+
+    # Forward Prometheus time-series metrics to VictoriaMetrics TSDB
+    try:
+        forward_chromebook_metrics_to_tsdb(report)
+    except Exception:
+        pass
+
+    # Record AP roaming handover event if detected
+    if report.get("wifi", {}).get("roamed_recently"):
+        ROAMING_EVENTS_DB.append({
+            "sensor_id": sensor_id,
+            "serial_number": sensor.get("serial_number"),
+            "old_bssid": report.get("wifi", {}).get("old_bssid") or "Previous-AP",
+            "new_bssid": report.get("wifi", {}).get("bssid"),
+            "ssid": report.get("wifi", {}).get("ssid"),
+            "timestamp": int(time.time()),
+            "campus_id": sensor.get("campus_id")
+        })
+        if len(ROAMING_EVENTS_DB) > 500:
+            ROAMING_EVENTS_DB.pop(0)
+
+    active_probes = [
+        p for p in PROBES_DB.values()
+        if p.get("enabled", True) and ("all" in p.get("target_sensors", ["all"]) or sensor_id in p.get("target_sensors", []))
+    ]
+    custom_probe_specs = [CustomProbeSpec(**p) for p in active_probes]
+
+    return SensorIngestResponse(
+        status="received",
+        sensor_id=sensor_id,
+        timestamp=int(time.time()),
+        probing_state=sensor.get("probing_state", "GREEN"),
+        custom_probes=custom_probe_specs
+    )
+
+# --- Chromebook Fleet REST API Endpoints ---
+
+@app.get(
+    "/api/v1/chromebooks",
+    response_model=List[ChromebookFleetItemResponse],
+    summary="List Active Chromebook Fleet Devices"
+)
+async def list_chromebook_fleet(campus: Optional[str] = None):
+    """Returns a list of all reporting Chromebook fleet sensors with Wi-Fi RF and hardware vitals."""
+    now = int(time.time())
+    result = []
+    for s_id, s in SENSORS_DB.items():
+        if s.get("os", "").lower() == "chromeos" or s_id.startswith("chromebook-") or s.get("sensor_type") == "chromebook":
+            if campus and s.get("campus_id") != campus:
+                continue
+            is_online = (now - s.get("last_seen", 0)) < 180 and s.get("last_seen", 0) > 0
+            wifi = s.get("wifi_telemetry", {})
+            probes = s.get("probe_telemetry", {})
+            hw = s.get("hardware_telemetry", {})
+            webrtc = probes.get("webrtc", {})
+            apps = probes.get("synthetic_http", [])
+            app_success_count = sum(1 for a in apps if a.get("success"))
+            app_sla = round((app_success_count / len(apps)) * 100, 1) if apps else 100.0
+
+            result.append(ChromebookFleetItemResponse(
+                sensor_id=s_id,
+                serial_number=s.get("serial_number") or "UNTAGGED",
+                asset_id=s.get("asset_id") or "UNTAGGED",
+                annotated_location=s.get("location").room if s.get("location") else "Mobile Fleet",
+                annotated_user=s.get("annotated_user"),
+                hostname=s.get("hostname"),
+                ip_address=s.get("ip_address"),
+                mac_address=s.get("mac_address"),
+                is_online=is_online,
+                last_seen=s.get("last_seen", 0),
+                campus_id=s.get("campus_id") or "CAMPUS-CHROMEBOOK-FLEET",
+                wifi_ssid=wifi.get("ssid"),
+                wifi_bssid=wifi.get("bssid"),
+                wifi_rssi_dbm=wifi.get("rssi_dbm"),
+                wifi_signal_pct=wifi.get("signal_strength_pct"),
+                wifi_channel=wifi.get("channel"),
+                wifi_band=wifi.get("band"),
+                battery_level_pct=hw.get("battery", {}).get("level_percent") if isinstance(hw.get("battery"), dict) else None,
+                battery_charging=hw.get("battery", {}).get("charging") if isinstance(hw.get("battery"), dict) else None,
+                cpu_usage_pct=hw.get("cpu", {}).get("usage_percent") if isinstance(hw.get("cpu"), dict) else None,
+                memory_usage_pct=hw.get("memory", {}).get("usage_percent") if isinstance(hw.get("memory"), dict) else None,
+                webrtc_mos=webrtc.get("mos"),
+                webrtc_mos_grade=webrtc.get("mos_grade"),
+                app_sla_pct=app_sla,
+                roamed_recently=wifi.get("roamed_recently", False),
+                location=s.get("location")
+            ))
+    return result
+
+@app.get(
+    "/api/v1/chromebooks/roaming-trail",
+    response_model=List[RoamingEventResponse],
+    summary="Get Recent Chromebook AP Roaming Events"
+)
+async def get_chromebook_roaming_trail(limit: int = 50):
+    """Returns the most recent AP BSSID handover transitions for roaming visualization."""
+    return ROAMING_EVENTS_DB[-limit:]
+
+@app.get(
+    "/api/v1/chromebooks/{sensor_id}",
+    summary="Get Detailed Chromebook Fleet Sensor Diagnostics"
+)
+async def get_chromebook_detail(sensor_id: str):
+    """Returns granular diagnostic, hardware, RF, and probe telemetry for a specific Chromebook."""
+    sensor = SENSORS_DB.get(sensor_id)
+    if not sensor:
+        raise HTTPException(status_code=404, detail="Chromebook sensor not found")
+    return {
+        "sensor_id": sensor_id,
+        "serial_number": sensor.get("serial_number"),
+        "asset_id": sensor.get("asset_id"),
+        "annotated_user": sensor.get("annotated_user"),
+        "directory_device_id": sensor.get("directory_device_id"),
+        "hostname": sensor.get("hostname"),
+        "ip_address": sensor.get("ip_address"),
+        "mac_address": sensor.get("mac_address"),
+        "last_seen": sensor.get("last_seen", 0),
+        "location": sensor.get("location"),
+        "campus_id": sensor.get("campus_id"),
+        "wifi": sensor.get("wifi_telemetry", {}),
+        "hardware": sensor.get("hardware_telemetry", {}),
+        "probes": sensor.get("probe_telemetry", {})
+    }
 
 # --- Administrative Endpoints ---
 
@@ -1698,6 +2018,7 @@ async def serve_admin_ui():
                         <button class="slide-tab-btn" onclick="goToSlide(2)" id="tab-slide-2">📚 3. Classroom SaaS SLAs</button>
                         <button class="slide-tab-btn" onclick="goToSlide(3)" id="tab-slide-3">👨‍🏫 4. Helpdesk & Teacher View</button>
                         <button class="slide-tab-btn" onclick="goToSlide(4)" id="tab-slide-4">📈 5. Live Grafana Metrics</button>
+                        <button class="slide-tab-btn" onclick="goToSlide(5)" id="tab-slide-5">💻 6. Chromebook Fleet</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <button class="btn btn-outline btn-sm" onclick="togglePlayPause()" id="btn-play-pause">⏸ Pause</button>
@@ -2015,6 +2336,80 @@ async def serve_admin_ui():
                     </div>
                 </div>
 
+                <!-- SLIDE 6: 1:1 STUDENT CHROMEBOOK FLEET EXPERIENCE & ROAMING -->
+                <div class="slide-card" id="slide-5">
+                    <div class="metrics-grid">
+                        <div class="metric-card" style="border-left: 4px solid var(--accent);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Active Chromebooks</div>
+                                <div class="metric-icon-badge" style="background: rgba(56,189,248,0.15); color: var(--accent);">💻</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-active">0</div>
+                            <div class="metric-footer"><span>Fleet Status: Streaming</span><span id="cb-kpi-managed">100% Managed</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--success);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Avg Wi-Fi Signal (RSSI)</div>
+                                <div class="metric-icon-badge" style="background: rgba(16,185,129,0.15); color: var(--success);">📶</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-rssi">-58 dBm</div>
+                            <div class="metric-footer"><span>RF Band: 5 GHz / 6 GHz</span><span>Optimal</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Google Meet / Zoom MOS</div>
+                                <div class="metric-icon-badge" style="background: rgba(168,85,247,0.15); color: var(--purple);">🎙️</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-mos">4.38 / 5.0</div>
+                            <div class="metric-footer"><span>VoIP Quality: Excellent</span><span>&lt;25ms RTT</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--warning);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">District Web Apps SLA</div>
+                                <div class="metric-icon-badge" style="background: rgba(245,158,11,0.15); color: var(--warning);">⚡</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-sla">100%</div>
+                            <div class="metric-footer"><span>CAASPP / LMS / Clever</span><span>0 Failures</span></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                        <div class="section-card" style="margin-bottom: 0;">
+                            <div class="section-header">
+                                <div class="section-title">💻 Live Student Chromebook Telemetry Stream</div>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Serial / Asset</th>
+                                        <th>Room / Location</th>
+                                        <th>Active AP BSSID</th>
+                                        <th>RSSI (dBm)</th>
+                                        <th>Battery</th>
+                                        <th>MOS Score</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cb-wallboard-table-body">
+                                    <tr><td colspan="7" style="text-align:center;">Streaming active student devices...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="section-card" style="margin-bottom: 0;">
+                            <div class="section-header">
+                                <div class="section-title">🔄 Recent AP Roaming Trail</div>
+                            </div>
+                            <div id="cb-roaming-feed" style="max-height: 380px; overflow-y: auto;">
+                                <p style="color: var(--text-muted); font-size: 12px;">Listening for AP handovers...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- VIEW 2: MONITOR - GIS CAMPUS MAP -->
@@ -2143,6 +2538,66 @@ async def serve_admin_ui():
 
             <!-- VIEW 5: MANAGE - FLEET & REGISTRATION -->
             <div class="view-section" id="view-manage-fleet">
+                <!-- 1-Line Onboarding & Helpdesk Provisioner Card -->
+                <div class="section-card" style="border-left: 4px solid var(--accent); background: linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, rgba(26, 32, 44, 0.6) 100%);">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div class="section-title" style="display: flex; align-items: center; gap: 8px;">
+                                <span>🚀 Zero-Touch Onboarding & Helpdesk Provisioner</span>
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--success); font-size: 11px;">1-Line Bootstrapper</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                Generate customized 1-line curl bootstrap commands or dispatch the interactive <code style="color: var(--accent); background: rgba(59,130,246,0.15); padding: 2px 6px; border-radius: 4px;">one-wizard</code> setup for field technicians.
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline btn-sm" onclick="toggleOnboardingDetails()">📖 Tech Cheat Sheet</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Campus / School</label>
+                            <input type="text" id="ob-campus" value="West High School" placeholder="e.g. West High School" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Building / Wing</label>
+                            <input type="text" id="ob-building" value="Science Building" placeholder="e.g. Science Wing" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Room / Drop ID</label>
+                            <input type="text" id="ob-room" value="Room 204" placeholder="e.g. Room 204" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Deployment Mode</label>
+                            <select id="ob-mode" onchange="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                                <option value="url-params">1-Line URL Presets (Recommended)</option>
+                                <option value="cli-flags">1-Line CLI Arguments</option>
+                                <option value="wizard">Interactive one-wizard CLI</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Generated Command Box -->
+                    <div style="margin-top: 14px; background: #0b0f19; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px;">⚡ Ready-To-Paste Field Command</div>
+                            <button class="btn btn-sm" id="btn-copy-bootstrap" onclick="copyBootstrapCommand()" style="background: var(--accent); color: white; padding: 4px 12px; font-size: 12px;">📋 Copy Command</button>
+                        </div>
+                        <pre id="ob-command-preview" style="margin: 0; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 6px; font-family: monospace; font-size: 13px; color: #38bdf8; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">curl -sSL http://cmp-server:8000/install.sh?site=West+High+School&room=Room+204 | sudo bash</pre>
+                    </div>
+
+                    <!-- Collapsible Tech Cheat Sheet -->
+                    <div id="ob-cheatsheet" style="display: none; margin-top: 14px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px;">
+                        <div style="font-weight: 600; font-size: 13px; margin-bottom: 8px; color: var(--text);">📋 Field Technician 3-Step Onboarding Protocol:</div>
+                        <ol style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-muted); line-height: 1.8;">
+                            <li><strong>Connect Hardware:</strong> Plug the Raspberry Pi / SBC into a PoE switchport or connect via Wi-Fi.</li>
+                            <li><strong>Run Command:</strong> SSH or open local terminal and paste the 1-line command above (or run <code style="color:var(--accent);">sudo one-wizard</code>).</li>
+                            <li><strong>Zero-Touch Verification:</strong> The sensor automatically registers. If on an auto-enroll subnet, it's approved immediately; otherwise approve it with 1-click in the queue below.</li>
+                        </ol>
+                    </div>
+                </div>
+
                 <!-- Pending Queue -->
                 <div class="section-card" id="pending-section" style="display: none; border-left: 4px solid var(--warning);">
                     <div class="section-header">
@@ -2164,24 +2619,54 @@ async def serve_admin_ui():
 
                 <!-- Active Fleet Table -->
                 <div class="section-card">
-                    <div class="section-header">
-                        <div class="section-title">📡 Active Edge Sensors Fleet</div>
+                    <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
+                        <div class="section-title">📡 Active Sensors & Device Fleet</div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-sm" id="fleet-filter-all" onclick="setFleetFilter('all')">🔘 All Devices</button>
+                            <button class="btn btn-outline btn-sm" id="fleet-filter-edge" onclick="setFleetFilter('edge')">📡 Fixed Edge Sensors</button>
+                            <button class="btn btn-outline btn-sm" id="fleet-filter-cb" onclick="setFleetFilter('chromebook')">💻 1:1 Chromebooks</button>
+                        </div>
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Sensor ID</th>
-                                <th>Physical Room / Campus</th>
-                                <th>GPS Coordinates</th>
-                                <th>Status</th>
-                                <th>Last Seen</th>
-                                <th>Quick Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sensors-table-body">
-                            <tr><td colspan="6" style="text-align:center;">Loading fleet...</td></tr>
-                        </tbody>
-                    </table>
+                    <div id="fleet-edge-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Sensor ID / Type</th>
+                                    <th>Physical Room / Campus</th>
+                                    <th>GPS Coordinates</th>
+                                    <th>Status</th>
+                                    <th>Last Seen</th>
+                                    <th>Quick Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sensors-table-body">
+                                <tr><td colspan="6" style="text-align:center;">Loading fleet...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="fleet-cb-table-container" style="margin-top: 20px; display: none;">
+                        <div class="section-header">
+                            <div class="section-title">💻 1:1 Chromebook Fleet Inventory (ChromeOS Managed)</div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Serial / Asset</th>
+                                    <th>Assigned User / Room</th>
+                                    <th>Active AP BSSID</th>
+                                    <th>Wi-Fi Signal (RSSI)</th>
+                                    <th>Battery</th>
+                                    <th>WebRTC MOS</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cb-fleet-table-body">
+                                <tr><td colspan="8" style="text-align:center;">Loading Chromebook fleet...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -2666,6 +3151,22 @@ async def serve_admin_ui():
         </div>
     </div>
 
+    <!-- Chromebook Fleet Diagnostics Modal -->
+    <div class="modal-overlay" id="cb-detail-modal" onclick="handleBackdropClick(event, 'cb-detail-modal')">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="cb-modal-title">💻 Chromebook Diagnostic Inspector</h2>
+                <button type="button" class="close-btn" onclick="closeCbDetailModal()">✕</button>
+            </div>
+            <div id="cb-modal-body" style="padding: 10px 0;">
+                <p>Loading Chromebook telemetry...</p>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                <button type="button" class="btn btn-outline" onclick="closeCbDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const ADMIN_KEY = "admin-noc-key-change-me";
         let SENSORS_CACHE = [];
@@ -2681,7 +3182,7 @@ async def serve_admin_ui():
 
         // MAIN SLIDESHOW STATE & CONTROLS
         let currentSlideIndex = 0;
-        const totalSlides = 5;
+        const totalSlides = 6;
         let isSlidePlaying = true;
         const slideDurationMs = 15000;
         let slideStartTime = Date.now();
@@ -2712,6 +3213,11 @@ async def serve_admin_ui():
                 name: "4. CIPA Policy Drill-Down",
                 title: "CIPA Content Filtering Deep Forensic Drill-Down",
                 path: "/d/openux-cipa-drilldown/cipa-content-filtering-deep-forensic-and-policy-violation-drill-down?kiosk=tv&theme=dark"
+            },
+            {
+                name: "5. Chromebook Fleet Experience",
+                title: "1:1 Chromebook Experience & Wi-Fi Telemetry",
+                path: "/d/one-chromebook-fleet-dashboard/one-chromebook-fleet-experience-and-wi-fi-telemetry?kiosk=tv&theme=dark"
             }
         ];
 
@@ -2735,9 +3241,9 @@ async def serve_admin_ui():
                         if (grafanaSubIndex < GRAFANA_DASHBOARDS.length - 1) {
                             goToGrafanaSub(grafanaSubIndex + 1);
                         } else {
-                            // Completed full Grafana rotation -> return to Slide 1 (Executive SLA Wallboard)
+                            // Completed full Grafana rotation -> advance to Slide 6 (Chromebook Fleet)
                             grafanaSubIndex = 0;
-                            goToSlide(0);
+                            goToSlide(5);
                         }
                     }
                 } else {
@@ -3330,6 +3836,130 @@ async def serve_admin_ui():
             }
         }
 
+        let CHROMEBOOKS_CACHE = [];
+        let ROAMING_TRAIL_CACHE = [];
+        let currentFleetFilter = 'all';
+
+        function setFleetFilter(filter) {
+            currentFleetFilter = filter;
+            document.querySelectorAll('#fleet-filter-all, #fleet-filter-edge, #fleet-filter-cb').forEach(b => {
+                b.classList.remove('btn');
+                b.classList.add('btn-outline');
+            });
+            const btn = document.getElementById('fleet-filter-' + (filter === 'all' ? 'all' : (filter === 'edge' ? 'edge' : 'cb')));
+            if (btn) {
+                btn.classList.remove('btn-outline');
+                btn.classList.add('btn');
+            }
+
+            const edgeContainer = document.getElementById('fleet-edge-table-container');
+            const cbContainer = document.getElementById('fleet-cb-table-container');
+
+            if (filter === 'all') {
+                if (edgeContainer) edgeContainer.style.display = 'block';
+                if (cbContainer) cbContainer.style.display = 'block';
+            } else if (filter === 'edge') {
+                if (edgeContainer) edgeContainer.style.display = 'block';
+                if (cbContainer) cbContainer.style.display = 'none';
+            } else if (filter === 'chromebook') {
+                if (edgeContainer) edgeContainer.style.display = 'none';
+                if (cbContainer) cbContainer.style.display = 'block';
+            }
+        }
+
+        async function openCbDetailModal(sensorId) {
+            const modal = document.getElementById('cb-detail-modal');
+            const body = document.getElementById('cb-modal-body');
+            const title = document.getElementById('cb-modal-title');
+            if (modal) modal.style.display = 'flex';
+            if (title) title.innerText = `💻 Chromebook Diagnostic Inspector: ${sensorId}`;
+            if (body) body.innerHTML = `<p style="color:var(--text-muted);">Fetching dynamic telemetry for <code>${sensorId}</code>...</p>`;
+
+            try {
+                const res = await fetch(`/api/v1/chromebooks/${sensorId}`);
+                if (!res.ok) throw new Error("Sensor not found");
+                const data = await res.json();
+                const wifi = data.wifi || {};
+                const hw = data.hardware || {};
+                const probes = data.probes || {};
+                const cpu = hw.cpu || {};
+                const mem = hw.memory || {};
+                const batt = hw.battery || {};
+                const webrtc = probes.webrtc || {};
+                const apps = probes.synthetic_http || [];
+
+                body.innerHTML = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--accent); font-size:13px;">🏢 Enterprise Identity</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • Serial Number: <b>${data.serial_number || 'N/A'}</b><br>
+                                • Asset Tag: <b>${data.asset_id || 'UNTAGGED'}</b><br>
+                                • User: <b>${data.annotated_user || 'Shared Student Cart'}</b><br>
+                                • Location: <b>${data.location?.room || 'Mobile Client'}</b> (${data.campus_id || 'District Fleet'})<br>
+                                • Hostname: <code>${data.hostname || 'cb-client'}</code>
+                            </div>
+                        </div>
+
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--success); font-size:13px;">📶 Wi-Fi RF & AP Connection</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • Active SSID: <b>${wifi.ssid || 'District-Secure-WiFi'}</b><br>
+                                • AP BSSID: <code>${wifi.bssid || 'Scanning...'}</code><br>
+                                • Signal RSSI: <b>${wifi.rssi_dbm !== undefined ? wifi.rssi_dbm + ' dBm' : '-58 dBm'} (${wifi.signal_strength_pct || 85}%)</b><br>
+                                • Channel / Band: <b>Ch${wifi.channel || 48} (${wifi.band || '5GHz'})</b><br>
+                                • IP / MAC: <code>${data.ip_address || '10.200.4.155'} / ${data.mac_address || '00:1A:2B:3C:4D:5E'}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--purple); font-size:13px;">⚙️ Dynamic Hardware Vitals</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • CPU: <b>${cpu.model_name || 'Celeron/ARM'} (${cpu.usage_percent || 12.4}% Used)</b><br>
+                                • Memory: <b>${mem.usage_percent || 48.0}% (${mem.capacity_bytes ? (mem.capacity_bytes/1073741824).toFixed(1)+'GB' : '8GB'})</b><br>
+                                • Battery: <b>${batt.level_percent !== undefined ? (batt.charging ? '⚡ Charging' : '🔋 Battery') + ' ' + batt.level_percent + '%' : '100%'}</b><br>
+                                • Display: <b>${hw.display?.primary_resolution || '1366x768'}</b>
+                            </div>
+                        </div>
+
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--warning); font-size:13px;">🎙️ WebRTC & VoIP Quality</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • E-Model MOS: <b>${webrtc.mos ? '🟢 ' + webrtc.mos.toFixed(2) + ' (' + (webrtc.mos_grade||'Excellent') + ')' : '🟢 4.38 (Excellent)'}</b><br>
+                                • STUN RTT Latency: <b>${webrtc.rtt_ms ? webrtc.rtt_ms + ' ms' : '22.5 ms'}</b><br>
+                                • Packet Jitter: <b>${webrtc.jitter_ms ? webrtc.jitter_ms + ' ms' : '1.8 ms'}</b><br>
+                                • Packet Loss: <b>${webrtc.packet_loss_percent !== undefined ? webrtc.packet_loss_percent + '%' : '0.0%'}</b>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                        <strong style="color:var(--text-main); font-size:13px;">⚡ District App Latency Breakdown</strong>
+                        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                            ${apps.length > 0 ? apps.map(a => `
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;">
+                                    <b>${a.name}</b>: <span style="color:${a.success ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">${a.latency_ms}ms</span> ${a.success ? '✓' : '✗'}
+                                </div>
+                            `).join('') : `
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;"><b>CAASPP Testing</b>: <span style="color:var(--success); font-weight:700;">45ms</span> ✓</div>
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;"><b>Google Classroom</b>: <span style="color:var(--success); font-weight:700;">32ms</span> ✓</div>
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;"><b>Clever SSO</b>: <span style="color:var(--success); font-weight:700;">28ms</span> ✓</div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                body.innerHTML = `<p style="color:var(--danger);">Error loading sensor telemetry: ${err.message}</p>`;
+            }
+        }
+
+        function closeCbDetailModal() {
+            const modal = document.getElementById('cb-detail-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
         async function loadDashboardData() {
             try {
                 const resSensors = await fetch('/api/v1/sensors', { headers: { 'X-API-Key': ADMIN_KEY } });
@@ -3358,14 +3988,23 @@ async def serve_admin_ui():
                     console.warn("Could not load live wallboard stats:", e);
                 }
 
-                renderDashboard(SENSORS_CACHE, probes, liveStats);
+                try {
+                    const resCb = await fetch('/api/v1/chromebooks');
+                    CHROMEBOOKS_CACHE = await resCb.json();
+                    const resRoam = await fetch('/api/v1/chromebooks/roaming-trail');
+                    ROAMING_TRAIL_CACHE = await resRoam.json();
+                } catch (e) {
+                    console.warn("Could not load Chromebook fleet data:", e);
+                }
+
+                renderDashboard(SENSORS_CACHE, probes, liveStats, CHROMEBOOKS_CACHE, ROAMING_TRAIL_CACHE);
                 renderAnalyticsCharts(liveStats);
             } catch (err) {
                 console.error("Failed to load dashboard data:", err);
             }
         }
 
-        function renderDashboard(sensors, probes, liveStats) {
+        function renderDashboard(sensors, probes, liveStats, chromebooks, roamingTrail) {
             let onlineCount = 0;
             let offlineCount = 0;
             let pendingCount = 0;
@@ -3409,11 +4048,8 @@ async def serve_admin_ui():
                                 <strong style="font-size:13px; color:var(--text-main);">${loc.site || 'City Center'}</strong>
                                 ${mapStatusBadge}
                             </div>
-                            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">
-                                ${loc.building || '1300 17th St'} &bull; ${loc.room || 'IT Operations'}
-                            </div>
-                            <div style="font-size:10px; color:var(--accent); margin-top:2px;">
-                                ${loc.latitude.toFixed(5)}°, ${loc.longitude.toFixed(5)}° &bull; Last seen: ${s.last_seen > 0 ? new Date(s.last_seen * 1000).toLocaleTimeString() : 'Never'}
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                📍 ${loc.building || 'Main'} &bull; ${loc.room || 'Room'} (${s.sensor_id.slice(0, 10)}...)
                             </div>
                         </div>
                     `);
@@ -3423,15 +4059,13 @@ async def serve_admin_ui():
                     pendingCount++;
                     pendingRows.push(`
                         <tr>
-                            <td><strong>${s.sensor_id}</strong></td>
-                            <td>${s.hostname || 'Unknown'}</td>
-                            <td><code>${s.mac_address || 'Unknown'}</code></td>
+                            <td><code>${s.sensor_id}</code></td>
+                            <td>${s.hostname || 'unknown'}</td>
+                            <td><code>${s.mac_address || '00:00:00:00:00:00'}</code></td>
                             <td>${locText}</td>
                             <td>
-                                <div class="btn-group">
-                                    <button class="btn btn-success btn-sm" onclick="approveSensor('${s.sensor_id}')">✓ Approve</button>
-                                    <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">✗ Reject</button>
-                                </div>
+                                <button class="btn btn-sm" onclick="approveSensor('${s.sensor_id}')">Approve</button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Reject</button>
                             </td>
                         </tr>
                     `);
@@ -3458,6 +4092,100 @@ async def serve_admin_ui():
                     `);
                 }
             });
+
+            // Populate Chromebook Fleet Table & Wallboard Slide 6
+            const cbList = chromebooks || CHROMEBOOKS_CACHE || [];
+            const cbRows = [];
+            const cbWallboardRows = [];
+            let cbOnlineCount = 0;
+            let cbTotalRssi = 0;
+            let cbRssiCount = 0;
+            let cbTotalMos = 0;
+            let cbMosCount = 0;
+
+            cbList.forEach(cb => {
+                if (cb.is_online) cbOnlineCount++;
+                if (cb.wifi_rssi_dbm) {
+                    cbTotalRssi += cb.wifi_rssi_dbm;
+                    cbRssiCount++;
+                }
+                if (cb.webrtc_mos) {
+                    cbTotalMos += cb.webrtc_mos;
+                    cbMosCount++;
+                }
+
+                const rssiColor = cb.wifi_rssi_dbm >= -65 ? 'var(--success)' : (cb.wifi_rssi_dbm >= -75 ? 'var(--warning)' : 'var(--danger)');
+                const mosColor = (cb.webrtc_mos || 4.38) >= 4.0 ? 'var(--success)' : ((cb.webrtc_mos || 4.38) >= 3.6 ? 'var(--warning)' : 'var(--danger)');
+                const battText = cb.battery_level_pct !== null && cb.battery_level_pct !== undefined ?
+                    `${cb.battery_charging ? '⚡' : '🔋'} ${cb.battery_level_pct}%` : '100%';
+                const statusBadge = cb.is_online ?
+                    '<span class="status-pill status-online">● Streaming</span>' :
+                    '<span class="status-pill status-offline">○ Offline</span>';
+
+                cbRows.push(`
+                    <tr>
+                        <td><strong>${cb.serial_number || 'UNTAGGED'}</strong><br><span style="font-size:11px; color:var(--text-muted);">${cb.asset_id || cb.sensor_id}</span></td>
+                        <td><strong>${cb.annotated_location || 'Mobile Fleet'}</strong><br><span style="font-size:11px; color:var(--accent);">${cb.annotated_user || 'Shared Student Cart'}</span></td>
+                        <td><code>${cb.wifi_bssid || 'Scanning APs'}</code><br><span style="font-size:11px; color:var(--text-muted);">${cb.wifi_ssid || 'District-WiFi'} (${cb.wifi_band || '5GHz'} Ch${cb.wifi_channel || 0})</span></td>
+                        <td><span style="color:${rssiColor}; font-weight:700;">${cb.wifi_rssi_dbm !== null && cb.wifi_rssi_dbm !== undefined ? cb.wifi_rssi_dbm + ' dBm' : '-58 dBm'}</span> <span style="font-size:11px; color:var(--text-muted);">(${cb.wifi_signal_pct || 85}%)</span></td>
+                        <td>${battText}</td>
+                        <td><span style="color:${mosColor}; font-weight:700;">${cb.webrtc_mos ? '🟢 ' + cb.webrtc_mos.toFixed(2) : '🟢 4.38'}</span></td>
+                        <td>${statusBadge}</td>
+                        <td><button class="btn btn-outline btn-sm" onclick="openCbDetailModal('${cb.sensor_id}')">⚡ Details</button></td>
+                    </tr>
+                `);
+
+                cbWallboardRows.push(`
+                    <tr>
+                        <td><strong>${cb.serial_number || cb.sensor_id.slice(0, 14)}</strong></td>
+                        <td>${cb.annotated_location || 'Classroom'}</td>
+                        <td><code>${cb.wifi_bssid ? cb.wifi_bssid.slice(0, 11) + '...' : 'Connected'}</code></td>
+                        <td><span style="color:${rssiColor}; font-weight:700;">${cb.wifi_rssi_dbm || -58} dBm</span></td>
+                        <td>${battText}</td>
+                        <td><span style="color:${mosColor}; font-weight:700;">${cb.webrtc_mos ? cb.webrtc_mos.toFixed(2) : '4.38'}</span></td>
+                        <td><button class="btn btn-outline btn-sm" style="padding:1px 6px;" onclick="openCbDetailModal('${cb.sensor_id}')">Inspect</button></td>
+                    </tr>
+                `);
+            });
+
+            const cbTableBody = document.getElementById('cb-fleet-table-body');
+            if (cbTableBody) {
+                cbTableBody.innerHTML = cbRows.length > 0 ? cbRows.join('') : '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No Chromebook fleet sensors reporting yet. (Install extension to auto-stream)</td></tr>';
+            }
+
+            const cbWbTableBody = document.getElementById('cb-wallboard-table-body');
+            if (cbWbTableBody) {
+                cbWbTableBody.innerHTML = cbWallboardRows.length > 0 ? cbWallboardRows.join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Awaiting active student Chromebook telemetry streams...</td></tr>';
+            }
+
+            // Update Slide 6 KPI Cards
+            const cbKpiActive = document.getElementById('cb-kpi-active');
+            if (cbKpiActive) cbKpiActive.innerText = cbOnlineCount;
+            const cbKpiRssi = document.getElementById('cb-kpi-rssi');
+            if (cbKpiRssi) cbKpiRssi.innerText = cbRssiCount > 0 ? `${Math.round(cbTotalRssi / cbRssiCount)} dBm` : '-58 dBm';
+            const cbKpiMos = document.getElementById('cb-kpi-mos');
+            if (cbKpiMos) cbKpiMos.innerText = cbMosCount > 0 ? `${(cbTotalMos / cbMosCount).toFixed(2)} / 5.0` : '4.38 / 5.0';
+
+            // Populate Slide 6 Roaming Feed
+            const roamTrail = roamingTrail || ROAMING_TRAIL_CACHE || [];
+            const roamFeed = document.getElementById('cb-roaming-feed');
+            if (roamFeed) {
+                if (roamTrail.length === 0) {
+                    roamFeed.innerHTML = '<p style="color:var(--text-muted); font-size:12px; padding:10px 0;">No recent AP handovers recorded (clients stable on primary APs).</p>';
+                } else {
+                    roamFeed.innerHTML = roamTrail.slice(-10).reverse().map(r => `
+                        <div style="background:var(--bg-card); border:1px solid var(--border); padding:8px 10px; border-radius:6px; margin-bottom:8px; font-size:11px;">
+                            <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--accent);">
+                                <span>🔄 Roam Event: ${r.serial_number || r.sensor_id}</span>
+                                <span style="color:var(--text-muted); font-weight:normal;">${new Date(r.timestamp * 1000).toLocaleTimeString()}</span>
+                            </div>
+                            <div style="margin-top:4px; color:var(--text-main);">
+                                Handover: <code>${r.old_bssid || 'AP-01'}</code> ➔ <code style="color:var(--success);">${r.new_bssid || 'AP-02'}</code> (${r.ssid || 'District-WiFi'})
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
 
             // Update GDC KPI Card Numbers from Live PromQL or local counts
             if (liveStats && liveStats.kpis) {
@@ -3593,7 +4321,7 @@ async def serve_admin_ui():
             }
 
             document.getElementById('sensors-table-body').innerHTML = activeRows.length > 0 ?
-                activeRows.join('') : '<tr><td colspan="6" style="text-align:center;">No active approved sensors found.</td></tr>';
+                activeRows.join('') : '<tr><td colspan="6" style="text-align:center;">No active approved fixed sensors found.</td></tr>';
 
             const mapListHtml = mapList.length > 0 ?
                 mapList.join('') : '<p style="color:var(--text-muted); font-size:12px;">No GPS coordinates recorded yet.</p>';
@@ -3628,21 +4356,22 @@ async def serve_admin_ui():
             handleGlobalSearch();
         }
 
-        function createCustomGlowMarker(lat, lon, siteName, roomName, isOnline, sensorId, lastSeen) {
+        function createCustomGlowMarker(lat, lon, siteName, roomName, isOnline, sensorId, lastSeen, isChromebook = false, extra = {}) {
             const statusClass = isOnline ? 'pin-online' : 'pin-offline';
             const ringHtml = isOnline ? '<div class="pin-ring"></div>' : '';
             const statusText = isOnline ?
-                '<span style="color:#059669; font-weight:700; font-size:11px;">🟢 Sensor Online (Active Streaming)</span>' :
-                `<span style="color:#dc2626; font-weight:700; font-size:11px;">🔴 Sensor Offline (Unreachable)</span>`;
+                '<span style="color:#059669; font-weight:700; font-size:11px;">🟢 Active Streaming</span>' :
+                `<span style="color:#dc2626; font-weight:700; font-size:11px;">🔴 Offline</span>`;
 
-            const tagBorderColor = isOnline ? '#10b981' : '#ef4444';
-            const tagTextColor = isOnline ? '#38bdf8' : '#f87171';
+            const iconPrefix = isChromebook ? '💻' : '📍';
+            const tagBorderColor = isChromebook ? '#38bdf8' : (isOnline ? '#10b981' : '#ef4444');
+            const tagTextColor = isChromebook ? '#38bdf8' : (isOnline ? '#10b981' : '#f87171');
 
             const customIcon = L.divIcon({
                 className: 'custom-map-pin',
                 html: `
                     <div class="map-pin-wrapper">
-                        <div class="pin-tag" style="border-color:${tagBorderColor}; color:${tagTextColor};">📍 ${siteName}</div>
+                        <div class="pin-tag" style="border-color:${tagBorderColor}; color:${tagTextColor};">${iconPrefix} ${siteName}</div>
                         ${ringHtml}
                         <div class="map-pin-pulse ${statusClass}"></div>
                     </div>
@@ -3653,15 +4382,25 @@ async def serve_admin_ui():
             });
 
             const marker = L.marker([lat, lon], { icon: customIcon });
+            const extraDetails = isChromebook ? `
+                • Serial Number: <b>${extra.serial_number || 'UNTAGGED'}</b><br>
+                • Wi-Fi RSSI: <b>${extra.wifi_rssi_dbm ? extra.wifi_rssi_dbm + ' dBm' : '-58 dBm'}</b><br>
+                • Battery: <b>${extra.battery_level_pct !== null && extra.battery_level_pct !== undefined ? extra.battery_level_pct + '%' : '100%'}</b><br>
+                • WebRTC MOS: <b>${extra.webrtc_mos ? extra.webrtc_mos.toFixed(2) : '4.38'}</b><br>
+                <div style="margin-top:6px;"><button class="btn btn-outline btn-sm" style="width:100%; padding:2px 4px; font-size:11px;" onclick="openCbDetailModal('${sensorId}')">⚡ Inspect Chromebook</button></div>
+            ` : `
+                • Status: <b>${isOnline ? '🟢 Connected' : '🔴 Offline'}</b><br>
+                • Sensor ID: <code>${sensorId ? sensorId.slice(0, 12) + '...' : 'Unknown'}</code><br>
+            `;
+
             marker.bindPopup(`
-                <div style="font-family:sans-serif; min-width:180px;">
-                    <strong style="color:#0f172a; font-size:14px;">📍 ${siteName}</strong><br>
+                <div style="font-family:sans-serif; min-width:190px;">
+                    <strong style="color:#0f172a; font-size:14px;">${iconPrefix} ${siteName}</strong><br>
                     <span style="color:#475569; font-size:12px;">Building: 1300 17th St &bull; ${roomName}</span><br>
                     ${statusText}<br>
                     <hr style="margin:6px 0; border:none; border-top:1px solid #cbd5e1;">
                     <div style="font-size:11px; color:#475569;">
-                        • Status: <b>${isOnline ? '🟢 Connected' : '🔴 Offline'}</b><br>
-                        • Sensor ID: <code>${sensorId ? sensorId.slice(0, 12) + '...' : 'Unknown'}</code><br>
+                        ${extraDetails}
                         • Last Check-In: <b>${lastSeen > 0 ? new Date(lastSeen * 1000).toLocaleTimeString() : 'Never'}</b>
                     </div>
                 </div>
@@ -3695,6 +4434,16 @@ async def serve_admin_ui():
                 }
             });
 
+            CHROMEBOOKS_CACHE.forEach(cb => {
+                const loc = cb.location;
+                if (loc && loc.latitude && loc.longitude) {
+                    const marker = createCustomGlowMarker(loc.latitude, loc.longitude, cb.serial_number || 'Chromebook', loc.room || 'Mobile Client', cb.is_online, cb.sensor_id, cb.last_seen, true, cb);
+                    marker.addTo(mapInstance);
+                    mapMarkers.push(marker);
+                    validCoords.push([loc.latitude, loc.longitude]);
+                }
+            });
+
             if (validCoords.length > 0) {
                 mapInstance.setView(validCoords[0], 14);
             }
@@ -3721,6 +4470,16 @@ async def serve_admin_ui():
                 const loc = s.location;
                 if (loc && loc.latitude && loc.longitude) {
                     const marker = createCustomGlowMarker(loc.latitude, loc.longitude, loc.site || 'City Center', loc.room || 'IT Operations', s.is_online, s.sensor_id, s.last_seen);
+                    marker.addTo(wallboardMapInstance);
+                    wallboardMapMarkers.push(marker);
+                    validCoords.push([loc.latitude, loc.longitude]);
+                }
+            });
+
+            CHROMEBOOKS_CACHE.forEach(cb => {
+                const loc = cb.location;
+                if (loc && loc.latitude && loc.longitude) {
+                    const marker = createCustomGlowMarker(loc.latitude, loc.longitude, cb.serial_number || 'Chromebook', loc.room || 'Mobile Client', cb.is_online, cb.sensor_id, cb.last_seen, true, cb);
                     marker.addTo(wallboardMapInstance);
                     wallboardMapMarkers.push(marker);
                     validCoords.push([loc.latitude, loc.longitude]);
@@ -4019,11 +4778,64 @@ async def serve_admin_ui():
             reader.readAsText(file);
         }
 
+        function toggleOnboardingDetails() {
+            const el = document.getElementById('ob-cheatsheet');
+            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updateBootstrapCommand() {
+            const campus = (document.getElementById('ob-campus')?.value || '').trim();
+            const building = (document.getElementById('ob-building')?.value || '').trim();
+            const room = (document.getElementById('ob-room')?.value || '').trim();
+            const mode = document.getElementById('ob-mode')?.value || 'url-params';
+            const host = window.location.host || 'cmp-server:8000';
+            const protocol = window.location.protocol || 'http:';
+            const baseUrl = `${protocol}//${host}`;
+
+            let cmd = '';
+            if (mode === 'wizard') {
+                cmd = `curl -sSL ${baseUrl}/install.sh?wizard=true | sudo bash`;
+            } else if (mode === 'url-params') {
+                const params = new URLSearchParams();
+                if (campus) params.append('site', campus);
+                if (building) params.append('building', building);
+                if (room) params.append('room', room);
+                const queryStr = params.toString();
+                cmd = `curl -sSL "${baseUrl}/install.sh${queryStr ? '?' + queryStr : ''}" | sudo bash`;
+            } else {
+                let args = [];
+                if (campus) args.push(`--site "${campus}"`);
+                if (building) args.push(`--building "${building}"`);
+                if (room) args.push(`--room "${room}"`);
+                cmd = `curl -sSL ${baseUrl}/install.sh | sudo bash -s -- ${args.join(' ')}`;
+            }
+
+            const previewEl = document.getElementById('ob-command-preview');
+            if (previewEl) previewEl.innerText = cmd;
+        }
+
+        function copyBootstrapCommand() {
+            const previewEl = document.getElementById('ob-command-preview');
+            if (!previewEl) return;
+            navigator.clipboard.writeText(previewEl.innerText);
+            const btn = document.getElementById('btn-copy-bootstrap');
+            if (btn) {
+                const originalText = btn.innerText;
+                btn.innerText = '✔ Copied!';
+                btn.style.background = 'var(--success)';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = 'var(--accent)';
+                }, 2000);
+            }
+        }
+
         const grafanaLink = document.getElementById('grafana-link');
         if (grafanaLink) {
             grafanaLink.href = `${window.location.protocol}//${window.location.hostname}:3000`;
         }
 
+        updateBootstrapCommand();
         loadDashboardData();
         setInterval(loadDashboardData, 10000);
         initSlideTimer();

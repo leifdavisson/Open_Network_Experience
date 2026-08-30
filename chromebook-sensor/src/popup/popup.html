@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ONE Chromebook Sensor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <div class="logo-box">
+      <span class="icon">📡</span>
+      <div>
+        <h1>ONE Sensor</h1>
+        <p class="subtitle">ChromeOS Fleet Diagnostic</p>
+      </div>
+    </div>
+    <span id="badge-status" class="badge badge-info">Initializing</span>
+  </header>
+
+  <main class="content">
+    <!-- Wi-Fi Telemetry Card -->
+    <section class="card">
+      <div class="card-header">
+        <h2>📶 Active Wi-Fi RF State</h2>
+        <span id="band-tag" class="tag">--</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="stat-label">SSID</div>
+          <div id="val-ssid" class="stat-value">Scanning...</div>
+        </div>
+        <div>
+          <div class="stat-label">BSSID (AP MAC)</div>
+          <div id="val-bssid" class="stat-value code">--:--:--:--:--:--</div>
+        </div>
+        <div>
+          <div class="stat-label">Signal (RSSI)</div>
+          <div id="val-rssi" class="stat-value">-- dBm</div>
+        </div>
+        <div>
+          <div class="stat-label">Channel / Freq</div>
+          <div id="val-channel" class="stat-value">Ch -- (-- MHz)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WebRTC MOS & Latency Card -->
+    <section class="card">
+      <div class="card-header">
+        <h2>🎧 WebRTC / VoIP Quality (ITU-T G.107)</h2>
+      </div>
+      <div class="mos-container">
+        <div class="mos-circle">
+          <span id="val-mos" class="mos-number">--</span>
+          <span class="mos-label">MOS</span>
+        </div>
+        <div class="mos-details">
+          <div class="stat-row">
+            <span class="stat-label">Grade:</span>
+            <span id="val-grade" class="stat-value">Evaluating</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">STUN RTT:</span>
+            <span id="val-rtt" class="stat-value">-- ms</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Jitter:</span>
+            <span id="val-jitter" class="stat-value">-- ms</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Synthetic App Timing List -->
+    <section class="card">
+      <div class="card-header">
+        <h2>⚡ District Web Apps</h2>
+      </div>
+      <div id="apps-list" class="apps-list">
+        <div class="app-row empty">No probe results yet.</div>
+      </div>
+    </section>
+
+    <!-- Device Identity & Buffer Status -->
+    <section class="card device-card">
+      <div class="stat-row">
+        <span class="stat-label">Serial / Asset:</span>
+        <span id="val-device" class="stat-value small">--</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Offline Buffer:</span>
+        <span id="val-buffer" class="stat-value small">0 events</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">CMP Ingestion:</span>
+        <span id="val-cmp" class="stat-value small">--</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <button id="btn-run-probe" class="btn btn-primary">⚡ Run Diagnostic Sweep Now</button>
+    <div id="last-updated" class="timestamp">Updated: Never</div>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
