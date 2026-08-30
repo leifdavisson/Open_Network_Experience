@@ -122,41 +122,80 @@ To eliminate false positives caused by WAN upstream outages, ONE sensors utilize
 
 ## 🚀 Installation & Service Setup
 
-### 1. Automated Installation
-Run the automated installer on the sensor host with root privileges:
+### 1. ⚡ 1-Line Remote SSH Installer & Zero-Touch Bootstrap (Recommended)
+
+You can provision a fresh sensor over SSH with a **single command**. The installer automatically audits hardware specs, installs dependencies (Docker, `wpasupplicant`, `iperf3`, `mtr-tiny`), downloads all 12 synthetic diagnostic modules directly from the CMP server, generates `/etc/sensor/reconciler.json`, and starts the `sensor-reconciler.service` daemon:
+
+#### A. Standard Campus Provisioning (with Location Metadata)
 ```bash
-sudo ./install.sh
+curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- \
+  --cmp http://10.98.2.125:8000/api/v1 \
+  --district "Kern High School District" \
+  --site "West High School" \
+  --building "Science Wing" \
+  --room "Room 102"
 ```
 
-The installer will:
-1. Install system dependencies (`docker.io`, `wpasupplicant`, `wireless-tools`, `tcpdump`, `iperf3`, `python3-serial`).
-2. Deploy all diagnostic scripts into `/usr/local/bin/`.
-3. Create configuration and forensic snapshot directories under `/etc/sensor/` and `/var/lib/sensor/`.
-4. Install and enable the `sensor-reconciler.service` systemd unit.
+#### B. Zero-Configuration DHCP Option 43 / DNS Auto-Discovery
+If your campus DHCP server provides **DHCP Option 43** or DNS search domains (`openux-cmp.district.edu`):
+```bash
+curl -sSL http://10.98.2.125:8000/install.sh | sudo bash
+```
 
-### 2. Configure Sensor Control Link (`/etc/sensor/reconciler.json`)
+#### C. Lab / Low-Power Hardware Override
+If testing on entry-level development boards, VMs, or Raspberry Pi boards with <8GB RAM or 2 cores:
+```bash
+curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- --cmp http://10.98.2.125:8000/api/v1 --force
+```
+
+---
+
+### 2. Manual / Offline Installation (From Git Clone)
+
+If deploying from a local clone of this repository:
+```bash
+cd sensor
+sudo ./install.sh --cmp http://10.98.2.125:8000/api/v1 --site "City Center" --room "IT Operations"
+```
+
+---
+
+### 3. Sensor Configuration File (`/etc/sensor/reconciler.json`)
+
+The installer generates `/etc/sensor/reconciler.json`:
 ```json
 {
-    "cmp_url": "http://cmp.district.edu:8000/api/v1",
-    "sensor_id": "auto",
+    "cmp_url": "http://10.98.2.125:8000/api/v1",
+    "sensor_id": "f10325921e2b43b2b5fcf33cadad864b",
     "api_key": "",
-    "check_interval_seconds": 60,
+    "enrollment_token": "",
+    "check_interval_seconds": 15,
     "wifi_interface": "wlan0",
-    "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf"
+    "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf",
+    "initial_location": {
+        "district": "Kern County Superintendent of Schools",
+        "site": "City Center",
+        "building": "1300 17th St",
+        "room": "IT Operations"
+    }
 }
 ```
 
-* **Trust-On-First-Use (TOFU) Registration**: Leave `"api_key": ""` blank. When the sensor first boots, it registers with the CMP in a `pending` state. Once the network administrator clicks **`[✓ Approve]`** in the Web UI dashboard, the sensor automatically downloads its secret cryptographic key.
+* **Trust-On-First-Use (TOFU) Registration**: Leave `"api_key": ""` blank. When the sensor first boots:
+  * **Subnet Auto-Approval**: If the sensor's subnet CIDR matches a rule in CMP, it is **instantly approved** and assigned to its campus site.
+  * **Manual Approval**: Otherwise, it registers in `pending` status. A NOC administrator can click **`[✓ Approve]`** or use **`[Batch Approve]`** in the Web UI dashboard.
 
-### 3. Service Management & Verification
+---
+
+### 4. Service Management & Live Logs
 ```bash
-# Start the reconciler service
-sudo systemctl start sensor-reconciler
+# Check service status
+sudo systemctl status sensor-reconciler
 
-# Enable on boot
-sudo systemctl enable sensor-reconciler
+# Restart the service
+sudo systemctl restart sensor-reconciler
 
-# View live check-in and reconciliation logs
+# View live adaptive resolution transitions and check-in logs
 sudo journalctl -u sensor-reconciler -f
 ```
 

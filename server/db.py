@@ -12,13 +12,17 @@ import os
 import time
 from typing import Dict, List, Optional, Any
 
-DB_PATH = os.environ.get("DB_PATH", "/app/data/cmp.db")
-BACKUP_DIR = os.environ.get("BACKUP_DIR", "/app/data/backups")
+DEFAULT_DATA_DIR = "/app/data" if os.path.exists("/app") and os.access("/app", os.W_OK) else os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DB_PATH = os.environ.get("DB_PATH", os.path.join(DEFAULT_DATA_DIR, "cmp.db"))
+BACKUP_DIR = os.environ.get("BACKUP_DIR", os.path.join(DEFAULT_DATA_DIR, "backups"))
 
 def get_connection() -> sqlite3.Connection:
     """Returns a SQLite connection with WAL mode enabled and parent directory created."""
-    os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
-    os.makedirs(BACKUP_DIR, exist_ok=True)
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+    except Exception:
+        pass
     conn = sqlite3.connect(DB_PATH, timeout=15.0)
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.row_factory = sqlite3.Row
@@ -27,6 +31,29 @@ def get_connection() -> sqlite3.Connection:
 def init_db():
     """Initializes SQLite tables if they do not exist."""
     with get_connection() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS campuses (
+                campus_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                category TEXT DEFAULT 'High School',
+                district TEXT DEFAULT 'Default District',
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                address TEXT,
+                contact_email TEXT,
+                created_at INTEGER
+            );
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS campus_subnets (
+                id TEXT PRIMARY KEY,
+                subnet_cidr TEXT NOT NULL UNIQUE,
+                campus_id TEXT NOT NULL,
+                campus_name TEXT NOT NULL,
+                building_default TEXT DEFAULT 'Main Building',
+                auto_approve BOOLEAN DEFAULT 1
+            );
+        """)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS sensors (
                 sensor_id TEXT PRIMARY KEY,
@@ -37,12 +64,23 @@ def init_db():
                 os TEXT,
                 last_seen INTEGER,
                 reset_flag BOOLEAN DEFAULT 0,
+                campus_id TEXT,
+                probing_state TEXT DEFAULT 'GREEN',
                 location_json TEXT,
                 target_config_json TEXT,
                 reported_containers_json TEXT,
                 updated_at INTEGER
             );
         """)
+        # Run schema migration for existing DBs that might lack campus_id or probing_state
+        try:
+            conn.execute("ALTER TABLE sensors ADD COLUMN campus_id TEXT;")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE sensors ADD COLUMN probing_state TEXT DEFAULT 'GREEN';")
+        except Exception:
+            pass
         conn.execute("""
             CREATE TABLE IF NOT EXISTS probes (
                 probe_id TEXT PRIMARY KEY,
@@ -68,6 +106,128 @@ def init_db():
         """)
         conn.commit()
 
+# --- Campuses CRUD ---
+
+def load_all_campuses() -> Dict[str, dict]:
+    """Loads all campuses from SQLite."""
+    campuses = {}
+    with get_connection() as conn:
+        cursor = conn.execute("SELECT * FROM campuses;")
+        for row in cursor.fetchall():
+            c_id = row["campus_id"]
+            campuses[c_id] = {
+                "campus_id": c_id,
+                "name": row["name"],
+                "category": row["category"] or "High School",
+                "district": row["district"] or "Default District",
+                "latitude": float(row["latitude"]),
+                "longitude": float(row["longitude"]),
+                "address": row["address"] or "",
+                "contact_email": row["contact_email"] or "",
+                "created_at": row["created_at"] or int(time.time())
+            }
+    return campuses
+
+def save_campus(campus: dict):
+    """Saves or updates a campus record."""
+    with get_connection() as conn:
+        conn.execute("""
+            INSERT INTO campuses (
+                campus_id, name, category, district, latitude, longitude, address, contact_email, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(campus_id) DO UPDATE SET
+                name=excluded.name,
+                category=excluded.category,
+                district=excluded.district,
+                latitude=excluded.latitude,
+                longitude=excluded.longitude,
+                address=excluded.address,
+                contact_email=excluded.contact_email;
+        """, (
+            campus["campus_id"],
+            campus["name"],
+            campus.get("category", "High School"),
+            campus.get("district", "Default District"),
+            float(campus["latitude"]),
+            float(campus["longitude"]),
+            campus.get("address", ""),
+            campus.get("contact_email", ""),
+            campus.get("created_at", int(time.time()))
+        ))
+        conn.commit()
+
+def delete_campus(campus_id: str):
+    """Deletes a campus record."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM campuses WHERE campus_id = ?;", (campus_id,))
+        conn.commit()
+
+# --- Subnet Auto-Enrollment Rules CRUD ---
+
+def load_all_subnets() -> List[dict]:
+    """Loads all auto-enrollment subnet rules."""
+    rules = []
+    with get_connection() as conn:
+        cursor = conn.execute("SELECT * FROM campus_subnets;")
+        for row in cursor.fetchall():
+            rules.append({
+                "id": row["id"],
+                "subnet_cidr": row["subnet_cidr"],
+                "campus_id": row["campus_id"],
+                "campus_name": row["campus_name"],
+                "building_default": row["building_default"],
+                "auto_approve": bool(row["auto_approve"])
+            })
+    return rules
+
+def save_subnet_rule(rule: dict):
+    """Saves or updates an auto-enrollment subnet rule."""
+    import uuid
+    rule_id = rule.get("id") or f"sub-{uuid.uuid4().hex[:8]}"
+    with get_connection() as conn:
+        conn.execute("""
+            INSERT INTO campus_subnets (id, subnet_cidr, campus_id, campus_name, building_default, auto_approve)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(subnet_cidr) DO UPDATE SET
+                campus_id=excluded.campus_id,
+                campus_name=excluded.campus_name,
+                building_default=excluded.building_default,
+                auto_approve=excluded.auto_approve;
+        """, (
+            rule_id,
+            rule["subnet_cidr"].strip(),
+            rule["campus_id"],
+            rule["campus_name"],
+            rule.get("building_default", "Main Building"),
+            1 if rule.get("auto_approve", True) else 0
+        ))
+        conn.commit()
+
+def delete_subnet_rule(rule_id: str):
+    """Deletes an auto-enrollment subnet rule."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM campus_subnets WHERE id = ?;", (rule_id,))
+        conn.commit()
+
+def match_subnet_auto_enroll(ip_address: str) -> Optional[dict]:
+    """Checks if an IP address belongs to any configured auto-enrollment subnet CIDR."""
+    import ipaddress
+    if not ip_address or ip_address in ("127.0.0.1", "localhost", "unknown"):
+        return None
+    try:
+        ip = ipaddress.ip_address(ip_address)
+        rules = load_all_subnets()
+        for r in rules:
+            try:
+                network = ipaddress.ip_network(r["subnet_cidr"], strict=False)
+                if ip in network:
+                    return r
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return None
+
 # --- Sensors CRUD ---
 
 def load_all_sensors() -> Dict[str, dict]:
@@ -86,6 +246,8 @@ def load_all_sensors() -> Dict[str, dict]:
                 "os": row["os"] or "unknown",
                 "last_seen": row["last_seen"] or 0,
                 "reset_flag": bool(row["reset_flag"]),
+                "campus_id": row["campus_id"] if "campus_id" in row.keys() else None,
+                "probing_state": row["probing_state"] if "probing_state" in row.keys() else "GREEN",
                 "location": json.loads(row["location_json"]) if row["location_json"] else None,
                 "target_config": json.loads(row["target_config_json"]) if row["target_config_json"] else {},
                 "reported_containers": json.loads(row["reported_containers_json"]) if row["reported_containers_json"] else {}
@@ -98,9 +260,9 @@ def save_sensor(sensor: dict):
         conn.execute("""
             INSERT INTO sensors (
                 sensor_id, status, api_key, hostname, mac_address, os,
-                last_seen, reset_flag, location_json, target_config_json,
+                last_seen, reset_flag, campus_id, probing_state, location_json, target_config_json,
                 reported_containers_json, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(sensor_id) DO UPDATE SET
                 status=excluded.status,
                 api_key=excluded.api_key,
@@ -109,6 +271,8 @@ def save_sensor(sensor: dict):
                 os=excluded.os,
                 last_seen=excluded.last_seen,
                 reset_flag=excluded.reset_flag,
+                campus_id=excluded.campus_id,
+                probing_state=excluded.probing_state,
                 location_json=excluded.location_json,
                 target_config_json=excluded.target_config_json,
                 reported_containers_json=excluded.reported_containers_json,
@@ -122,12 +286,33 @@ def save_sensor(sensor: dict):
             sensor.get("os", "unknown"),
             sensor.get("last_seen", 0),
             1 if sensor.get("reset_flag") else 0,
+            sensor.get("campus_id"),
+            sensor.get("probing_state", "GREEN"),
             json.dumps(sensor.get("location").model_dump() if hasattr(sensor.get("location"), "model_dump") else sensor.get("location")),
             json.dumps(sensor.get("target_config").model_dump() if hasattr(sensor.get("target_config"), "model_dump") else sensor.get("target_config")),
             json.dumps(sensor.get("reported_containers", {})),
             int(time.time())
         ))
         conn.commit()
+
+def batch_approve_sensors(sensor_ids: List[str], campus_id: Optional[str] = None, building: Optional[str] = None) -> List[str]:
+    """Approves multiple sensors in a single transaction and assigns them to a campus."""
+    import secrets
+    approved_keys = []
+    with get_connection() as conn:
+        for s_id in sensor_ids:
+            new_key = f"key_{secrets.token_hex(16)}"
+            approved_keys.append(new_key)
+            conn.execute("""
+                UPDATE sensors SET
+                    status = 'approved',
+                    api_key = ?,
+                    campus_id = COALESCE(?, campus_id),
+                    updated_at = ?
+                WHERE sensor_id = ?;
+            """, (new_key, campus_id, int(time.time()), s_id))
+        conn.commit()
+    return approved_keys
 
 def delete_sensor(sensor_id: str):
     """Deletes a sensor record from SQLite."""

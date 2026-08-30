@@ -106,55 +106,35 @@ To ensure reliable driver support for Wi-Fi 6/6E adapters, USB GPS receivers, an
 > [!TIP]
 > **Why 64-bit Headless?** Modern headless Chromium and Playwright binaries require a 64-bit architecture (`arm64` or `x86_64`). Running a headless "Server" or "Lite" image keeps idle OS memory footprint under 250 MB, leaving maximum headroom for packet captures and browser transactions.
 
-### 3. Run the Sensor Bootstrap Installer
-On the edge sensor machine:
-```bash
-# Clone the repository onto the sensor
-git clone https://github.com/leifdavisson/Open_Network_Experience.git
-cd Open_Network_Experience/sensor
+### 3. Run the 1-Line Remote Sensor Bootstrap (Recommended)
+On the edge sensor machine (via SSH or console):
 
-# Run the automated installer with root privileges
-sudo ./install.sh
+```bash
+# 1-Line Zero-Touch Remote Provisioning (with campus tags)
+curl -sSL http://<YOUR_CMP_SERVER_IP>:8000/install.sh | sudo bash -s -- \
+  --cmp http://<YOUR_CMP_SERVER_IP>:8000/api/v1 \
+  --site "West High School" \
+  --room "Room 102"
 ```
 
-### 3. Configure the Sensor Reconciler
-Edit `/etc/sensor/reconciler.json`:
+Or for automated DHCP Option 43 auto-discovery:
 ```bash
-sudo nano /etc/sensor/reconciler.json
+curl -sSL http://<YOUR_CMP_SERVER_IP>:8000/install.sh | sudo bash
 ```
-```json
-{
-    "cmp_url": "http://<YOUR_CMP_SERVER_IP>:8000/api/v1",
-    "sensor_id": "auto",
-    "api_key": "",
-    "check_interval_seconds": 60,
-    "wifi_interface": "wlan0",
-    "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf"
-}
-```
+
 > [!NOTE]
-> Leave `api_key: ""` empty. The sensor will automatically enter the **Trust-On-First-Use (TOFU)** pending approval queue.
+> The installer automatically detects CPU/RAM, installs all dependencies, downloads the 12 synthetic diagnostic modules from the CMP server, writes `/etc/sensor/reconciler.json`, and starts the `sensor-reconciler.service` daemon.
 
-### 4. Start the Service
+### 4. Zero-Touch & TOFU Approval
+
+1. **Subnet Auto-Approval**: If the sensor IP matches an auto-enrollment subnet CIDR configured in CMP (`/api/v1/subnets`), it is **approved instantly** and assigned to its campus site without technician interaction.
+2. **1-Click Web UI Approval**: If manual TOFU is enabled, go to `http://<YOUR_CMP_SERVER_IP>:8000` and click **`[✓ Approve]`** or **`[Batch Approve]`** to activate the sensor.
+
+### 5. Monitor Live Sensor Activity
 ```bash
-sudo systemctl start sensor-reconciler
-sudo systemctl enable sensor-reconciler
+# Stream live adaptive resolution state transitions and check-in logs
+sudo journalctl -u sensor-reconciler -f
 ```
-
-### 5. Approve the Sensor on the CMP Control Plane
-From your admin terminal or Swagger UI:
-
-```bash
-# 1. View pending sensors (admin key required)
-curl -H "X-API-Key: admin-noc-key-change-me" http://<YOUR_CMP_SERVER_IP>:8000/api/v1/sensors
-
-# 2. Approve the sensor (generates and provisions its unique cryptographic key)
-curl -X POST \
-  -H "X-API-Key: admin-noc-key-change-me" \
-  http://<YOUR_CMP_SERVER_IP>:8000/api/v1/sensors/<sensor_uuid>/approve
-```
-
-The sensor will automatically download its unique API key on its next 60-second check-in and begin sending telemetry!
 
 ---
 

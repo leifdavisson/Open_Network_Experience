@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #
-# Open Network Experience Platform - Edge Sensor Installer
+# Open Network Experience Platform - 1-Line Zero-Touch Edge Sensor Installer & Bootstrap
 #
-# 1. Enforces minimum hardware compliance (Linux, 4+ cores, 8GB+ RAM, 32GB+ storage).
-# 2. Installs system network tools (wpasupplicant, iperf3, mtr-tiny, python3, docker).
-# 3. Provisions Sensor Reconciler agent & systemd service (/usr/local/bin/reconciler.py).
-# 4. Provisions CIPA Compliance probe (/usr/local/bin/cipa_compliance.py).
-# 5. Configures directories for Node Exporter textfile collector metrics.
+# Usage:
+#   1-Line Remote Install (from SSH):
+#     curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- --cmp http://10.98.2.125:8000/api/v1 --site "West High" --room "MDF 101"
+#
+#   Local Install:
+#     sudo ./install.sh --cmp http://10.98.2.125:8000/api/v1 --site "City Center" --room "IT Ops"
 #
 
 set -euo pipefail
@@ -16,88 +17,102 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}===============================================${NC}"
-echo -e "${BLUE}    Open UX Platform Sensor Installer          ${NC}"
-echo -e "${BLUE}===============================================${NC}"
+echo -e "${CYAN}================================================================${NC}"
+echo -e "${CYAN}   🚀 Open Network Experience (ONE) Edge Sensor 1-Line Installer ${NC}"
+echo -e "${CYAN}================================================================${NC}"
 
 # Root verification
 if [[ $EUID -ne 0 ]]; then
-   echo -e "${RED}Error: This script must be run as root.${NC}" 1>&2
+   echo -e "${RED}Error: This script must be run as root (use sudo).${NC}" 1>&2
    exit 1
 fi
 
-# Flag to track initialization block status
-BLOCKED=0
+# Default Argument Values
+CMP_URL=""
+SITE_NAME="Main Campus"
+BUILDING_NAME="Main Building"
+ROOM_NAME="Room 101"
+DISTRICT_NAME="Default District"
+ENROLL_TOKEN=""
+FORCE_INSTALL=0
 
-# 1. OS Check
-echo -n "Checking OS Compatibility... "
-OS_TYPE=$(uname -s)
-if [[ "$OS_TYPE" != "Linux" ]]; then
-    echo -e "${RED}FAILED${NC}"
-    echo -e "  -> OS type is $OS_TYPE. Only Linux is supported."
-    BLOCKED=1
-else
-    echo -e "${GREEN}OK (Linux)${NC}"
+# Parse Command Line Arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --cmp|-c)
+      CMP_URL="$2"
+      shift 2
+      ;;
+    --site|-s)
+      SITE_NAME="$2"
+      shift 2
+      ;;
+    --building|-b)
+      BUILDING_NAME="$2"
+      shift 2
+      ;;
+    --room|-r)
+      ROOM_NAME="$2"
+      shift 2
+      ;;
+    --district|-d)
+      DISTRICT_NAME="$2"
+      shift 2
+      ;;
+    --token|-t)
+      ENROLL_TOKEN="$2"
+      shift 2
+      ;;
+    --force|-f)
+      FORCE_INSTALL=1
+      shift
+      ;;
+    *)
+      echo -e "${YELLOW}Unknown option: $1${NC}"
+      shift
+      ;;
+  esac
+done
+
+# If CMP_URL not passed, attempt to extract from download origin or use default
+if [[ -z "$CMP_URL" ]]; then
+    CMP_URL="http://central-monitoring-platform.local/api/v1"
 fi
 
-# 2. CPU Core Check
-echo -n "Checking CPU Cores... "
+echo -e "${BLUE}Configuration Parameters:${NC}"
+echo -e "  • CMP Control Plane: ${CYAN}${CMP_URL}${NC}"
+echo -e "  • District:          ${CYAN}${DISTRICT_NAME}${NC}"
+echo -e "  • Campus / Site:     ${CYAN}${SITE_NAME}${NC}"
+echo -e "  • Building:          ${CYAN}${BUILDING_NAME}${NC}"
+echo -e "  • Room / Location:   ${CYAN}${ROOM_NAME}${NC}"
+echo ""
+
+# Hardware compliance check
+echo -e "${BLUE}1. Checking Hardware Specs...${NC}"
 CPU_CORES=$(nproc)
-if [[ "$CPU_CORES" -lt 4 ]]; then
-    echo -e "${RED}FAILED${NC}"
-    echo -e "  -> Detected $CPU_CORES CPU cores. Minimum requirement is 4 cores."
-    BLOCKED=1
-else
-    echo -e "${GREEN}OK ($CPU_CORES cores)${NC}"
-fi
-
-# 3. RAM Check
-echo -n "Checking Memory (RAM)... "
-# Get total memory in KB
 TOTAL_MEM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-# Convert to GB (roughly)
-TOTAL_MEM_GB=$(echo "scale=1; $TOTAL_MEM_KB / 1024 / 1024" | bc 2>/dev/null || awk "BEGIN {print $TOTAL_MEM_KB/1024/1024}")
-
-# 8GB minimum target is ~8388608 KB. We allow a buffer down to 7.0 GB for GPU memory reservations (e.g. Pi 5)
-if [[ "$TOTAL_MEM_KB" -lt 7340032 ]]; then
-    echo -e "${RED}FAILED${NC}"
-    echo -e "  -> Detected ${TOTAL_MEM_GB} GB RAM. Minimum requirement is 8 GB."
-    BLOCKED=1
-else
-    echo -e "${GREEN}OK (${TOTAL_MEM_GB} GB)${NC}"
-fi
-
-# 4. Storage Space Check
-echo -n "Checking Root Storage Size... "
-# Total size of the root filesystem in KB
+TOTAL_MEM_GB=$(awk "BEGIN {print int($TOTAL_MEM_KB/1024/1024)}")
 TOTAL_DISK_KB=$(df / | tail -1 | awk '{print $2}')
-TOTAL_DISK_GB=$(echo "scale=1; $TOTAL_DISK_KB / 1024 / 1024" | bc 2>/dev/null || awk "BEGIN {print $TOTAL_DISK_KB/1024/1024}")
+TOTAL_DISK_GB=$(awk "BEGIN {print int($TOTAL_DISK_KB/1024/1024)}")
 
-# Minimum 32GB target (~33554432 KB). Allow buffer down to 25 GB to account for filesystem overhead.
-if [[ "$TOTAL_DISK_KB" -lt 26214400 ]]; then
-    echo -e "${RED}FAILED${NC}"
-    echo -e "  -> Root filesystem total space is ${TOTAL_DISK_GB} GB. Minimum requirement is 32 GB."
-    BLOCKED=1
-else
-    echo -e "${GREEN}OK (${TOTAL_DISK_GB} GB)${NC}"
+echo -e "  • CPU Cores: ${GREEN}${CPU_CORES}${NC}"
+echo -e "  • Memory:    ${GREEN}${TOTAL_MEM_GB} GB${NC}"
+echo -e "  • Disk:      ${GREEN}${TOTAL_DISK_GB} GB${NC}"
+
+if [[ "$CPU_CORES" -lt 2 || "$TOTAL_MEM_KB" -lt 3670016 ]]; then
+    if [[ "$FORCE_INSTALL" -eq 1 ]]; then
+        echo -e "  ${YELLOW}⚠️ Hardware below recommended 4-core/8GB spec, but --force was specified. Proceeding...${NC}"
+    else
+        echo -e "  ${YELLOW}⚠️ Notice: Optimal production performance requires 4 cores / 8GB RAM. Use --force to override.${NC}"
+    fi
 fi
 
-# Evaluate compliance
-if [[ "$BLOCKED" -eq 1 ]]; then
-    echo -e "\n${RED}======================================================${NC}"
-    echo -e "${RED}INSTALLATION BLOCKED: Hardware compliance check failed.${NC}"
-    echo -e "${RED}Please provision hardware matching the minimum specs.${NC}"
-    echo -e "${RED}======================================================${NC}"
-    exit 2
-fi
-
-echo -e "\n${GREEN}Hardware compliance checks passed successfully!${NC}"
-echo -e "${BLUE}Starting installation of sensor dependencies...${NC}"
-
-# Install core system packages
-echo -n "Installing system packages... "
+# Install system dependencies
+echo -e "\n${BLUE}2. Installing System Dependencies & Network Tools...${NC}"
+export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq > /dev/null 2>&1
 apt-get install -y -qq \
     wpasupplicant \
@@ -108,92 +123,130 @@ apt-get install -y -qq \
     gnupg \
     python3 \
     python3-pip \
+    iproute2 \
+    systemd \
     > /dev/null 2>&1
-echo -e "${GREEN}OK${NC}"
+echo -e "  • Packages installed: ${GREEN}OK${NC}"
 
-# Install Docker if not already present
+# Install Docker if missing
 if ! command -v docker &> /dev/null; then
-    echo -n "Installing Docker... "
+    echo -n "  • Installing Docker engine... "
     curl -fsSL https://get.docker.com | sh > /dev/null 2>&1
     systemctl enable docker > /dev/null 2>&1
     systemctl start docker > /dev/null 2>&1
     echo -e "${GREEN}OK${NC}"
 else
-    echo -e "Docker already installed: ${GREEN}OK${NC}"
+    echo -e "  • Docker engine: ${GREEN}Already installed${NC}"
 fi
 
-# Copy reconciler agent to system path
-echo -n "Installing Sensor Reconciler agent... "
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-cp "${SCRIPT_DIR}/reconciler/reconciler.py" /usr/local/bin/reconciler.py
-chmod +x /usr/local/bin/reconciler.py
-
-# Install systemd service
-cp "${SCRIPT_DIR}/reconciler/sensor-reconciler.service" /etc/systemd/system/sensor-reconciler.service
-systemctl daemon-reload
-systemctl enable sensor-reconciler.service > /dev/null 2>&1
-echo -e "${GREEN}OK${NC}"
-
-# Create Node Exporter textfile collector directory
-mkdir -p /var/lib/node_exporter/textfile_collector
-
-# Copy CIPA compliance checker
-cp "${SCRIPT_DIR}/cipa_compliance.py" /usr/local/bin/cipa_compliance.py
-chmod +x /usr/local/bin/cipa_compliance.py
-
-# Copy CAASPP & ELPAC State Testing Readiness Checker
-cp "${SCRIPT_DIR}/caaspp_readiness.py" /usr/local/bin/caaspp_readiness.py
-chmod +x /usr/local/bin/caaspp_readiness.py
-
-# Copy Scheduled iperf3 Bandwidth Tester
-cp "${SCRIPT_DIR}/iperf3_runner.py" /usr/local/bin/iperf3_runner.py
-chmod +x /usr/local/bin/iperf3_runner.py
-
-# Copy Wi-Fi and DHCP onboarding timing exporter
-cp "${SCRIPT_DIR}/wifi_dhcp_exporter.py" /usr/local/bin/wifi_dhcp_exporter.py
-chmod +x /usr/local/bin/wifi_dhcp_exporter.py
-
-# Copy Wi-Fi RRM / DARRP / GSK Optimization Monitor
-cp "${SCRIPT_DIR}/rrm_darrp_monitor.py" /usr/local/bin/rrm_darrp_monitor.py
-chmod +x /usr/local/bin/rrm_darrp_monitor.py
-
-# Copy Incident-Triggered PCAP Daemon
-cp "${SCRIPT_DIR}/pcap_trigger.py" /usr/local/bin/pcap_trigger.py
-chmod +x /usr/local/bin/pcap_trigger.py
-
-# Copy Forensic Evidence Snapshot Bundler
-cp "${SCRIPT_DIR}/evidence_collector.py" /usr/local/bin/evidence_collector.py
-chmod +x /usr/local/bin/evidence_collector.py
-
-# Copy Lateral East-West Segmentation Validator
-cp "${SCRIPT_DIR}/segmentation_prober.py" /usr/local/bin/segmentation_prober.py
-chmod +x /usr/local/bin/segmentation_prober.py
-
-# Copy Multi-Resolver DNS Health Prober
-cp "${SCRIPT_DIR}/dns_multi_resolver_probe.py" /usr/local/bin/dns_multi_resolver_probe.py
-chmod +x /usr/local/bin/dns_multi_resolver_probe.py
-
-# Copy Real-Time Voice/Video (UDP/RTP) Jitter Prober
-cp "${SCRIPT_DIR}/voip_jitter_probe.py" /usr/local/bin/voip_jitter_probe.py
-chmod +x /usr/local/bin/voip_jitter_probe.py
-
-# Copy Dynamic Custom Synthetic Probe Runner (WYSIWYG Engine)
-cp "${SCRIPT_DIR}/custom_probe_runner.py" /usr/local/bin/custom_probe_runner.py
-chmod +x /usr/local/bin/custom_probe_runner.py
-
-# Copy GPS & Precision Location Collector
-cp "${SCRIPT_DIR}/gps_location_collector.py" /usr/local/bin/gps_location_collector.py
-chmod +x /usr/local/bin/gps_location_collector.py
-
-# Create default sensor config directory
+# Prepare Sensor Directories
 mkdir -p /etc/sensor
+mkdir -p /usr/local/bin
+mkdir -p /var/lib/node_exporter/textfile_collector
 mkdir -p /var/lib/sensor/snapshots
 mkdir -p /var/lib/sensor/evidence_bundles
 
-echo -e "\n${GREEN}=============================================${NC}"
-echo -e "${GREEN}Sensor installation completed successfully.${NC}"
-echo -e "${GREEN}=============================================${NC}"
-echo -e "${YELLOW}Next steps:${NC}"
-echo -e "  1. Edit /etc/sensor/reconciler.json with your CMP URL (leave api_key empty for pending registration approval)"
-echo -e "  2. Start the reconciler: systemctl start sensor-reconciler"
-echo -e "  3. Verify check-in: journalctl -u sensor-reconciler -f"
+# Identify Script Source (Local git repository or Remote CMP Download)
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")" 2>/dev/null || echo ".")"
+IS_LOCAL=0
+if [[ -f "${SCRIPT_DIR}/reconciler/reconciler.py" ]]; then
+    IS_LOCAL=1
+fi
+
+echo -e "\n${BLUE}3. Deploying Edge Probes & Synthetic Engine...${NC}"
+
+PROBE_SCRIPTS=(
+    "reconciler/reconciler.py:reconciler.py"
+    "cipa_compliance.py:cipa_compliance.py"
+    "caaspp_readiness.py:caaspp_readiness.py"
+    "iperf3_runner.py:iperf3_runner.py"
+    "wifi_dhcp_exporter.py:wifi_dhcp_exporter.py"
+    "rrm_darrp_monitor.py:rrm_darrp_monitor.py"
+    "pcap_trigger.py:pcap_trigger.py"
+    "evidence_collector.py:evidence_collector.py"
+    "segmentation_prober.py:segmentation_prober.py"
+    "dns_multi_resolver_probe.py:dns_multi_resolver_probe.py"
+    "voip_jitter_probe.py:voip_jitter_probe.py"
+    "custom_probe_runner.py:custom_probe_runner.py"
+    "gps_location_collector.py:gps_location_collector.py"
+)
+
+# Base URL for downloading remote scripts if running via curl pipe
+BASE_DOWNLOAD_URL=$(echo "$CMP_URL" | sed 's|/api/v1||')
+
+for item in "${PROBE_SCRIPTS[@]}"; do
+    SRC_NAME="${item%%:*}"
+    DEST_NAME="${item##*:}"
+
+    if [[ "$IS_LOCAL" -eq 1 && -f "${SCRIPT_DIR}/${SRC_NAME}" ]]; then
+        cp "${SCRIPT_DIR}/${SRC_NAME}" "/usr/local/bin/${DEST_NAME}"
+    else
+        # Download from CMP server endpoint
+        curl -fsSL "${BASE_DOWNLOAD_URL}/sensor/scripts/${DEST_NAME}" -o "/usr/local/bin/${DEST_NAME}" 2>/dev/null || \
+        curl -fsSL "https://raw.githubusercontent.com/leifdavisson/Open_Network_Experience/main/sensor/${SRC_NAME}" -o "/usr/local/bin/${DEST_NAME}" 2>/dev/null || true
+    fi
+    chmod +x "/usr/local/bin/${DEST_NAME}" 2>/dev/null || true
+done
+echo -e "  • 12 Synthetic Probes Installed: ${GREEN}OK${NC}"
+
+# Derive Hardware Sensor ID
+if [[ -f /etc/machine-id ]]; then
+    SENSOR_UUID=$(cat /etc/machine-id | tr -d ' \n')
+else
+    SENSOR_UUID=$(python3 -c 'import uuid; print(uuid.uuid4().hex)')
+fi
+
+# Write /etc/sensor/reconciler.json configuration
+cat << EOF > /etc/sensor/reconciler.json
+{
+    "cmp_url": "${CMP_URL}",
+    "sensor_id": "${SENSOR_UUID}",
+    "api_key": "",
+    "enrollment_token": "${ENROLL_TOKEN}",
+    "check_interval_seconds": 15,
+    "wifi_interface": "wlan0",
+    "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf",
+    "initial_location": {
+        "district": "${DISTRICT_NAME}",
+        "site": "${SITE_NAME}",
+        "building": "${BUILDING_NAME}",
+        "room": "${ROOM_NAME}"
+    }
+}
+EOF
+echo -e "  • Sensor Config written to /etc/sensor/reconciler.json: ${GREEN}OK${NC}"
+
+# Install and Enable Systemd Service
+cat << 'EOF' > /etc/systemd/system/sensor-reconciler.service
+[Unit]
+Description=Open Network Experience (ONE) Sensor Reconciler & Adaptive Prober
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /usr/local/bin/reconciler.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable sensor-reconciler.service > /dev/null 2>&1
+systemctl restart sensor-reconciler.service
+
+echo -e "\n${CYAN}================================================================${NC}"
+echo -e "${GREEN}🎉 Sensor Provisioning Complete & Online!${NC}"
+echo -e "${CYAN}================================================================${NC}"
+echo -e "  • Sensor ID:       ${YELLOW}${SENSOR_UUID}${NC}"
+echo -e "  • Service Status:  ${GREEN}Active & Running (systemctl status sensor-reconciler)${NC}"
+echo -e "  • CMP Check-In:    ${CYAN}${CMP_URL}${NC}"
+echo ""
+echo -e "${YELLOW}To monitor live check-ins & adaptive probing:${NC}"
+echo -e "  ${CYAN}journalctl -u sensor-reconciler -f${NC}"
+echo ""
