@@ -2385,9 +2385,12 @@ async def serve_admin_ui():
                         <option value="aeries">Aeries SIS Portal</option>
                         <option value="renaissance">Renaissance Star Reading</option>
                         <option value="nwea">NWEA MAP Growth</option>
-                        <option value="lexia">Lexia Core5 / PowerUp</option>
                         <option value="kahoot">Kahoot! Live Student Quizzing</option>
                         <option value="zoom">Zoom Education Video & Web</option>
+                        <option value="m365_teams">Microsoft Teams Web & Signaling</option>
+                        <option value="m365_outlook">Microsoft Outlook Web Access (OWA)</option>
+                        <option value="m365_sharepoint">SharePoint Online Portal</option>
+                        <option value="m365_graph">Microsoft Graph & Entra ID API</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -3835,9 +3838,12 @@ async def serve_admin_ui():
                 'aeries': { name: 'Aeries SIS Portal', type: 'http', target: 'https://aeries.net', cadence: 5, timeout: 4000 },
                 'renaissance': { name: 'Renaissance Star Reading', type: 'http', target: 'https://global-zone50.renaissance-go.com', cadence: 5, timeout: 4000 },
                 'nwea': { name: 'NWEA MAP Growth Assessment', type: 'http', target: 'https://test.mapnwea.org', cadence: 5, timeout: 3000 },
-                'lexia': { name: 'Lexia Core5 / PowerUp', type: 'http', target: 'https://www.lexiacore5.com', cadence: 5, timeout: 4000 },
                 'kahoot': { name: 'Kahoot! Student Engagement', type: 'http', target: 'https://kahoot.it', cadence: 5, timeout: 3000 },
-                'zoom': { name: 'Zoom Education Video & Web', type: 'http', target: 'https://zoom.us', cadence: 5, timeout: 4000 }
+                'zoom': { name: 'Zoom Education Video & Web', type: 'http', target: 'https://zoom.us', cadence: 5, timeout: 4000 },
+                'm365_teams': { name: 'Microsoft Teams Web & Signaling', type: 'http', target: 'https://teams.microsoft.com', cadence: 5, timeout: 3000 },
+                'm365_outlook': { name: 'Microsoft Outlook Web Access (OWA)', type: 'http', target: 'https://outlook.office.com', cadence: 5, timeout: 3000 },
+                'm365_sharepoint': { name: 'SharePoint Online Portal', type: 'http', target: 'https://sharepoint.com', cadence: 5, timeout: 3000 },
+                'm365_graph': { name: 'Microsoft Graph & Entra ID API', type: 'http', target: 'https://graph.microsoft.com/v1.0/$metadata', cadence: 5, timeout: 3000 }
             };
 
             const t = templates[presetKey];
