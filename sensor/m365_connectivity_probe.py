@@ -65,7 +65,19 @@ M365_SERVICES = [
         "expect_ssl_bypass": True
     },
 
-    # --- 2. ALLOW (Essential Cloud Dependencies) ---
+    # --- 2. UNIVERSAL PRINT (Azure Cloud Print - IPP over HTTPS) ---
+    {
+        "id": "universal_print_gateway",
+        "name": "Universal Print Gateway (IPP/HTTPS)",
+        "category": "print",
+        "url": "https://print.print.microsoft.com",
+        "host": "print.print.microsoft.com",
+        "port": 443,
+        "critical": True,
+        "expect_ssl_bypass": True
+    },
+
+    # --- 3. ALLOW (Essential Cloud & Identity Dependencies) ---
     {
         "id": "entra_id_sts",
         "name": "Microsoft Entra ID STS Auth",
@@ -86,20 +98,84 @@ M365_SERVICES = [
         "critical": True,
         "expect_ssl_bypass": False
     },
+
+    # --- 4. MICROSOFT INTUNE & ENDPOINT DEPLOYMENT SUITE ---
     {
-        "id": "microsoft_intune",
-        "name": "Microsoft Intune Device Management",
-        "category": "allow",
+        "id": "intune_core_gateway",
+        "name": "Intune Core Management Gateway",
+        "category": "intune",
         "url": "https://manage.microsoft.com",
         "host": "manage.microsoft.com",
+        "port": 443,
+        "critical": True,
+        "expect_ssl_bypass": False
+    },
+    {
+        "id": "intune_device_registration",
+        "name": "Entra Device Registration (ADRS)",
+        "category": "intune",
+        "url": "https://enterpriseregistration.windows.net",
+        "host": "enterpriseregistration.windows.net",
+        "port": 443,
+        "critical": True,
+        "expect_ssl_bypass": False
+    },
+    {
+        "id": "intune_ime_cdn",
+        "name": "Intune Win32 App & Script CDN (IME)",
+        "category": "intune",
+        "url": "https://swda01-mscdn.manage.microsoft.com",
+        "host": "swda01-mscdn.manage.microsoft.com",
         "port": 443,
         "critical": False,
         "expect_ssl_bypass": False
     },
     {
+        "id": "autopilot_ztd",
+        "name": "Windows Autopilot Deployment (ZTD)",
+        "category": "intune",
+        "url": "https://ztd.dds.microsoft.com",
+        "host": "ztd.dds.microsoft.com",
+        "port": 443,
+        "critical": True,
+        "expect_ssl_bypass": False
+    },
+    {
+        "id": "autopilot_tpm_attestation",
+        "name": "Autopilot TPM Attestation Service",
+        "category": "intune",
+        "url": "https://ekcert.spserv.microsoft.com",
+        "host": "ekcert.spserv.microsoft.com",
+        "port": 443,
+        "critical": False,
+        "expect_ssl_bypass": False
+    },
+    {
+        "id": "wns_push_notifications",
+        "name": "Windows Push Notification Service (WNS)",
+        "category": "intune",
+        "url": "https://client.wns.windows.com",
+        "host": "client.wns.windows.com",
+        "port": 443,
+        "critical": False,
+        "expect_ssl_bypass": False
+    },
+    {
+        "id": "delivery_optimization",
+        "name": "Delivery Optimization Peer CDN",
+        "category": "intune",
+        "url": "http://do.dsp.mp.microsoft.com",
+        "host": "do.dsp.mp.microsoft.com",
+        "port": 80,
+        "critical": False,
+        "expect_ssl_bypass": False
+    },
+
+    # --- 5. DEFENDER & PURVIEW SECURITY ---
+    {
         "id": "defender_security",
         "name": "Microsoft Defender Portal",
-        "category": "allow",
+        "category": "security",
         "url": "https://security.microsoft.com",
         "host": "security.microsoft.com",
         "port": 443,
@@ -109,7 +185,7 @@ M365_SERVICES = [
     {
         "id": "purview_compliance",
         "name": "Microsoft Purview Compliance Portal",
-        "category": "allow",
+        "category": "security",
         "url": "https://compliance.microsoft.com",
         "host": "compliance.microsoft.com",
         "port": 443,
@@ -334,6 +410,26 @@ def write_metrics(prom_lines: List[str], output_file: str):
     else:
         print(prom_content)
 
+def probe_ntp_clock_sync(host: str = "time.windows.com", port: int = 123, timeout_sec: float = 2.0) -> Dict[str, Any]:
+    """Measures NTP clock synchronization latency and reachability over UDP 123 for Autopilot OOBE."""
+    try:
+        dest_ip = socket.gethostbyname(host)
+        # 48-byte NTP client request (LI=0, VN=3, Mode=3)
+        data = b'\x1b' + 47 * b'\0'
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(timeout_sec)
+        t_start = time.time()
+        sock.sendto(data, (dest_ip, port))
+        resp, _ = sock.recvfrom(48)
+        t_recv = time.time()
+        sock.close()
+        rtt_ms = round((t_recv - t_start) * 1000.0, 2)
+        if len(resp) >= 48:
+            return {"status": 1, "rtt_ms": rtt_ms, "host": host, "error": None}
+    except Exception as e:
+        return {"status": 0, "rtt_ms": 0.0, "host": host, "error": str(e)}
+    return {"status": 0, "rtt_ms": 0.0, "host": host, "error": "Invalid NTP response length"}
+
 def main():
     parser = argparse.ArgumentParser(description="OpenUX Microsoft 365 & Office 365 A5 Synthetic Prober")
     parser.add_argument("--tenant", default="", help="Custom district SharePoint tenant prefix (e.g. 'kernhigh' for kernhigh.sharepoint.com)")
@@ -373,7 +469,11 @@ def main():
         "# HELP openux_m365_teams_udp_loss_percent Teams UDP Media packet loss percentage",
         "# TYPE openux_m365_teams_udp_loss_percent gauge",
         "# HELP openux_m365_teams_voice_mos Estimated Microsoft Teams voice quality Mean Opinion Score (1.0 to 4.5)",
-        "# TYPE openux_m365_teams_voice_mos gauge"
+        "# TYPE openux_m365_teams_voice_mos gauge",
+        "# HELP openux_m365_ntp_sync_status Windows Autopilot NTP Clock Sync reachability (1=Synchronized, 0=Failed)",
+        "# TYPE openux_m365_ntp_sync_status gauge",
+        "# HELP openux_m365_ntp_rtt_ms NTP Clock Sync round-trip latency in milliseconds",
+        "# TYPE openux_m365_ntp_rtt_ms gauge"
     ]
 
     print("Executing Microsoft 365 & Office 365 A5 Synthetic Probes...")
@@ -411,6 +511,12 @@ def main():
         prom_lines.append(f'openux_m365_teams_udp_jitter_ms{{relay="{r_name}",host="{r_host}",port="{r_port}"}} {media_res["jitter_ms"]}')
         prom_lines.append(f'openux_m365_teams_udp_loss_percent{{relay="{r_name}",host="{r_host}",port="{r_port}"}} {media_res["loss_percent"]}')
         prom_lines.append(f'openux_m365_teams_voice_mos{{relay="{r_name}",host="{r_host}",port="{r_port}"}} {media_res["mos_score"]}')
+
+    # 3. Probe Windows Autopilot NTP Clock Sync
+    ntp_res = probe_ntp_clock_sync("time.windows.com", 123)
+    print(f"  [NTP] Windows Autopilot NTP (time.windows.com:123) -> Status: {'OK' if ntp_res['status'] == 1 else 'FAIL'} | RTT: {ntp_res['rtt_ms']}ms")
+    prom_lines.append(f'openux_m365_ntp_sync_status{{server="time.windows.com"}} {ntp_res["status"]}')
+    prom_lines.append(f'openux_m365_ntp_rtt_ms{{server="time.windows.com"}} {ntp_res["rtt_ms"]}')
 
     write_metrics(prom_lines, args.output)
 

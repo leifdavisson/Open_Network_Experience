@@ -166,3 +166,43 @@ def test_m365_teams_udp_media_probe_firewall_blocked():
         assert res["loss_percent"] == 100.0
         assert res["mos_score"] == 1.0
         assert "Firewall blocking UDP" in res["error"]
+
+# ====================================================
+# 5. Universal Print & Intune Autopilot Suite Tests
+# ====================================================
+
+def test_m365_universal_print_and_intune_services_registered():
+    """Verifies Universal Print and Intune/Autopilot sub-components are present in M365_SERVICES."""
+    service_ids = [s["id"] for s in m365_connectivity_probe.M365_SERVICES]
+    assert "universal_print_gateway" in service_ids
+    assert "intune_core_gateway" in service_ids
+    assert "intune_device_registration" in service_ids
+    assert "intune_ime_cdn" in service_ids
+    assert "autopilot_ztd" in service_ids
+    assert "autopilot_tpm_attestation" in service_ids
+    assert "wns_push_notifications" in service_ids
+    assert "delivery_optimization" in service_ids
+
+def test_m365_ntp_clock_sync_success():
+    """Verifies NTP synchronization over UDP 123 for Autopilot OOBE."""
+    mock_sock = MagicMock()
+    mock_sock.recvfrom.return_value = (b"\x1c" + b"\x00" * 47, ("51.137.137.111", 123))
+
+    with patch("socket.gethostbyname", return_value="51.137.137.111"), \
+         patch("socket.socket", return_value=mock_sock):
+        res = m365_connectivity_probe.probe_ntp_clock_sync("time.windows.com", 123)
+        assert res["status"] == 1
+        assert res["rtt_ms"] >= 0.0
+        assert res["error"] is None
+
+def test_m365_ntp_clock_sync_firewall_timeout():
+    """Verifies handling when UDP 123 is blocked by firewall."""
+    mock_sock = MagicMock()
+    mock_sock.recvfrom.side_effect = socket.timeout("NTP timed out")
+
+    with patch("socket.gethostbyname", return_value="51.137.137.111"), \
+         patch("socket.socket", return_value=mock_sock):
+        res = m365_connectivity_probe.probe_ntp_clock_sync("time.windows.com", 123)
+        assert res["status"] == 0
+        assert res["rtt_ms"] == 0.0
+        assert "timed out" in res["error"]
