@@ -503,16 +503,57 @@ async def get_wallboard_live_stats():
     trend_wired = [round(base_wired + ((i % 5) - 2) * 0.04, 2) for i in range(15)]
     trend_wifi = [round(base_wired * 3.6 + ((i % 4) - 1.5) * 0.15, 2) for i in range(15)]
 
-    # 5. Incident feed
+    # 5. Incident feed with Traffic Light Severity levels
     incidents = []
+    from datetime import datetime, timezone
+
+    # Check for failing SaaS probes (RED level)
+    for k, v in saas_map.items():
+        if not v.get("is_up", True):
+            incidents.append({
+                "severity": "RED",
+                "category": "SaaS SLA Alert",
+                "title": f"{v['name']} High Latency / SLA Warning",
+                "location": "District Gateway",
+                "detail": f"Target endpoint response time elevated ({v['rtt_ms']} ms).",
+                "timestamp": now,
+                "time_str": datetime.now(timezone.utc).strftime("%H:%M:%S")
+            })
+
+    # Check for offline sensors (AMBER level) - deduplicate by sensor ID
+    seen_sensor_ids = set()
     for s_id, s in SENSORS_DB.items():
+        if s_id in seen_sensor_ids:
+            continue
+        seen_sensor_ids.add(s_id)
+
         if (now - s.get("last_seen", 0)) >= 120 or s.get("last_seen", 0) == 0:
             loc = s.get("location")
             site = getattr(loc, "site", "Campus") if loc else "Campus"
             room = getattr(loc, "room", "Room") if loc else "Room"
-            incidents.append(f"⚠️ Sensor '{s_id[:8]}' at {site} ({room}) is currently offline.")
+            last_seen_val = s.get("last_seen", 0)
+            time_str = datetime.fromtimestamp(last_seen_val, timezone.utc).strftime("%H:%M:%S") if last_seen_val > 0 else "Never"
+            incidents.append({
+                "severity": "AMBER",
+                "category": "Sensor Offline",
+                "title": f"Edge Sensor {s_id[:8]}... Offline",
+                "location": f"{site} ({room})",
+                "detail": f"No check-in heartbeat received for >120s. Last seen: {time_str}.",
+                "timestamp": last_seen_val,
+                "time_str": time_str
+            })
 
-    incident_text = " • ".join(incidents) if incidents else "🟢 All network pathways, State Testing endpoints, and VoLTE/Zoom media streams are operating within SLA bounds."
+    # If no active incidents, provide an all-clear GREEN entry
+    if not incidents:
+        incidents.append({
+            "severity": "GREEN",
+            "category": "All Systems Nominal",
+            "title": "Nominal Fleet Telemetry",
+            "location": "District-Wide Fleet",
+            "detail": "All network pathways, State Testing endpoints, and VoLTE/Zoom media streams operating within nominal SLA bounds.",
+            "timestamp": now,
+            "time_str": "Live"
+        })
 
     return {
         "saas": saas_map,
@@ -536,7 +577,8 @@ async def get_wallboard_live_stats():
             "wired": trend_wired,
             "wifi": trend_wifi
         },
-        "incident_feed": incident_text
+        "incidents": incidents,
+        "incident_feed": f"{len(incidents)} active incident(s)"
     }
 
 @app.put(
@@ -1226,6 +1268,55 @@ async def serve_admin_ui():
         body.wallboard-fullscreen #wallboard-map { height: 560px; }
         body.wallboard-fullscreen .campus-drawer { max-height: 560px; }
         body.wallboard-fullscreen #grafana-embed-frame { height: 680px !important; }
+
+        /* TRAFFIC LIGHT SCROLLABLE INCIDENT LIST */
+        .incident-scroll-container {
+            max-height: 220px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .incident-scroll-container::-webkit-scrollbar { width: 6px; }
+        .incident-scroll-container::-webkit-scrollbar-track { background: var(--bg-card); border-radius: 4px; }
+        .incident-scroll-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .incident-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            transition: all 0.15s;
+        }
+        .incident-item:hover { border-color: var(--accent); }
+        .incident-item.severity-red { border-left: 4px solid #ef4444; }
+        .incident-item.severity-amber { border-left: 4px solid #f59e0b; }
+        .incident-item.severity-green { border-left: 4px solid #10b981; }
+        .traffic-light-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            min-width: 170px;
+        }
+        .traffic-light-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dot-red { background: #ef4444; box-shadow: 0 0 10px #ef4444; animation: blinkRed 1.5s infinite; }
+        .dot-amber { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+        .dot-green { background: #10b981; box-shadow: 0 0 10px #10b981; }
+        @keyframes blinkRed { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
     </style>
 </head>
 <body>
@@ -1465,11 +1556,23 @@ async def serve_admin_ui():
 
                     <div class="section-card" style="margin-bottom: 0;">
                         <div class="section-header">
-                            <div class="section-title">🚨 Active Incidents & Live Operational Ticker</div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div class="section-title">🚨 Active Incidents & Live Operational Ticker</div>
+                                <span class="badge" id="incident-count-badge" style="background:rgba(245,158,11,0.15); color:var(--warning); border:1px solid var(--warning); font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700;">Live Feed</span>
+                            </div>
                             <button class="btn btn-outline btn-sm" onclick="loadDashboardData()">🔄 Refresh</button>
                         </div>
-                        <div style="color: var(--text-muted); font-size: 14px;" id="incident-feed">
-                            🟢 All network pathways, State Testing endpoints, and VoLTE/Zoom media streams are operating within SLA bounds.
+                        <div class="incident-scroll-container" id="incident-feed">
+                            <div class="incident-item severity-green">
+                                <div class="traffic-light-indicator">
+                                    <span class="traffic-light-dot dot-green"></span>
+                                    <span style="color:#10b981;">ALL NOMINAL</span>
+                                </div>
+                                <div style="flex:1; margin:0 12px; color:var(--text-main);">
+                                    <strong>District-Wide Fleet Nominal</strong> &bull; All network pathways, State Testing endpoints, and VoLTE/Zoom media streams are operating within SLA bounds.
+                                </div>
+                                <div style="color:var(--text-muted); font-size:11px; white-space:nowrap;">Live</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2599,10 +2702,71 @@ async def serve_admin_ui():
                 if (vVal) vVal.innerText = `${slas.voip_mos} / 5.00 MOS`;
             }
 
-            // Update Slide 1 Incident Feed
-            if (liveStats && liveStats.incident_feed) {
-                const incFeed = document.getElementById('incident-feed');
-                if (incFeed) incFeed.innerHTML = liveStats.incident_feed;
+            // Update Slide 1 Incident Feed with Traffic Light List
+            const incFeed = document.getElementById('incident-feed');
+            const incBadge = document.getElementById('incident-count-badge');
+            if (incFeed && liveStats && liveStats.incidents) {
+                const incList = liveStats.incidents;
+                const activeCount = incList.filter(i => i.severity !== 'GREEN').length;
+                if (incBadge) {
+                    if (activeCount === 0) {
+                        incBadge.innerText = 'All Nominal (0 Alerts)';
+                        incBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+                        incBadge.style.color = 'var(--status-online-text)';
+                        incBadge.style.borderColor = 'var(--success)';
+                    } else {
+                        incBadge.innerText = `${activeCount} Active Incident${activeCount > 1 ? 's' : ''}`;
+                        incBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+                        incBadge.style.color = 'var(--warning)';
+                        incBadge.style.borderColor = 'var(--warning)';
+                    }
+                }
+
+                if (incList.length === 0) {
+                    incFeed.innerHTML = `
+                        <div class="incident-item severity-green">
+                            <div class="traffic-light-indicator">
+                                <span class="traffic-light-dot dot-green"></span>
+                                <span style="color:#10b981; font-size:12px;">ALL NOMINAL</span>
+                            </div>
+                            <div style="flex:1; margin:0 12px; color:var(--text-main);">
+                                <strong>District-Wide Fleet Nominal</strong> &bull; All network pathways, State Testing endpoints, and VoLTE/Zoom media streams are operating within SLA bounds.
+                            </div>
+                            <div style="color:var(--text-muted); font-size:11px; white-space:nowrap;">Live</div>
+                        </div>
+                    `;
+                } else {
+                    const rows = incList.map(inc => {
+                        let dotClass = 'dot-green';
+                        let badgeColor = '#10b981';
+                        let itemClass = 'severity-green';
+                        if (inc.severity === 'RED') {
+                            dotClass = 'dot-red';
+                            badgeColor = '#ef4444';
+                            itemClass = 'severity-red';
+                        } else if (inc.severity === 'AMBER') {
+                            dotClass = 'dot-amber';
+                            badgeColor = '#f59e0b';
+                            itemClass = 'severity-amber';
+                        }
+
+                        return `
+                            <div class="incident-item ${itemClass}">
+                                <div class="traffic-light-indicator">
+                                    <span class="traffic-light-dot ${dotClass}"></span>
+                                    <span style="color:${badgeColor}; font-size:12px; font-weight:700;">${inc.category || inc.severity}</span>
+                                </div>
+                                <div style="flex:1; margin:0 12px; color:var(--text-main);">
+                                    <strong>${inc.title}</strong> &bull; <span style="color:var(--text-muted);">${inc.location}:</span> ${inc.detail}
+                                </div>
+                                <div style="color:var(--text-muted); font-size:11px; white-space:nowrap;">
+                                    ${inc.time_str || (inc.timestamp > 0 ? new Date(inc.timestamp * 1000).toLocaleTimeString() : 'Active')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    incFeed.innerHTML = rows.join('');
+                }
             }
 
             // Update Slide 3 SaaS Application Cards from Live PromQL
