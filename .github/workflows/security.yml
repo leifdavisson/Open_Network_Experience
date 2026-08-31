@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build CMP Server Image
-        run: docker build -t open-ux/cmp-server:scan server/
+        run: docker build -f server/Dockerfile -t open-ux/cmp-server:scan .
 
       - name: Install Trivy Scanner
         run: |
