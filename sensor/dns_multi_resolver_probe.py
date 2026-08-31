@@ -19,26 +19,29 @@ import sys
 import time
 import socket
 import argparse
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/dns_resolvers.prom"
 
+# Public Recursive Resolvers for Baseline Benchmarking
 PUBLIC_DNS_PROVIDERS = [
-    {"name": "Cloudflare", "ip": "1.1.1.1", "is_public": True},
-    {"name": "Google", "ip": "8.8.8.8", "is_public": True},
-    {"name": "Quad9", "ip": "9.9.9.9", "is_public": True},
-    {"name": "OpenDNS", "ip": "208.67.222.222", "is_public": True}
+    {"name": "Cloudflare-Primary", "ip": "1.1.1.1", "is_public": True},
+    {"name": "Google-Primary", "ip": "8.8.8.8", "is_public": True},
+    {"name": "Quad9-Secure", "ip": "9.9.9.9", "is_public": True},
+    {"name": "OpenDNS-Home", "ip": "208.67.222.222", "is_public": True}
 ]
 
-TEST_DOMAINS = [
-    {"domain": "google.com", "type": "public"},
+# Critical educational/enterprise domains to benchmark
+DEFAULT_BENCHMARK_DOMAINS = [
+    {"domain": "google.com", "type": "public_web"},
+    {"domain": "microsoft.com", "type": "public_web"},
     {"domain": "caaspp-elpac.org", "type": "testing_portal"},
     {"domain": "canvas.net", "type": "lms"}
 ]
 
 def discover_local_resolvers() -> List[Dict[str, Any]]:
     """Parses /etc/resolv.conf to find active local/DHCP DNS servers."""
-    resolvers = []
+    resolvers: List[Dict[str, Any]] = []
     if os.path.exists("/etc/resolv.conf"):
         try:
             with open("/etc/resolv.conf", "r") as f:
@@ -95,7 +98,7 @@ def probe_dns_server(
     server_ip: str,
     domain: str,
     timeout_sec: float = 2.0,
-    interface: str = None
+    interface: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Sends raw UDP DNS query to specific nameserver IP and measures exact response latency.
@@ -131,7 +134,7 @@ def probe_dns_server(
         sock.close()
         return {"status": 0, "latency_seconds": time.time() - start, "rcode": -2, "rcode_str": f"ERROR_{e}"}
 
-def run_multi_resolver_probes(interface: str = None) -> List[Dict[str, Any]]:
+def run_multi_resolver_probes(interface: Optional[str] = None) -> List[Dict[str, Any]]:
     """Runs DNS resolution benchmark across local and public providers."""
     local_resolvers = discover_local_resolvers()
     all_resolvers = local_resolvers + PUBLIC_DNS_PROVIDERS
@@ -143,7 +146,7 @@ def run_multi_resolver_probes(interface: str = None) -> List[Dict[str, Any]]:
         r_ip = res["ip"]
         is_pub = "Public" if res["is_public"] else "Local/DHCP"
 
-        for dom in TEST_DOMAINS:
+        for dom in DEFAULT_BENCHMARK_DOMAINS:
             domain_name = dom["domain"]
             probe = probe_dns_server(r_ip, domain_name, timeout_sec=2.0, interface=interface)
 

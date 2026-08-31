@@ -331,9 +331,15 @@ def check_ssl_inspection_bypass(host: str, port: int = 443) -> Tuple[bool, str]:
         with socket.create_connection((host, port), timeout=5) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as ssock:
                 cert = ssock.getpeercert()
-                issuer = dict(x[0] for x in cert.get('issuer', []))
-                common_name = issuer.get('commonName', '')
-                org_name = issuer.get('organizationName', '')
+                issuer_dict: Dict[str, str] = {}
+                if cert and isinstance(cert, dict):
+                    raw_issuer = cert.get('issuer', ())
+                    for rdn in raw_issuer:
+                        for entry in rdn:
+                            if isinstance(entry, tuple) and len(entry) >= 2:
+                                issuer_dict[str(entry[0])] = str(entry[1])
+                common_name = issuer_dict.get('commonName', '')
+                org_name = issuer_dict.get('organizationName', '')
                 issuer_str = f"{common_name} ({org_name})"
 
                 lower_issuer = issuer_str.lower()

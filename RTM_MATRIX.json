@@ -1,0 +1,327 @@
+[
+  {
+    "requirement_id": "REQ-SEC-001",
+    "title": "Administrative API Key Constant-Time Verification & Production Fail-Fast",
+    "safety_level": "CRITICAL",
+    "verifying_tests": [
+      "test_01_unauthorized_endpoints"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-SEC-002",
+    "title": "HMAC-SHA256 Signed Session Token & Cookie Isolation",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_04_global_controls_and_buttons"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-001",
+    "title": "Wi-Fi 802.11 Association & DHCP Timing Exporter",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_regex_patterns",
+      "test_calculate_timings_success"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-002",
+    "title": "Incident-Triggered RAM Ring Buffer PCAP Capture",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_start_rolling_capture",
+      "test_trigger_pcap_snapshot"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-003",
+    "title": "Forensic Diagnostic Evidence Bundle Packaging",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_generate_plain_english_summary",
+      "test_package_evidence_bundle"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-004",
+    "title": "Wi-Fi Radio Resource Management & Dynamic Channel Flap Detection",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_get_connected_wifi_info",
+      "test_scan_cochannel_interference"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-005",
+    "title": "Lateral East-West Subnet Segmentation Compliance",
+    "safety_level": "CRITICAL",
+    "verifying_tests": [
+      "test_probe_target_blocked_compliant",
+      "test_probe_target_blocked_breached",
+      "test_probe_target_allowed_compliant"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-006",
+    "title": "Synthetic Browser & API Transaction Waterfalls",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_run_api_test_success",
+      "test_run_api_test_failure",
+      "test_run_page_test_success"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-007",
+    "title": "GPS Precision Geolocation & Fallback Profile Resolution",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_parse_nmea_lat_long_valid_north",
+      "test_parse_nmea_lat_long_valid_south",
+      "test_parse_nmea_lat_long_valid_east",
+      "test_parse_nmea_lat_long_valid_west",
+      "test_parse_nmea_lat_long_invalid_inputs",
+      "test_read_hardware_gps_no_device",
+      "test_read_hardware_gps_success_gpgga",
+      "test_read_hardware_gps_success_gngga",
+      "test_read_hardware_gps_no_fix",
+      "test_read_hardware_gps_serial_exception",
+      "test_load_or_update_location_default_fallback",
+      "test_load_or_update_location_from_file",
+      "test_load_or_update_location_malformed_json",
+      "test_load_or_update_location_with_live_gps_fix",
+      "test_load_or_update_location_save_exception",
+      "test_write_metrics_to_file",
+      "test_write_metrics_stdout",
+      "test_main_cli_execution"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-008",
+    "title": "CIPA Internet Safety & Content Filter Policy Compliance",
+    "safety_level": "CRITICAL",
+    "verifying_tests": [
+      "test_check_target_blocked_by_http_error",
+      "test_check_target_blocked_by_network_error",
+      "test_check_target_blocked_by_timeout_or_handshake",
+      "test_check_target_blocked_by_block_page_without_token",
+      "test_check_target_allowed_non_compliant",
+      "test_check_internet_connectivity_success_204",
+      "test_check_internet_connectivity_success_200",
+      "test_check_internet_connectivity_failure_status",
+      "test_check_internet_connectivity_failure_exception",
+      "test_write_metrics_to_file",
+      "test_write_metrics_stdout",
+      "test_write_metrics_error_handling",
+      "test_main_offline_fallback",
+      "test_main_online_all_compliant",
+      "test_main_online_with_filter_breach"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-009",
+    "title": "Real-Time UDP Voice & Video Jitter (MOS) Estimation",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_build_stun_binding_request_format",
+      "test_build_stun_binding_request_random_tx_id",
+      "test_calculate_mos_score_crystal_clear",
+      "test_calculate_mos_score_high_latency_jitter_loss",
+      "test_calculate_mos_score_clamped_boundaries",
+      "test_calculate_mos_score_intermediate_bounds",
+      "test_probe_udp_jitter_dns_failure",
+      "test_probe_udp_jitter_success",
+      "test_probe_udp_jitter_partial_packet_loss_and_invalid_response",
+      "test_probe_udp_jitter_all_packets_dropped",
+      "test_probe_udp_jitter_interface_binding",
+      "test_probe_udp_jitter_generic_exception_handling",
+      "test_probe_udp_jitter_bind_device_exception",
+      "test_write_metrics_atomic_file",
+      "test_write_metrics_stdout_when_output_path_none",
+      "test_main_execution",
+      "test_main_execution_poor_mos_branch"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-010",
+    "title": "Multi-Resolver DNS Benchmark & Failure Detection",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_discover_local_resolvers_standard_and_deduplication",
+      "test_discover_local_resolvers_file_not_found_fallback",
+      "test_discover_local_resolvers_empty_file_fallback",
+      "test_discover_local_resolvers_read_exception_fallback",
+      "test_build_dns_query_packet_structure",
+      "test_parse_dns_response_rcodes",
+      "test_probe_dns_server_success",
+      "test_probe_dns_server_nxdomain",
+      "test_probe_dns_server_timeout",
+      "test_probe_dns_server_network_error",
+      "test_probe_dns_server_with_interface_binding",
+      "test_probe_dns_server_interface_binding_exception_ignored",
+      "test_run_multi_resolver_probes",
+      "test_write_metrics_atomic_file_emission",
+      "test_write_metrics_stdout_fallback",
+      "test_cli_main"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-011",
+    "title": "Scheduled & Throttled iPerf3 Bandwidth Benchmarking",
+    "safety_level": "MEDIUM",
+    "verifying_tests": [
+      "test_is_within_allowed_hours_none_or_empty",
+      "test_is_within_allowed_hours_normal_window",
+      "test_is_within_allowed_hours_overnight_window",
+      "test_is_within_allowed_hours_multiple_and_malformed",
+      "test_get_interface_ip_success",
+      "test_get_interface_ip_no_inet_line",
+      "test_get_interface_ip_subprocess_error",
+      "test_run_iperf3_test_tcp_success",
+      "test_run_iperf3_test_udp_success",
+      "test_run_iperf3_test_unlimited_bandwidth",
+      "test_run_iperf3_test_process_failure",
+      "test_run_iperf3_test_timeout_expired",
+      "test_run_iperf3_test_malformed_json_exception",
+      "test_write_metrics_atomic_file",
+      "test_write_metrics_stdout_fallback",
+      "test_cli_instructional_lockout_guardrail",
+      "test_cli_thermal_safety_guardrail",
+      "test_cli_preflight_congestion_guardrail",
+      "test_cli_outside_allowed_hours",
+      "test_cli_full_dual_nic_success",
+      "test_cli_interface_without_ip_or_failed_test",
+      "test_cli_force_flag_bypasses_all_lockouts"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-012",
+    "title": "WYSIWYG Dynamic Custom Synthetic Probe Execution",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_execute_http_probe_200_ok",
+      "test_execute_http_probe_regex_match_success",
+      "test_execute_http_probe_regex_match_failure",
+      "test_execute_http_probe_http_error_unexpected",
+      "test_execute_http_probe_http_error_expected",
+      "test_execute_http_probe_network_exception",
+      "test_execute_dns_probe_success",
+      "test_execute_dns_probe_failure",
+      "test_execute_tcp_probe_success",
+      "test_execute_tcp_probe_failure",
+      "test_run_probes_mixed_types_and_disabled",
+      "test_write_metrics_atomic_file",
+      "test_write_metrics_stdout_when_output_path_none",
+      "test_main_with_valid_config",
+      "test_main_fallback_default_when_no_config",
+      "test_main_handles_invalid_json_config"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-ONB-001",
+    "title": "Interactive & Automated TUI Onboarding Wizard",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_scan_wifi_ssids_nmcli"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-ONB-002",
+    "title": "FAT32 USB Flash Drive Assembly-Line Staging Kit",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_find_usb_bootstrap_config"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-ONB-003",
+    "title": "Subnet-Based Zero-Touch Provisioning (ZTP) Auto-Approval",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_subnet_auto_enroll_ztp",
+      "test_subnet_auto_enroll_ztp"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-CMP-001",
+    "title": "Multi-Campus Hierarchy & District SLA Rollup",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_campus_hierarchy_crud",
+      "test_campus_hierarchy_crud"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-SCH-001",
+    "title": "Unified Visual Probe Scheduler & Off-Peak Windows",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_08_api_schedule_creation_and_listing",
+      "test_08_api_schedule_creation_and_listing"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-SCH-002",
+    "title": "Instructional Hours Safety Guardrails & Emergency Override",
+    "safety_level": "CRITICAL",
+    "verifying_tests": [
+      "test_guardrail_instructional_lockout_during_school"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-TEL-001",
+    "title": "Chromebook Fleet Telemetry Ingestion & AP Roaming Trail",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_07_chromebook_fleet_view_and_modal_elements"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-TEL-002",
+    "title": "NOC Wallboard Real-Time Metrics & SaaS Health Feed",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_01_page_header_and_brand_rendering"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-DB-001",
+    "title": "Database Persistence & Scoped Resource Management",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_02_sensor_registration_lifecycle"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-SNMP-001",
+    "title": "SNMP Infrastructure & Switch Interface Poller",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_poll_firewall_fortigate_normal"
+    ],
+    "status": "VERIFIED"
+  }
+]

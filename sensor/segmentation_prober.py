@@ -13,7 +13,7 @@ import sys
 import time
 import socket
 import argparse
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/segmentation.prom"
 

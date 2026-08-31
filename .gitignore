@@ -50,3 +50,9 @@ wpa_supplicant.conf
 # Shell history (may contain pasted secrets)
 .bash_history
 .python_history
+
+# Test and coverage artifacts
+.coverage
+.pytest_cache/
+.mypy_cache/
+htmlcov/

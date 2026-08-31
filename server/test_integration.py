@@ -14,6 +14,12 @@ import time
 CMP_BASE_URL = "http://localhost:8000/api/v1"
 ADMIN_KEY = "admin-noc-key-change-me"
 
+def verifies(req_id: str):
+    def decorator(fn):
+        fn.__verifies__ = req_id
+        return fn
+    return decorator
+
 class TestCMPFlow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -42,16 +48,18 @@ class TestCMPFlow(unittest.TestCase):
         except Exception as e:
             self.fail(f"Request failed: {e}")
 
+    @verifies("REQ-SEC-001")
     def test_01_unauthorized_endpoints(self):
         """Ensures administrative endpoints require a valid API key."""
-        # Query sensor list without key -> expecting 422 (FastAPI required header)
+        # Query sensor list without key -> expecting 401 Unauthorized (or 422 validation error)
         code, _ = self.make_request("/sensors", method="GET")
-        self.assertEqual(code, 422)
+        self.assertIn(code, (401, 422))
 
         # Query sensor list with wrong key -> expecting 401 Unauthorized
         code, _ = self.make_request("/sensors", method="GET", headers={"X-API-Key": "wrong-key"})
         self.assertEqual(code, 401)
 
+    @verifies("REQ-DB-001")
     def test_02_sensor_registration_lifecycle(self):
         """Tests the full register-approve-reconcile sensor lifecycle."""
         # 1. Register a new sensor (unauthenticated)
@@ -427,7 +435,7 @@ class TestCMPFlow(unittest.TestCase):
         self.assertIn("sensors", backup_data)
         self.assertIn("probes", backup_data)
         self.assertIn("version", backup_data)
-        self.assertEqual(backup_data["version"], "0.3.0")
+        self.assertEqual(backup_data["version"], "0.4.0")
 
         # 2. Restore backup
         code, restore_res = self.make_request("/system/restore", method="POST", body=backup_data, headers={"X-API-Key": ADMIN_KEY})

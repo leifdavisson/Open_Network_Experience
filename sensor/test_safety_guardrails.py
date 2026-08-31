@@ -9,6 +9,13 @@ Tests:
   5. In-Flight Kill Switch Watchdog (SIGKILL on Packet Drop)
 """
 
+def verifies(req_id: str):
+    def decorator(fn):
+        fn.__verifies__ = req_id
+        return fn
+    return decorator
+
+
 import os
 import sys
 import time
@@ -26,6 +33,7 @@ from safety_guardrails import NetworkSafetyGuardrails
 # 1. Guardrail 1: Instructional Hours Lockout Tests
 # ====================================================
 
+@verifies("REQ-SCH-002")
 def test_guardrail_instructional_lockout_during_school():
     """Verifies that tests are blocked during Wednesday 10:30 AM school hours."""
     school_time = datetime.datetime(2026, 9, 2, 10, 30) # Wednesday 10:30 AM

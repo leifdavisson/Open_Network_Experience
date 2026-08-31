@@ -8,6 +8,13 @@ Validates:
   5. Edge Adaptive Resolution State Machine (GREEN -> AMBER -> RED -> BLACKOUT)
 """
 
+
+def verifies(req_id: str):
+    def decorator(fn):
+        fn.__verifies__ = req_id
+        return fn
+    return decorator
+
 import os
 import sys
 import time
@@ -20,8 +27,8 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "sensor", "reconciler")))
 
-import db
-import main
+import server.db as db
+import server.main as main
 from reconciler import AdaptiveResolutionEngine
 
 ADMIN_KEY = "admin-noc-key-change-me"
@@ -38,6 +45,8 @@ def setup_test_db(tmp_path, monkeypatch):
     main.PROBES_DB.clear()
     main.SCHEDULES_DB.clear()
 
+@verifies("REQ-CMP-001")
+@verifies("REQ-CMP-001")
 def test_campus_hierarchy_crud():
     """Validates adding, listing, and rolling up campus statistics."""
     campus_payload = {
@@ -61,6 +70,8 @@ def test_campus_hierarchy_crud():
     assert campuses[0]["campus_id"] == "CAMPUS-WEST-HIGH"
     assert campuses[0]["sensor_count"] == 0
 
+@verifies("REQ-ONB-003")
+@verifies("REQ-ONB-003")
 def test_subnet_auto_enroll_ztp():
     """Validates Zero-Touch Provisioning via DHCP Subnet Matching."""
     subnet_payload = {
