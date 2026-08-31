@@ -16,19 +16,32 @@ export function setupChromeMock(overrides = {}) {
 
   const globalScope = typeof global !== "undefined" ? global : window;
 
-  if (typeof navigator !== "undefined") {
+  const mockNavigator = {
+    platform: "CrOS",
+    userAgent: "Mozilla/5.0 (X11; CrOS x86_64 14542.0.0)",
+    onLine: true,
+    getBattery: async () => ({
+      charging: true,
+      level: 0.94,
+      dischargingTime: Infinity
+    })
+  };
+
+  try {
+    Object.defineProperty(globalScope, "navigator", {
+      value: mockNavigator,
+      configurable: true,
+      writable: true
+    });
+  } catch (e) {
     try {
-      Object.defineProperty(navigator, "getBattery", {
-        value: async () => ({
-          charging: true,
-          level: 0.94,
-          dischargingTime: Infinity
-        }),
-        configurable: true,
-        writable: true
-      });
-    } catch (e) {
-      // Ignore if navigator is non-extensible
+      globalScope.navigator = mockNavigator;
+    } catch (err) {
+      if (globalScope.navigator) {
+        try {
+          globalScope.navigator.getBattery = mockNavigator.getBattery;
+        } catch (ignored) {}
+      }
     }
   }
 
