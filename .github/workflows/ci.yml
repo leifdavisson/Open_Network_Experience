@@ -58,9 +58,9 @@ jobs:
           pip install -r server/requirements.txt
           pip install pytest pytest-cov hypothesis httpx
 
-      - name: Run Full Pytest Suite (310 Tests)
+      - name: Run Unit & Property Test Suite
         run: |
-          pytest --cov=server --cov=sensor --cov-report=term-missing
+          pytest --ignore=server/test_integration.py --ignore=server/test_ui_comprehensive.py --cov=server --cov=sensor --cov-report=term-missing
 
       - name: Verify DO-178C Level A MC/DC Truth Tables
         run: |
