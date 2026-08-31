@@ -1,11 +1,25 @@
 repos:
-  # Block commits containing secrets (API keys, passwords, tokens)
+  # 1. Block commits containing secrets (API keys, passwords, tokens)
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4
     hooks:
       - id: gitleaks
 
-  # Fix trailing whitespace, merge conflicts, large files
+  # 2. Fast, modern Python linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  # 3. Security SAST scanner (Bandit)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: [-ll, -r, server/, sensor/]
+
+  # 4. Standard formatting & hygiene hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
