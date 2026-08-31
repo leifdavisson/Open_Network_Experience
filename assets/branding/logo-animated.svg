@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Segment 1: Hardware Edge Probers (Electric Cyan -> Signal Blue) -->
+    <linearGradient id="edgeProberGradAnim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+
+    <!-- Segment 2: Central Control Plane (Signal Blue -> Emerald Green) -->
+    <linearGradient id="controlPlaneGradAnim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+
+    <!-- Segment 3: Chromebook / Client Extensions (Emerald Green -> Bright Teal/Cyan) -->
+    <linearGradient id="clientExtGradAnim" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#00F0FF" />
+    </linearGradient>
+
+    <!-- Core Waveform / Pulse Gradient -->
+    <linearGradient id="corePulseGradAnim" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#10B981" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#0066FF" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Universally-compatible standard Gaussian Blur filter -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <style>
+      /* Pure standard CSS properties supported by all browsers and SVG engines */
+      @keyframes floatPieceA {
+        0%, 100% { transform: translateY(0px); opacity: 0.95; }
+        50% { transform: translateY(-5px); opacity: 1; }
+      }
+      @keyframes floatPieceB {
+        0%, 100% { transform: translate(0px, 0px); opacity: 0.95; }
+        50% { transform: translate(4px, 3px); opacity: 1; }
+      }
+      @keyframes floatPieceC {
+        0%, 100% { transform: translate(0px, 0px); opacity: 0.95; }
+        50% { transform: translate(-4px, 3px); opacity: 1; }
+      }
+      @keyframes waveShimmer {
+        0%, 100% { stroke: #00F0FF; opacity: 0.85; }
+        50% { stroke: #34D399; opacity: 1; }
+      }
+      @keyframes dashRotateRing {
+        from { stroke-dashoffset: 0; }
+        to { stroke-dashoffset: 72; }
+      }
+      @keyframes beaconFocal {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.35); opacity: 0.85; }
+      }
+
+      .piece-a { animation: floatPieceA 3.6s ease-in-out infinite; }
+      .piece-b { animation: floatPieceB 3.6s ease-in-out infinite 1.2s; }
+      .piece-c { animation: floatPieceC 3.6s ease-in-out infinite 2.4s; }
+
+      .dash-hex-ring { animation: dashRotateRing 8s linear infinite; }
+      .waveform-path { animation: waveShimmer 2.8s ease-in-out infinite; }
+      .beacon-dot {
+        transform-origin: 256px 256px;
+        animation: beaconFocal 2s ease-in-out infinite;
+      }
+    </style>
+  </defs>
+
+  <!-- Background Base Container to ensure solid visibility on any light or dark viewport -->
+  <rect width="512" height="512" rx="64" fill="#0B0F19" fill-opacity="0.95" />
+
+  <g transform="translate(0, 0)">
+    <!-- Interlocking Hexagonal Segment A (Top-Right / North-East) -->
+    <path class="piece-a"
+          d="M 256 50
+             L 395 130
+             L 395 210
+             L 310 160
+             L 256 128
+             L 202 160
+             L 170 140
+             Z"
+          fill="url(#edgeProberGradAnim)"
+          stroke="#00F0FF"
+          stroke-width="2"
+          stroke-opacity="0.8" />
+
+    <!-- Interlocking Hexagonal Segment B (Right-Bottom / South-East) -->
+    <path class="piece-b"
+          d="M 420 175
+             L 420 337
+             L 281 418
+             L 281 320
+             L 335 288
+             L 335 225
+             Z"
+          fill="url(#controlPlaneGradAnim)"
+          stroke="#10B981"
+          stroke-width="2"
+          stroke-opacity="0.8" />
+
+    <!-- Interlocking Hexagonal Segment C (Left-Bottom / West) -->
+    <path class="piece-c"
+          d="M 231 418
+             L 92 337
+             L 92 175
+             L 177 225
+             L 177 288
+             L 231 320
+             Z"
+          fill="url(#clientExtGradAnim)"
+          stroke="#0066FF"
+          stroke-width="2"
+          stroke-opacity="0.8" />
+
+    <!-- Inner Core: Isometric Aperture & Waveform Pulse -->
+    <g filter="url(#softGlow)">
+      <!-- Outer Hex Pulse Ring with Animated Dash Flow -->
+      <polygon class="dash-hex-ring"
+               points="256,180 320,217 320,295 256,332 192,295 192,217"
+               fill="#0F172A"
+               stroke="url(#corePulseGradAnim)"
+               stroke-width="4.5"
+               stroke-dasharray="12 6" />
+
+      <!-- Center Waveform Signal Nodes with Glowing Pulse -->
+      <path class="waveform-path"
+            d="M 216 256
+               L 236 256
+               L 246 232
+               L 256 280
+               L 266 240
+               L 276 256
+               L 296 256"
+            fill="none"
+            stroke="#00F0FF"
+            stroke-width="5.5"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
+
+      <!-- SMIL Continuous Radar Ripple 1 -->
+      <circle cx="256" cy="256" r="6" fill="none" stroke="#10B981" stroke-width="2">
+        <animate attributeName="r" from="6" to="32" dur="2.4s" repeatCount="indefinite" />
+        <animate attributeName="opacity" from="0.9" to="0" dur="2.4s" repeatCount="indefinite" />
+      </circle>
+
+      <!-- SMIL Continuous Radar Ripple 2 (Staggered) -->
+      <circle cx="256" cy="256" r="6" fill="none" stroke="#00F0FF" stroke-width="1.5">
+        <animate attributeName="r" from="6" to="32" dur="2.4s" begin="1.2s" repeatCount="indefinite" />
+        <animate attributeName="opacity" from="0.9" to="0" dur="2.4s" begin="1.2s" repeatCount="indefinite" />
+      </circle>
+
+      <!-- Signal Focal Dot with Heartbeat Pulsing -->
+      <circle class="beacon-dot" cx="256" cy="256" r="5" fill="#10B981" />
+      <circle cx="256" cy="256" r="2" fill="#FFFFFF" />
+    </g>
+  </g>
+</svg>

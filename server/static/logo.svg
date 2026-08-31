@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Segment 1: Hardware Edge Probers (Electric Cyan -> Signal Blue) -->
+    <linearGradient id="edgeProberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+
+    <!-- Segment 2: Central Control Plane (Signal Blue -> Emerald Green) -->
+    <linearGradient id="controlPlaneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+
+    <!-- Segment 3: Chromebook / Client Extensions (Emerald Green -> Bright Teal/Cyan) -->
+    <linearGradient id="clientExtGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#00D2FF" />
+    </linearGradient>
+
+    <!-- Core Waveform / Pulse Gradient -->
+    <linearGradient id="corePulseGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00D2FF" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#10B981" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#0066FF" stop-opacity="0.9" />
+    </linearGradient>
+
+    <!-- Ambient Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <g transform="translate(0, 0)">
+    <!-- Interlocking Hexagonal Segment A (Top-Right / North-East) -->
+    <path d="M 256 50
+             L 395 130
+             L 395 210
+             L 310 160
+             L 256 128
+             L 202 160
+             L 170 140
+             Z"
+          fill="url(#edgeProberGrad)" />
+
+    <!-- Interlocking Hexagonal Segment B (Right-Bottom / South-East) -->
+    <path d="M 420 175
+             L 420 337
+             L 281 418
+             L 281 320
+             L 335 288
+             L 335 225
+             Z"
+          fill="url(#controlPlaneGrad)" />
+
+    <!-- Interlocking Hexagonal Segment C (Left-Bottom / West) -->
+    <path d="M 231 418
+             L 92 337
+             L 92 175
+             L 177 225
+             L 177 288
+             L 231 320
+             Z"
+          fill="url(#clientExtGrad)" />
+
+    <!-- Inner Core: Isometric Aperture & Waveform Pulse -->
+    <g filter="url(#glow)">
+      <!-- Outer Hex Pulse Ring -->
+      <polygon points="256,180 320,217 320,295 256,332 192,295 192,217"
+               fill="#0F172A"
+               stroke="url(#corePulseGrad)"
+               stroke-width="4"
+               stroke-dasharray="12 6" />
+
+      <!-- Center Waveform Signal Nodes -->
+      <path d="M 216 256
+               L 236 256
+               L 246 232
+               L 256 280
+               L 266 240
+               L 276 256
+               L 296 256"
+            fill="none"
+            stroke="#00D2FF"
+            stroke-width="5"
+            stroke-linecap="round"
+            stroke-linejoin="round" />
+
+      <!-- Signal Focal Dot -->
+      <circle cx="256" cy="256" r="3.5" fill="#10B981" />
+    </g>
+  </g>
+</svg>

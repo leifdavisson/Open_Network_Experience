@@ -60,7 +60,7 @@ class TestCustomProbeRunner(unittest.TestCase):
         mock_resp.__enter__.return_value = mock_resp
         mock_urlopen.return_value = mock_resp
 
-        success, latency, status_code = custom_probe_runner.execute_http_probe("https://canvas.district.edu", timeout=3.0)
+        success, latency, status_code = custom_probe_runner.execute_http_probe("https://canvas.example.edu", timeout=3.0)
         self.assertEqual(success, 1)
         self.assertEqual(status_code, 200)
         self.assertGreaterEqual(latency, 0.0)
@@ -76,7 +76,7 @@ class TestCustomProbeRunner(unittest.TestCase):
         mock_urlopen.return_value = mock_resp
 
         success, latency, status_code = custom_probe_runner.execute_http_probe(
-            "https://sis.district.edu/api/v1/health",
+            "https://sis.example.edu/api/v1/health",
             timeout=3.0,
             expected_status=200,
             match_regex="healthy"
@@ -95,7 +95,7 @@ class TestCustomProbeRunner(unittest.TestCase):
         mock_urlopen.return_value = mock_resp
 
         success, latency, status_code = custom_probe_runner.execute_http_probe(
-            "https://sis.district.edu/api/v1/health",
+            "https://sis.example.edu/api/v1/health",
             timeout=3.0,
             expected_status=200,
             match_regex="healthy"
@@ -107,10 +107,10 @@ class TestCustomProbeRunner(unittest.TestCase):
     @patch("urllib.request.urlopen")
     def test_execute_http_probe_http_error_unexpected(self, mock_urlopen):
         """Verifies HTTPError handling when status code is unexpected (e.g. 500 vs expected 200)."""
-        err = urllib.error.HTTPError("https://portal.district.edu", 500, "Internal Server Error", {}, None)
+        err = urllib.error.HTTPError("https://portal.example.edu", 500, "Internal Server Error", {}, None)
         mock_urlopen.side_effect = err
 
-        success, latency, status_code = custom_probe_runner.execute_http_probe("https://portal.district.edu")
+        success, latency, status_code = custom_probe_runner.execute_http_probe("https://portal.example.edu")
         self.assertEqual(success, 0)
         self.assertEqual(status_code, 500)
         self.assertGreaterEqual(latency, 0.0)
@@ -119,11 +119,11 @@ class TestCustomProbeRunner(unittest.TestCase):
     @patch("urllib.request.urlopen")
     def test_execute_http_probe_http_error_expected(self, mock_urlopen):
         """Verifies HTTPError handling when an error status code is intentionally expected (e.g. 401 Unauthorized)."""
-        err = urllib.error.HTTPError("https://secure.district.edu/admin", 401, "Unauthorized", {}, None)
+        err = urllib.error.HTTPError("https://secure.example.edu/admin", 401, "Unauthorized", {}, None)
         mock_urlopen.side_effect = err
 
         success, latency, status_code = custom_probe_runner.execute_http_probe(
-            "https://secure.district.edu/admin",
+            "https://secure.example.edu/admin",
             expected_status=401
         )
         self.assertEqual(success, 1)
@@ -135,7 +135,7 @@ class TestCustomProbeRunner(unittest.TestCase):
         """Verifies HTTP probe handles low-level network exceptions (URLError, timeout)."""
         mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
 
-        success, latency, status_code = custom_probe_runner.execute_http_probe("https://unreachable.district.edu")
+        success, latency, status_code = custom_probe_runner.execute_http_probe("https://unreachable.example.edu")
         self.assertEqual(success, 0)
         self.assertEqual(status_code, -1)
         self.assertGreaterEqual(latency, 0.0)
@@ -150,11 +150,11 @@ class TestCustomProbeRunner(unittest.TestCase):
         """Verifies successful DNS resolution probe."""
         mock_gethostbyname.return_value = "10.0.0.53"
 
-        success, latency, status_code = custom_probe_runner.execute_dns_probe("dns.district.edu")
+        success, latency, status_code = custom_probe_runner.execute_dns_probe("dns.example.edu")
         self.assertEqual(success, 1)
         self.assertEqual(status_code, 0)
         self.assertGreaterEqual(latency, 0.0)
-        mock_gethostbyname.assert_called_once_with("dns.district.edu")
+        mock_gethostbyname.assert_called_once_with("dns.example.edu")
 
     @verifies("REQ-PRB-012")
     @patch("socket.gethostbyname")
@@ -162,7 +162,7 @@ class TestCustomProbeRunner(unittest.TestCase):
         """Verifies DNS probe failure on socket resolution error (NXDOMAIN / gaierror)."""
         mock_gethostbyname.side_effect = socket.gaierror(socket.EAI_NONAME, "Name or service not known")
 
-        success, latency, status_code = custom_probe_runner.execute_dns_probe("nonexistent.district.edu")
+        success, latency, status_code = custom_probe_runner.execute_dns_probe("nonexistent.example.edu")
         self.assertEqual(success, 0)
         self.assertEqual(status_code, -1)
         self.assertGreaterEqual(latency, 0.0)
@@ -219,7 +219,7 @@ class TestCustomProbeRunner(unittest.TestCase):
                 "id": "canvas-lms",
                 "name": "Canvas LMS",
                 "probe_type": "http",
-                "target": "https://canvas.district.edu",
+                "target": "https://canvas.example.edu",
                 "timeout_seconds": 4.0,
                 "expected_status_code": 200,
                 "match_body_regex": "Canvas",
@@ -229,7 +229,7 @@ class TestCustomProbeRunner(unittest.TestCase):
                 "id": "sis-api",
                 "name": "SIS API",
                 "probe_type": "api",
-                "target": "https://powerschool.district.edu/api",
+                "target": "https://powerschool.example.edu/api",
                 "timeout_seconds": 5.0,
                 "expected_status_code": 200,
                 "enabled": True
@@ -238,7 +238,7 @@ class TestCustomProbeRunner(unittest.TestCase):
                 "id": "internal-dns",
                 "name": "DC1 DNS",
                 "probe_type": "dns",
-                "target": "auth.district.local",
+                "target": "auth.corp.example.com",
                 "timeout_seconds": 2.0,
                 "enabled": True
             },
@@ -262,7 +262,7 @@ class TestCustomProbeRunner(unittest.TestCase):
                 "id": "disabled-probe",
                 "name": "Legacy Lunch POS",
                 "probe_type": "http",
-                "target": "https://oldpos.district.edu",
+                "target": "https://oldpos.example.edu",
                 "enabled": False
             },
             {
@@ -287,9 +287,9 @@ class TestCustomProbeRunner(unittest.TestCase):
         self.assertIn("tcp-default-port", result_ids)
         self.assertIn("unknown-probe", result_ids)
 
-        mock_http.assert_any_call("https://canvas.district.edu", 4.0, 200, "Canvas")
-        mock_http.assert_any_call("https://powerschool.district.edu/api", 5.0, 200, None)
-        mock_dns.assert_called_once_with("auth.district.local", 2.0)
+        mock_http.assert_any_call("https://canvas.example.edu", 4.0, 200, "Canvas")
+        mock_http.assert_any_call("https://powerschool.example.edu/api", 5.0, 200, None)
+        mock_dns.assert_called_once_with("auth.corp.example.com", 2.0)
         mock_tcp.assert_any_call("10.0.50.10", 4000, 2.0)
         mock_tcp.assert_any_call("10.0.50.11", 80, 2.0)
 
@@ -310,7 +310,7 @@ class TestCustomProbeRunner(unittest.TestCase):
                 "id": "canvas-lms",
                 "name": "Canvas LMS",
                 "type": "http",
-                "target": "https://canvas.district.edu",
+                "target": "https://canvas.example.edu",
                 "success": 1,
                 "latency": 0.04567,
                 "status_code": 200
@@ -336,9 +336,9 @@ class TestCustomProbeRunner(unittest.TestCase):
         self.assertIn("# TYPE openux_custom_probe_status gauge", content)
         self.assertIn("# HELP openux_custom_probe_duration_seconds", content)
         self.assertIn("# HELP openux_custom_probe_http_status", content)
-        self.assertIn('openux_custom_probe_status{id="canvas-lms",name="Canvas LMS",type="http",target="https://canvas.district.edu"} 1', content)
-        self.assertIn('openux_custom_probe_duration_seconds{id="canvas-lms",name="Canvas LMS",type="http",target="https://canvas.district.edu"} 0.0457', content)
-        self.assertIn('openux_custom_probe_http_status{id="canvas-lms",name="Canvas LMS",type="http",target="https://canvas.district.edu"} 200', content)
+        self.assertIn('openux_custom_probe_status{id="canvas-lms",name="Canvas LMS",type="http",target="https://canvas.example.edu"} 1', content)
+        self.assertIn('openux_custom_probe_duration_seconds{id="canvas-lms",name="Canvas LMS",type="http",target="https://canvas.example.edu"} 0.0457', content)
+        self.assertIn('openux_custom_probe_http_status{id="canvas-lms",name="Canvas LMS",type="http",target="https://canvas.example.edu"} 200', content)
         self.assertIn('openux_custom_probe_status{id="door-access",name="Door Access",type="tcp",target="10.0.50.10:4000"} 0', content)
         self.assertIn('openux_custom_probe_http_status{id="door-access",name="Door Access",type="tcp",target="10.0.50.10:4000"} -1', content)
 
@@ -351,7 +351,7 @@ class TestCustomProbeRunner(unittest.TestCase):
                 "id": "test-probe",
                 "name": "Test Probe",
                 "type": "dns",
-                "target": "dns.district.edu",
+                "target": "dns.example.edu",
                 "success": 1,
                 "latency": 0.0123,
                 "status_code": 0
@@ -361,7 +361,7 @@ class TestCustomProbeRunner(unittest.TestCase):
         custom_probe_runner.write_metrics(results, "")
         mock_print.assert_called()
         printed_arg = mock_print.call_args[0][0]
-        self.assertIn('openux_custom_probe_status{id="test-probe",name="Test Probe",type="dns",target="dns.district.edu"} 1', printed_arg)
+        self.assertIn('openux_custom_probe_status{id="test-probe",name="Test Probe",type="dns",target="dns.example.edu"} 1', printed_arg)
 
     # ==========================================
     # 6. CLI Execution & main() Tests

@@ -19,7 +19,7 @@ import time
 import subprocess
 import urllib.request
 import urllib.error
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional
 
 # Default Paths & Configuration
 CONFIG_PATH = "/etc/sensor/reconciler.json"
@@ -38,7 +38,7 @@ def parse_option43_tlv_or_string(raw_val: str) -> Optional[dict]:
     """
     Parses Option 43 / Option 224 raw string or hex TLV payload.
     Supports:
-      - Plain text ASCII URLs (e.g. 'http://10.98.2.125:8000/api/v1')
+      - Plain text ASCII URLs (e.g. 'http://192.0.2.10:8000/api/v1')
       - Colon-separated or continuous hex streams
       - RFC 2132 Sub-Option TLVs:
           Sub-option 1 (0x01): CMP Server URL (String)
@@ -508,7 +508,7 @@ class AdaptiveResolutionEngine:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1.5)
             # Try port 80 or fallback ping
-            res = sock.connect_ex((self.gateway_ip, 80))
+            _ = sock.connect_ex((self.gateway_ip, 80))
             latency = (time.time() - start) * 1000
             sock.close()
             # If socket connects or returns connection refused, the host is reachable at L3

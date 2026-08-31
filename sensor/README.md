@@ -128,8 +128,8 @@ You can provision a fresh sensor over SSH with a **single command**. The install
 
 #### A. Standard Campus Provisioning (with Location Metadata)
 ```bash
-curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- \
-  --cmp http://10.98.2.125:8000/api/v1 \
+curl -sSL http://192.0.2.10:8000/install.sh | sudo bash -s -- \
+  --cmp http://192.0.2.10:8000/api/v1 \
   --district "Kern High School District" \
   --site "West High School" \
   --building "Science Wing" \
@@ -137,15 +137,15 @@ curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- \
 ```
 
 #### B. Zero-Configuration DHCP Option 43 / DNS Auto-Discovery
-If your campus DHCP server provides **DHCP Option 43** or DNS search domains (`openux-cmp.district.edu`):
+If your campus DHCP server provides **DHCP Option 43** or DNS search domains (`openux-cmp.example.com`):
 ```bash
-curl -sSL http://10.98.2.125:8000/install.sh | sudo bash
+curl -sSL http://192.0.2.10:8000/install.sh | sudo bash
 ```
 
 #### C. Lab / Low-Power Hardware Override
 If testing on entry-level development boards, VMs, or Raspberry Pi boards with <8GB RAM or 2 cores:
 ```bash
-curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- --cmp http://10.98.2.125:8000/api/v1 --force
+curl -sSL http://192.0.2.10:8000/install.sh | sudo bash -s -- --cmp http://192.0.2.10:8000/api/v1 --force
 ```
 
 ---
@@ -155,7 +155,7 @@ curl -sSL http://10.98.2.125:8000/install.sh | sudo bash -s -- --cmp http://10.9
 If deploying from a local clone of this repository:
 ```bash
 cd sensor
-sudo ./install.sh --cmp http://10.98.2.125:8000/api/v1 --site "City Center" --room "IT Operations"
+sudo ./install.sh --cmp http://192.0.2.10:8000/api/v1 --site "City Center" --room "IT Operations"
 ```
 
 ---
@@ -165,7 +165,7 @@ sudo ./install.sh --cmp http://10.98.2.125:8000/api/v1 --site "City Center" --ro
 The installer generates `/etc/sensor/reconciler.json`:
 ```json
 {
-    "cmp_url": "http://10.98.2.125:8000/api/v1",
+    "cmp_url": "http://192.0.2.10:8000/api/v1",
     "sensor_id": "f10325921e2b43b2b5fcf33cadad864b",
     "api_key": "",
     "enrollment_token": "",

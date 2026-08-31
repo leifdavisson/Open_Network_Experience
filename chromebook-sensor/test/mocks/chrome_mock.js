@@ -6,7 +6,7 @@
 
 export function setupChromeMock(overrides = {}) {
   const managedStore = overrides.managed || {
-    cmp_server_url: "https://cmp-test.district.edu:8000",
+    cmp_server_url: "https://cmp-test.example.edu:8000",
     api_key: "test-noc-key",
     campus_id: "CAMPUS-NORTH-HIGH",
     probe_interval_seconds: 30
@@ -93,7 +93,7 @@ export function setupChromeMock(overrides = {}) {
         getDeviceSerialNumber: (cb) => cb("5CD9440ABC"),
         getDeviceAssetId: (cb) => cb("ASSET-CB-90210"),
         getDeviceAnnotatedLocation: (cb) => cb("West High Room 204"),
-        getDeviceAnnotatedUser: (cb) => cb("student.jdoe@district.edu"),
+        getDeviceAnnotatedUser: (cb) => cb("student.jdoe@example.edu"),
         getDeviceHostname: (cb) => cb("cb-student-204-01")
       },
       networkingAttributes: {

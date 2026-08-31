@@ -16,8 +16,7 @@ def verifies(req_id: str):
     return decorator
 
 import json
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # Add sensor and onboarding paths
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -31,7 +30,7 @@ def test_find_usb_bootstrap_config(tmp_path):
     usb_dir = tmp_path / "fake_usb"
     usb_dir.mkdir()
     cfg_file = usb_dir / "one-bootstrap.json"
-    cfg_file.write_text(json.dumps({"cmp_url": "http://10.98.2.125:8000/api/v1"}))
+    cfg_file.write_text(json.dumps({"cmp_url": "http://192.0.2.10:8000/api/v1"}))
 
     found = usb_provisioner.find_usb_bootstrap_config(str(usb_dir))
     assert found is not None
@@ -169,7 +168,7 @@ def test_run_usb_provisioning_full_flow(tmp_path):
     usb_dir.mkdir()
     cfg_file = usb_dir / "one-bootstrap.json"
     cfg_file.write_text(json.dumps({
-        "cmp_url": "http://10.98.2.125:8000/api/v1",
+        "cmp_url": "http://192.0.2.10:8000/api/v1",
         "location": {"site": "Oak High School", "room": "Room 101"},
         "auto_eject_and_sync": False
     }))

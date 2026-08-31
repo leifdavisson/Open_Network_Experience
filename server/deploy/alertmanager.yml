@@ -2,8 +2,8 @@ global:
   resolve_timeout: 5m
   # Optional SMTP configuration for email alerts
   # smtp_smarthost: 'smtp.office365.com:587'
-  # smtp_from: 'openux-alerts@district.edu'
-  # smtp_auth_username: 'openux-alerts@district.edu'
+  # smtp_from: 'one-alerts@example.com'
+  # smtp_auth_username: 'one-alerts@example.com'
   # smtp_auth_password: 'your-email-password'
 
 route:
@@ -52,7 +52,7 @@ receivers:
         send_resolved: true
     # slack_configs:
     #   - api_url: 'https://hooks.slack.com/services/T000/B000/XXXX'
-    #     channel: '#district-noc-alerts'
+    #     channel: '#noc-alerts'
     #     title: '[CRITICAL] {{ .GroupLabels.alertname }} - {{ .CommonLabels.site }}'
     #     text: '{{ .CommonAnnotations.description }}'
     #     send_resolved: true
@@ -63,6 +63,6 @@ receivers:
       - url: 'http://cmp-server:8000/api/v1/alerts'
         send_resolved: true
     # ms_teams_configs:
-    #   - webhook_url: 'https://district.webhook.office.com/webhookb2/...'
+    #   - webhook_url: 'https://example.webhook.office.com/webhookb2/...'
     #     title: 'Wi-Fi AP Flapping Alert'
     #     text: 'Access Point channel hopping detected on {{ .CommonLabels.sensor_id }}'

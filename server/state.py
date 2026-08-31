@@ -5,7 +5,7 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 """
 
 import copy
-from typing import Dict, List, Any
+from typing import Dict, List
 from server.schemas import (
     WifiSpec,
     TargetContainerSpec,
@@ -42,7 +42,7 @@ DEFAULT_TARGET_CONTAINERS = {
         volumes=["/var/lib/node_exporter/textfile_collector:/metrics"],
         command=None,
         env={
-            "TARGET_URL": "https://portal.your-district.edu",
+            "TARGET_URL": "https://portal.example.edu",
             "TEST_TYPE": "page",
             "TEST_INTERVAL_SECONDS": "300"
         }

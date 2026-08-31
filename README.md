@@ -1,18 +1,34 @@
+<div align="center">
+
+<img src="assets/logo.svg" alt="Open Network Experience Logo" width="160" height="160" />
+
 # Open Network Experience (ONE)
 
-**Open Network Experience (ONE)** is a 24/7 digital assistant for school and district networks. Think of it as a virtual student and teacher sitting in classrooms, libraries, and offices around the clock—constantly testing the Wi-Fi, online learning tools, and school internet to ensure everything works smoothly *before* the school day begins.
+**"Every Packet Accountable. Every Experience Verified."**
 
-Instead of waiting for a classroom of students to get disconnected during state testing or finding out a video lesson is buffering during second period, Open Network Experience continuously tests the network from the student's point of view. It alerts school technology teams to Wi-Fi dead spots, slow learning portals, or content filter issues instantly so problems can be solved before they disrupt teaching and learning.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=flat-square" alt="License: AGPL v3"></a>
+  <a href="https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/leifdavisson/Open_Network_Experience/ci.yml?branch=main&label=CI%20Build&style=flat-square" alt="CI"></a>
+  <a href="https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/leifdavisson/Open_Network_Experience/security.yml?branch=main&label=Security%20SAST&style=flat-square" alt="Security"></a>
+  <img src="https://img.shields.io/badge/Release-v0.4.0-00F0FF?style=flat-square" alt="Release v0.4.0">
+  <img src="https://img.shields.io/badge/Architecture-Dual--NIC%20%2B%20ChromeOS-10B981?style=flat-square" alt="Dual-NIC Architecture">
+</p>
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
-[![CI](https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/ci.yml/badge.svg)](https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/ci.yml)
-[![Security](https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/security.yml/badge.svg)](https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/security.yml)
+<p align="center">
+  <img src="assets/images/one_hero_banner.svg" alt="Open Network Experience NOC & Sensor Command Wall" width="100%" style="border-radius: 12px;">
+</p>
+
+</div>
+
+**Open Network Experience (ONE)** is a 24/7 digital assistant and synthetic network assurance platform for schools, enterprise campuses, and public networks. Think of it as a virtual student and teacher sitting in classrooms, lecture halls, libraries, and offices around the clock—constantly testing the Wi-Fi RF health, state testing portals, and school internet to ensure everything works smoothly *before* the morning bell rings.
+
+Instead of waiting for a classroom of students to get disconnected during state testing or finding out a video lesson is buffering during second period, Open Network Experience continuously tests the network from the user's point of view. It alerts school technology teams to Wi-Fi dead spots, AP channel flapping, slow learning portals, or content filter issues instantly so problems can be solved before they disrupt teaching and learning.
 
 ---
 
 ## 📑 Table of Contents
 
-- [1. Overview](#open-network-experience-one)
+- [1. Overview & Brand Vision](#open-network-experience-one)
 - [2. Prerequisites & Learning Curve](#2-prerequisites--learning-curve)
   - [Who Is This Platform Built For?](#who-is-this-platform-built-for)
   - [Helpful Foundational Knowledge](#what-basic-knowledge-is-helpful-before-rolling-this-out)
@@ -21,13 +37,14 @@ Instead of waiting for a classroom of students to get disconnected during state 
   - [4.1 Launch the CMP Server Telemetry Stack](#1-launch-the-cmp-server-telemetry-stack-cloud--datacenter)
   - [4.2 Set Up a New Edge Hardware Sensor](#2-set-up-a-new-edge-sensor)
   - [4.3 Deploy the Chromebook Fleet Sensor](#3-deploy-the-chromebook-fleet-sensor)
-- [5. Key Features & Detailed Capabilities](#key-features)
+- [5. Platform Architecture & Key Features](#5-platform-architecture--key-features)
   - [5.1 Core Management Platform (CMP) & Control Plane](#51-core-management-platform-cmp--control-plane)
   - [5.2 Edge Sensor Fleet (Linux Hardware - Raspberry Pi & x86)](#52-edge-sensor-fleet-linux-hardware)
   - [5.3 Chromebook Sensor Fleet (ChromeOS Extension & Kiosk)](#53-chromebook-sensor-fleet-chromeos)
-- [6. Running Diagnostics Manually](#6-running-diagnostics-manually)
-- [7. Development & Test Execution](#7-development--test-execution)
-- [8. License & Disclaimers](#8-license--disclaimers)
+- [6. Brand, Marketing & Whitepaper Collateral](#6-brand-marketing--whitepaper-collateral)
+- [7. Running Diagnostics Manually](#7-running-diagnostics-manually)
+- [8. Development & Test Execution](#8-development--test-execution)
+- [9. License & Disclaimers](#9-license--disclaimers)
 
 ---
 
@@ -84,7 +101,9 @@ You don't need a high-level engineering certification (like a CCIE or CWNE) to d
   * `main.py`: FastAPI endpoints for edge registration, reconcile check-in, test scheduling, on-demand triggers, and Chromebook ingestion.
   * `schemas.py`: Pydantic validation schemas, credential redaction models (`SensorStatusResponseSafe`), and test specifications.
   * `test_integration.py`: End-to-end integration test suite validating registration, approval, test schedules, and telemetry ingestion.
-  * `deploy/`: Docker Compose deployment stack (VictoriaMetrics, Grafana, Loki, Alertmanager, dashboards).
+  * `deploy/`: Docker Compose deployment stack ([VictoriaMetrics](https://victoriametrics.com/), [Grafana](https://grafana.com/), [Grafana Loki](https://grafana.com/oss/loki/), Alertmanager, dashboards).
+* **[`/assets`](file:///data/Open_Network_Experience/assets)** (`file:///data/Open_Network_Experience/assets`): Brand logos, vector marks, social cards, and architectural diagrams.
+* **[`/docs`](file:///data/Open_Network_Experience/docs)** (`file:///data/Open_Network_Experience/docs`): Brand guide, Aruba UXI TCO comparison, District IT 1-pager, and launch playbook.
 
 ---
 
@@ -102,7 +121,7 @@ docker compose up --build -d
 * **VictoriaMetrics TSDB**: `http://<server-ip>:8428`
 
 ### 2. Set Up a New Edge Sensor
-On your single-board computer (Raspberry Pi 5 / Intel N100) running Debian 12 or Ubuntu 22.04 LTS:
+On your single-board computer ([Raspberry Pi](https://www.raspberrypi.com/) 4/5 or Intel N100) running Debian 12 or Ubuntu 22.04 LTS:
 1. Copy the `sensor/` directory onto the device.
 2. Run the automated installer:
    ```bash
@@ -134,12 +153,15 @@ On your single-board computer (Raspberry Pi 5 / Intel N100) running Debian 12 or
 
 ---
 
-<a id="key-features"></a>
-## 5. Key Features & Detailed Capabilities
+## 5. Platform Architecture & Key Features
+
+<p align="center">
+  <img src="assets/diagrams/k12_fleet_architecture.svg" alt="ONE Platform Architecture Diagram" width="100%">
+</p>
 
 ### 5.1 Core Management Platform (CMP) & Control Plane
-- **FastAPI Control Plane**: High-performance REST API with persistent SQLite storage and zero-touch subnet auto-enrollment (ZTP).
-- **Interactive GIS Campus Map**: Leaflet.js dark-theme campus map rendering real-time glowing sensor status pins with Wi-Fi signal halos.
+- **[FastAPI](https://fastapi.tiangolo.com/) Control Plane**: High-performance REST API with persistent SQLite storage and zero-touch subnet auto-enrollment (ZTP).
+- **Interactive GIS Campus Map**: [Leaflet.js](https://leafletjs.com/) dark-theme campus map rendering real-time glowing sensor status pins with Wi-Fi signal halos.
 - **Visual Scheduling Engine**: Configures daily runs, maintenance window repetitions, continuous intervals, and raw cron schedules with built-in safety guardrails.
 - **WYSIWYG EasyBuilder Custom Probe Studio**: Create custom HTTP/HTTPS/DNS synthetic probes via web UI with automatic fleet distribution.
 - **SNMP FortiGate Telemetry Collector**: Gathers gateway CPU, memory, and active session metrics to detect campus WAN saturation.
@@ -147,11 +169,16 @@ On your single-board computer (Raspberry Pi 5 / Intel N100) running Debian 12 or
 - **VictoriaMetrics & Grafana Provisioning**: Automated TSDB and dashboard provisioning with Alertmanager integration.
 
 ### 5.2 Edge Sensor Fleet (Linux Hardware)
+
+<p align="center">
+  <img src="assets/diagrams/dual_nic_diagnostics.svg" alt="Dual-NIC Scientific Control Isolation" width="100%">
+</p>
+
 1. **Dual-NIC Split-Brain Diagnostics**: Leverages both Wired (`eth0`) and Wireless (`wlan0`) NICs. The wired connection acts as a **scientific control group** — instantly isolating whether degradation is caused by local RF/AP interference vs. upstream switch, firewall, or ISP failures.
 2. **CAASPP & ELPAC State Testing Readiness**: Validates network reachability and latency against official California Assessment endpoints (Cambium TDS/TIDE, ETS TOMS, Smarter Balanced SSO) and verifies **SSL Inspection Bypass** (certificate pinning integrity) so secure testing browsers do not crash.
 3. **Wi-Fi RRM, DARRP & GSK Optimization Monitor**: Observes dynamic Radio Resource Management (RRM) events from Fortinet FortiAPs (DARRP / Global Spectrum Knowledge) and enterprise controllers. Tracks channel dwell stability, counts Co-Channel Interference (CCI) collisions, and alerts on aggressive **channel flapping** (>3 switches/hour).
 4. **Scheduled & Rate-Limited Bandwidth Testing (`iperf3`)**: Supports automated throughput and jitter testing with time-window restrictions (e.g., off-peak 20:00–06:00 only), bandwidth throttling caps, and on-demand NOC test triggers.
-5. **Synthetic Browser Transactions (Playwright)**: Runs headless Chromium browser workflows on a loop, reporting full render timings, DOMContentLoaded events, and tracking exactly which blocked third-party domains (ads, trackers) cause page slowness.
+5. **Synthetic Browser Transactions ([Playwright](https://playwright.dev/))**: Runs headless Chromium browser workflows on a loop, reporting full render timings, DOMContentLoaded events, and tracking exactly which blocked third-party domains cause page slowness.
 6. **L2/L3 Onboarding Exporter**: Dynamically parses system event logs to measure Access Point association speed, WPA/EAP authentication handshakes, and DHCP lease acquisition timings in seconds.
 7. **CIPA Compliance Checker**: Conducts pre-flight internet connectivity checks, then tests connection categories (CSAM, Terrorist content, Pornography, SSL Decryption, swearing) using `testfiltering.com` tokens. Reports filter failure alerts immediately.
 8. **Trust-On-First-Use (TOFU) Registration Queue**: Brand new edge sensors register in a `pending` state. Administrators approve devices via the administrative console, generating unique, revoked-at-will API keys for telemetry write authorizations.
@@ -172,7 +199,18 @@ On your single-board computer (Raspberry Pi 5 / Intel N100) running Debian 12 or
 
 ---
 
-## 6. Running Diagnostics Manually
+## 6. Brand, Marketing & Whitepaper Collateral
+
+The project includes complete branding guidelines, competitive analyses, executive briefs, and community launch assets:
+
+* [Open `BRAND_GUIDE.md`](file:///data/Open_Network_Experience/docs/BRAND_GUIDE.md) (`file:///data/Open_Network_Experience/docs/BRAND_GUIDE.md`) — Official design system, NOC dark color palette, vector assets, and typography rules.
+* [Open `COMPARISON_ARUBA_UXI_7SIGNAL.md`](file:///data/Open_Network_Experience/docs/COMPARISON_ARUBA_UXI_7SIGNAL.md) (`file:///data/Open_Network_Experience/docs/COMPARISON_ARUBA_UXI_7SIGNAL.md`) — Detailed architectural comparison and 5-year K-12 Total Cost of Ownership (TCO) breakdown ($205k+ savings).
+* [Open `DISTRICT_IT_DIRECTOR_ONE_PAGER.md`](file:///data/Open_Network_Experience/docs/DISTRICT_IT_DIRECTOR_ONE_PAGER.md) (`file:///data/Open_Network_Experience/docs/DISTRICT_IT_DIRECTOR_ONE_PAGER.md`) — Executive 1-pager tailored for School Boards, Superintendents, and Technology Directors.
+* [Open `COMMUNITY_LAUNCH_PLAYBOOK.md`](file:///data/Open_Network_Experience/docs/COMMUNITY_LAUNCH_PLAYBOOK.md) (`file:///data/Open_Network_Experience/docs/COMMUNITY_LAUNCH_PLAYBOOK.md`) — Pre-written announcement posts and templates for Hacker News (*Show HN*), Reddit (`r/networking`, `r/k12sysadmin`, `r/homelab`), and Product Hunt.
+
+---
+
+## 7. Running Diagnostics Manually
 
 You can test individual diagnostic modules on the sensor directly:
 
@@ -184,7 +222,7 @@ python3 /data/Open_Network_Experience/sensor/caaspp_readiness.py
 python3 /data/Open_Network_Experience/sensor/rrm_darrp_monitor.py
 
 # Scheduled Bandwidth Test (Rate-limited to 100M)
-python3 /data/Open_Network_Experience/sensor/iperf3_runner.py --server iperf3.district.org --bandwidth-cap 100
+python3 /data/Open_Network_Experience/sensor/iperf3_runner.py --server iperf3.example.com --bandwidth-cap 100
 
 # CIPA Content Filter Compliance
 python3 /data/Open_Network_Experience/sensor/cipa_compliance.py
@@ -195,7 +233,7 @@ python3 /data/Open_Network_Experience/sensor/wifi_dhcp_exporter.py
 
 ---
 
-## 7. Development & Test Execution
+## 8. Development & Test Execution
 
 Run the integration test suite against the live Docker stack:
 ```bash
@@ -208,12 +246,12 @@ pytest
 
 ---
 
-## 8. License & Disclaimers
+## 9. License & Disclaimers
 
 ### License
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for the full license text.
+This project is licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](file:///data/Open_Network_Experience/LICENSE)** (`file:///data/Open_Network_Experience/LICENSE`). See the [LICENSE](LICENSE) file for the full license text.
 
 ### Disclaimers & Trademarks
-* **Trademarks**: All product names, logos, brands, trademarks, and registered trademarks mentioned within this project or documentation are property of their respective owners. Their use does not imply any affiliation with, endorsement by, or sponsorship by those owners.
-* **Privacy & Compliance**: ONE is a synthetic network telemetry platform. It generates synthetic test traffic to measure infrastructure performance and does not collect or inspect human student, staff, or user payload data. Packet capture modules enforce automatic header slicing (`-s 128`) to discard application payloads.
+* **Trademarks**: All product names, logos, brands, trademarks, and registered trademarks mentioned within this project or documentation (including Aruba UXI, 7SIGNAL, Cisco ThousandEyes, Fortinet, Google ChromeOS, Cambium, ETS) are property of their respective owners. Their use does not imply any affiliation with, endorsement by, or sponsorship by those owners.
+* **Privacy & Compliance**: ONE is a synthetic network telemetry platform. It generates synthetic test traffic to measure infrastructure performance and does not collect, inspect, or log human student, staff, or user payload data. Packet capture modules enforce automatic header slicing (`-s 128`) to discard application payloads.
 * **Warranty**: As provided under the AGPL-3.0 license, this software is provided "AS IS", without warranty of any kind, express or implied.

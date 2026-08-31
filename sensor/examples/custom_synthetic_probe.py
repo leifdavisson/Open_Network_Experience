@@ -14,7 +14,6 @@ How it works:
 import os
 import sys
 import time
-import socket
 import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Tuple
@@ -27,7 +26,7 @@ CUSTOM_TARGETS = [
     {
         "id": "lms_portal",
         "name": "District Learning Management System",
-        "url": "https://canvas.district.edu/login",
+        "url": "https://canvas.example.edu/login",
         "expected_status": 200,
         "required_string": None,  # Optional string that must appear in response body
         "timeout_seconds": 5
@@ -35,7 +34,7 @@ CUSTOM_TARGETS = [
     {
         "id": "sis_portal",
         "name": "Student Information System (SIS)",
-        "url": "https://sis.district.edu",
+        "url": "https://sis.example.edu",
         "expected_status": 200,
         "required_string": None,
         "timeout_seconds": 5

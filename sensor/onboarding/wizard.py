@@ -674,7 +674,7 @@ def run_interactive_wizard():
         status = reg_result.get("status")
         if status == "approved":
             api_key = reg_result.get("api_key", api_key)
-            print_success(f"Sensor Approved via Zero-Touch Auto-Enrollment!")
+            print_success("Sensor Approved via Zero-Touch Auto-Enrollment!")
             print(f"  • API Key provisioned: {COLOR_GREEN}{api_key[:8]}...{COLOR_RESET}")
         else:
             print_warning(f"Registration Submitted - Status: {COLOR_YELLOW}PENDING APPROVAL{COLOR_RESET}")
@@ -790,7 +790,7 @@ def main():
         description="Open Network Experience (ONE) - Edge Sensor Onboarding Wizard (one-wizard)",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--cmp", "-c", help="CMP Control Plane URL (e.g. http://10.98.2.125:8000/api/v1)")
+    parser.add_argument("--cmp", "-c", help="CMP Control Plane URL (e.g. http://192.0.2.10:8000/api/v1)")
     parser.add_argument("--site", "-s", help="School / Campus Site Name")
     parser.add_argument("--building", "-b", help="Building or Wing Name")
     parser.add_argument("--room", "-r", help="Room, Classroom or Drop Identifier")

@@ -200,7 +200,7 @@ class TestCMPFlow(unittest.TestCase):
             "schedules": {
                 "bandwidth": {
                     "enabled": True,
-                    "server": "speedtest.district.org",
+                    "server": "speedtest.example.com",
                     "port": 5201,
                     "duration_seconds": 15,
                     "bandwidth_cap_mbps": 250,
@@ -226,7 +226,7 @@ class TestCMPFlow(unittest.TestCase):
         code, data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
         self.assertEqual(code, 200)
         self.assertIn("schedules", data)
-        self.assertEqual(data["schedules"]["bandwidth"]["server"], "speedtest.district.org")
+        self.assertEqual(data["schedules"]["bandwidth"]["server"], "speedtest.example.com")
         self.assertEqual(data["schedules"]["bandwidth"]["bandwidth_cap_mbps"], 250)
         self.assertFalse(data["schedules"]["bandwidth"]["run_now"])
 
@@ -344,7 +344,7 @@ class TestCMPFlow(unittest.TestCase):
             "id": "canvas-lms",
             "name": "Canvas LMS Login Portal",
             "probe_type": "http",
-            "target": "https://canvas.district.edu",
+            "target": "https://canvas.example.edu",
             "cadence_minutes": 5,
             "timeout_seconds": 3.0,
             "expected_status_code": 200,

@@ -158,7 +158,7 @@ class OnDemandBurstTrigger(BaseModel):
 
 class BandwidthScheduleSpec(BaseModel):
     enabled: bool = Field(default=False, description="Whether scheduled bandwidth testing is active")
-    server: str = Field(default="iperf3.district.local", description="Target iperf3 server IP or hostname")
+    server: str = Field(default="iperf3.example.com", description="Target iperf3 server IP or hostname")
     port: int = Field(default=5201, description="Target iperf3 port")
     duration_seconds: int = Field(default=10, description="Test duration in seconds")
     bandwidth_cap_mbps: int = Field(default=100, description="Bandwidth throttling limit in Mbps (0 for unmetered)")

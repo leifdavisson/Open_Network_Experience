@@ -41,7 +41,7 @@ class TestBrowserTransaction(unittest.TestCase):
         mock_response = MagicMock(status=200, ok=True)
         mock_req_ctx.get.return_value = mock_response
 
-        res = browser_transaction.run_api_test("https://api.district.edu/health", method="GET")
+        res = browser_transaction.run_api_test("https://api.example.edu/health", method="GET")
         self.assertEqual(res["success"], 1)
         self.assertEqual(res["status_code"], 200)
 
@@ -55,7 +55,7 @@ class TestBrowserTransaction(unittest.TestCase):
         mock_p.request.new_context.return_value = mock_req_ctx
         mock_req_ctx.get.side_effect = Exception("Connection Refused")
 
-        res = browser_transaction.run_api_test("https://broken.district.edu", method="GET")
+        res = browser_transaction.run_api_test("https://broken.example.edu", method="GET")
         self.assertEqual(res["success"], 0)
         self.assertEqual(res["status_code"], -1)
 
@@ -78,7 +78,7 @@ class TestBrowserTransaction(unittest.TestCase):
         mock_page.goto.return_value = MagicMock(status=200)
         mock_page.evaluate.return_value = '{"navigationStart": 1000, "domContentLoadedEventEnd": 1500, "loadEventEnd": 2000}'
 
-        res = browser_transaction.run_page_test("https://portal.district.edu")
+        res = browser_transaction.run_page_test("https://portal.example.edu")
         self.assertEqual(res["success"], 1)
         self.assertEqual(res["status_code"], 200)
         self.assertAlmostEqual(res["dcl_seconds"], 0.5, places=2)

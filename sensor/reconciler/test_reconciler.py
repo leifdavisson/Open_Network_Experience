@@ -12,9 +12,7 @@ Tests:
 
 import os
 import sys
-import json
 import uuid
-import pytest
 from unittest.mock import patch, MagicMock, mock_open
 
 # Ensure reconciler module path is in sys.path
@@ -28,7 +26,6 @@ from reconciler import (
     save_config,
     reconcile_wifi,
     reconcile_containers,
-    reconcile_custom_probes,
     reconcile_unified_schedules,
     reconcile_pcap_trigger,
     get_cmp_url,
@@ -76,40 +73,40 @@ def test_02_load_and_save_config(tmp_path, monkeypatch):
 
 def test_03_dhcp_option43_discovery(tmp_path):
     """Verifies parsing of DHCP Option 43 from lease files."""
-    lease_content = 'OPTION_43="http://cmp.district.k12.ca.us:8000/api/v1"\n'
+    lease_content = 'OPTION_43="http://cmp.example.com:8000/api/v1"\n'
 
     with patch("os.path.exists", return_value=True), \
          patch("os.walk", return_value=[("/run/systemd/netif/leases", [], ["eth0.lease"])]), \
          patch("builtins.open", mock_open(read_data=lease_content)):
         url = discover_cmp_via_dhcp_option43()
-        assert url == "http://cmp.district.k12.ca.us:8000/api/v1"
+        assert url == "http://cmp.example.com:8000/api/v1"
 
 def test_03b_dhcp_option43_hex_tlv_discovery(tmp_path):
     """Verifies parsing of RFC 2132 Sub-Option TLV hex streams in Option 43."""
-    # Sub-option 1 (0x01), length 30 (0x1e) -> http://10.98.2.125:8000/api/v1
+    # Sub-option 1 (0x01), length 30 (0x1e) -> http://192.0.2.10:8000/api/v1
     # Sub-option 2 (0x02), length 9 (0x09) -> West High
-    hex_payload = "01:1e:68:74:74:70:3a:2f:2f:31:30:2e:39:38:2e:32:2e:31:32:35:3a:38:30:30:30:2f:61:70:69:2f:76:31:02:09:57:65:73:74:20:48:69:67:68"
+    hex_payload = "01:1d:68:74:74:70:3a:2f:2f:31:39:32:2e:30:2e:32:2e:31:30:3a:38:30:30:30:2f:61:70:69:2f:76:31:02:09:57:65:73:74:20:48:69:67:68"
     lease_content = f'vendor-encapsulated-options="{hex_payload}"\n'
 
     with patch("os.path.exists", return_value=True), \
          patch("os.walk", return_value=[("/run/systemd/netif/leases", [], ["eth0.lease"])]), \
          patch("builtins.open", mock_open(read_data=lease_content)):
         url = discover_cmp_via_dhcp_option43()
-        assert url == "http://10.98.2.125:8000/api/v1"
+        assert url == "http://192.0.2.10:8000/api/v1"
 
     parsed = reconciler.parse_option43_tlv_or_string(hex_payload)
-    assert parsed["cmp_url"] == "http://10.98.2.125:8000/api/v1"
+    assert parsed["cmp_url"] == "http://192.0.2.10:8000/api/v1"
     assert parsed["campus"] == "West High"
 
 def test_03c_option224_private_option_discovery(tmp_path):
     """Verifies parsing of site-specific private DHCP Option 224."""
-    lease_content = 'OPTION_224="http://10.200.0.5:8000/api/v1"\n'
+    lease_content = 'OPTION_224="http://192.0.2.10:8000/api/v1"\n'
 
     with patch("os.path.exists", return_value=True), \
          patch("os.walk", return_value=[("/var/lib/dhcp", [], ["dhclient.leases"])]), \
          patch("builtins.open", mock_open(read_data=lease_content)):
         url = discover_cmp_via_dhcp_option43()
-        assert url == "http://10.200.0.5:8000/api/v1"
+        assert url == "http://192.0.2.10:8000/api/v1"
 
 def test_04_dns_domain_resolution():
     """Verifies resolving openux-cmp via DNS domain suffix."""

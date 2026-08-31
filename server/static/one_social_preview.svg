@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="ogBg" cx="25%" cy="25%" r="95%">
+      <stop offset="0%" stop-color="#131D31" />
+      <stop offset="50%" stop-color="#0B0F19" />
+      <stop offset="100%" stop-color="#05070E" />
+    </radialGradient>
+
+    <!-- Synthetic Hex Pulse Gradients -->
+    <linearGradient id="edgeProberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+
+    <linearGradient id="controlPlaneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+
+    <linearGradient id="clientExtGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#00D2FF" />
+    </linearGradient>
+
+    <linearGradient id="corePulseGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="50%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+
+    <linearGradient id="titleCyanBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="50%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#8B5CF6" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1E293B" stroke-width="1" opacity="0.45"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="630" fill="url(#ogBg)" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+
+  <!-- Accent Ambient Glow Flares -->
+  <circle cx="160" cy="140" r="280" fill="#00D2FF" opacity="0.08" filter="url(#glow)"/>
+  <circle cx="960" cy="320" r="320" fill="#0066FF" opacity="0.08" filter="url(#glow)"/>
+  <circle cx="1000" cy="500" r="260" fill="#10B981" opacity="0.06" filter="url(#glow)"/>
+
+  <!-- Left Column: Branding, Title, Tagline, Badges -->
+  <!-- Top Release Pills -->
+  <g transform="translate(60, 60)">
+    <rect width="160" height="34" rx="17" fill="#131D31" stroke="#00D2FF" stroke-width="1.5"/>
+    <circle cx="18" cy="17" r="5" fill="#10B981" filter="url(#glow)"/>
+    <text x="32" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC" letter-spacing="1.2">RELEASE v0.4.0</text>
+
+    <rect x="175" width="140" height="34" rx="17" fill="#131D31" stroke="#6366F1" stroke-width="1.5"/>
+    <text x="193" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#A5B4FC" letter-spacing="1">AGPLv3 OPEN</text>
+  </g>
+
+  <!-- Main Headline & Value Proposition -->
+  <g transform="translate(60, 155)">
+    <!-- Main Title (Strictly bounded so it never overlaps right card) -->
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="44" font-weight="900" letter-spacing="-0.5" fill="#FFFFFF">
+      OPEN <tspan fill="url(#titleCyanBlue)">NETWORK</tspan> EXPERIENCE
+    </text>
+
+    <!-- Subtitle / Tagline -->
+    <text x="0" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" fill="#38BDF8" letter-spacing="0.2">
+      "Every Packet Accountable. Every Experience Verified."
+    </text>
+
+    <!-- Subtitle Description -->
+    <text x="0" y="80" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="600" fill="#94A3B8" letter-spacing="0.5">
+      The Vendor-Neutral Synthetic UXI &amp; Fleet Telemetry Platform
+    </text>
+
+    <!-- Body Description -->
+    <text x="0" y="125" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="400" fill="#CBD5E1" line-height="1.5">
+      <tspan x="0" dy="0">Continuous user-perspective monitoring from single-board edge sensors</tspan>
+      <tspan x="0" dy="24">to 1:1 Chromebook fleets. 100% Free from annual sensor license fees.</tspan>
+    </text>
+  </g>
+
+  <!-- Feature Metric Badges (Left Column Bottom) -->
+  <g transform="translate(60, 480)">
+    <!-- Pill 1: Dual-NIC Isolation -->
+    <rect x="0" y="0" width="205" height="74" rx="12" fill="#131D31" stroke="#22304A" stroke-width="1.5" />
+    <text x="16" y="26" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="800" fill="#64748B" letter-spacing="1">SCIENTIFIC CONTROL</text>
+    <text x="16" y="52" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15" font-weight="800" fill="#00D2FF">Dual-NIC Eth0/Wlan0</text>
+
+    <!-- Pill 2: State Testing -->
+    <rect x="220" y="0" width="205" height="74" rx="12" fill="#131D31" stroke="#22304A" stroke-width="1.5" />
+    <text x="236" y="26" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="800" fill="#64748B" letter-spacing="1">K-12 STATE TESTING</text>
+    <text x="236" y="52" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15" font-weight="800" fill="#10B981">CAASPP / TDS Ready</text>
+
+    <!-- Pill 3: Fleet Probing -->
+    <rect x="440" y="0" width="205" height="74" rx="12" fill="#131D31" stroke="#22304A" stroke-width="1.5" />
+    <text x="456" y="26" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="800" fill="#64748B" letter-spacing="1">CHROMEOS FLEET</text>
+    <text x="456" y="52" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15" font-weight="800" fill="#8B5CF6">Manifest V3 Extension</text>
+  </g>
+
+  <!-- Right Column: Glassmorphic Mascot Card with Synthetic Hex Pulse -->
+  <g transform="translate(760, 60)">
+    <!-- Outer Card Frame -->
+    <rect x="0" y="0" width="380" height="500" rx="24" fill="#0F172A" stroke="#22304A" stroke-width="2" />
+    <rect x="12" y="12" width="356" height="476" rx="18" fill="#131D31" opacity="0.9" />
+
+    <!-- Center Synthetic Hex Pulse Mascot -->
+    <g transform="translate(190, 220) scale(0.68)">
+      <g transform="translate(-256, -256)">
+        <!-- Interlocking Segment A -->
+        <path d="M 256 50 L 395 130 L 395 210 L 310 160 L 256 128 L 202 160 L 170 140 Z"
+              fill="url(#edgeProberGrad)" stroke="#00D2FF" stroke-width="1.5" />
+
+        <!-- Interlocking Segment B -->
+        <path d="M 420 175 L 420 337 L 281 418 L 281 320 L 335 288 L 335 225 Z"
+              fill="url(#controlPlaneGrad)" stroke="#10B981" stroke-width="1.5" />
+
+        <!-- Interlocking Segment C -->
+        <path d="M 231 418 L 92 337 L 92 175 L 177 225 L 177 288 L 231 320 Z"
+              fill="url(#clientExtGrad)" stroke="#0066FF" stroke-width="1.5" />
+
+        <!-- Inner Core Aperture & Pulse -->
+        <g filter="url(#glow)">
+          <polygon points="256,180 320,217 320,295 256,332 192,295 192,217"
+                   fill="#0F172A" stroke="url(#corePulseGrad)" stroke-width="4.5" stroke-dasharray="12 6" />
+          <path d="M 216 256 L 236 256 L 246 232 L 256 280 L 266 240 L 276 256 L 296 256"
+                fill="none" stroke="#00D2FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="256" cy="256" r="4.5" fill="#10B981" />
+        </g>
+      </g>
+    </g>
+
+    <!-- Card Footer Label -->
+    <rect x="50" y="420" width="280" height="38" rx="10" fill="#0B0F19" stroke="#1E293B" />
+    <text x="190" y="444" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="800" fill="#38BDF8" letter-spacing="2">
+      ZERO VENDOR LOCK-IN
+    </text>
+  </g>
+</svg>

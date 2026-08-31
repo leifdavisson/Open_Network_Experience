@@ -61,7 +61,7 @@ sequenceDiagram
 * **Option 60 (Vendor Class Identifier / VCI)**: The **identity badge** sent by the client (`"ONE-EdgeSensor"`). Allows the DHCP server to distinguish a network sensor from a Mitel phone, a Windows laptop, or a Cisco AP.
 * **Option 43 (Vendor Specific Information)**: The **payload container** returned by the server containing the CMP endpoint URL.
 * **Option 224 (Private Use / Site-Specific)**: An alternate private option ([RFC 3942](https://datatracker.ietf.org/doc/html/rfc3942)) to completely avoid Option 43 shared-vendor namespaces.
-* **Option 15 (Domain Name)**: The local DNS suffix (e.g. `district.k12.ca.us`) used for hostname discovery.
+* **Option 15 (Domain Name)**: The local DNS suffix (e.g. `example.com`) used for hostname discovery.
 
 ---
 
@@ -157,7 +157,7 @@ flowchart TD
     START(["Start: Select Sensor-to-CMP Connection Method"]) --> Q_POLICY{"Do you have administrative access<br/>to modify DHCP or DNS?"}
 
     Q_POLICY -->|No Access| PATH5["👉 Path 5: 1-Line Web Bootstrapper / one-wizard<br/>(Static Provisioning — Go to Section 8)"]
-    Q_POLICY -->|Yes Access| Q_DNS{"Can you add a single DNS record<br/>(e.g. one-cmp.district.k12.ca.us)?"}
+    Q_POLICY -->|Yes Access| Q_DNS{"Can you add a single DNS record<br/>(e.g. one-cmp.example.com)?"}
 
     Q_DNS -->|Yes - Easiest & Safest| PATH4["👉 Path 4: Internal DNS Search Domain<br/>(Zero DHCP Risk — Go to Section 7)"]
     Q_DNS -->|No - DHCP Preferred| Q_VLAN{"Are sensors deployed on a<br/>Dedicated Sensor/IoT VLAN?"}
@@ -223,7 +223,7 @@ The ONE Edge Sensor reconciler daemon ([`sensor/reconciler/reconciler.py`](file:
 ### Format A: Plain ASCII URL String
 The simplest format. The Option 43 or Option 224 value is directly formatted as an ASCII string:
 ```text
-http://10.98.2.125:8000/api/v1
+http://192.0.2.10:8000/api/v1
 ```
 
 ### Format B: RFC 2132 Sub-Option TLV (Type-Length-Value)
@@ -233,7 +233,7 @@ For advanced deployments that wish to automatically provision Campus, Building, 
 +-------------------+--------------------+---------------------------------------+
 | Sub-Option Code   | Field Name         | Example Value                         |
 +-------------------+--------------------+---------------------------------------+
-| 0x01 (1)          | CMP Server URL     | http://10.98.2.125:8000/api/v1        |
+| 0x01 (1)          | CMP Server URL     | http://192.0.2.10:8000/api/v1        |
 | 0x02 (2)          | Campus / Site Name | West High School                      |
 | 0x03 (3)          | Building Name      | Science Wing                          |
 | 0x04 (4)          | Room / Drop ID     | Room 204                              |
@@ -242,26 +242,26 @@ For advanced deployments that wish to automatically provision Campus, Building, 
 ```
 
 #### Example Hex Stream:
-`01:1e:68:74:74:70:3a:2f:2f:31:30:2e:39:38:2e:32:2e:31:32:35:3a:38:30:30:30:2f:61:70:69:2f:76:31:02:09:57:65:73:74:20:48:69:67:68`
+`01:1d:68:74:74:70:3a:2f:2f:31:39:32:2e:30:2e:32:2e:31:30:3a:38:30:30:30:2f:61:70:69:2f:76:31:02:09:57:65:73:74:20:48:69:67:68`
 
 ---
 
 ## 4. Path 1 Walkthrough: Dedicated Sensor VLAN (Option 43)
 
-If you follow **Path 1** from the decision tree, edge sensors are patched into a dedicated VLAN (e.g. VLAN 20 - `10.200.4.0/24`). Because VoIP phones and APs are not present on this subnet, you can configure Option 43 directly on the scope.
+If you follow **Path 1** from the decision tree, edge sensors are patched into a dedicated VLAN (e.g. VLAN 20 - `198.51.100.0/24`). Because VoIP phones and APs are not present on this subnet, you can configure Option 43 directly on the scope.
 
 ### Microsoft Windows Server DHCP (Scope Option)
 ```powershell
-Set-DhcpServerv4OptionValue -ScopeId 10.200.4.0 -OptionId 43 -Value "http://10.98.2.125:8000/api/v1"
+Set-DhcpServerv4OptionValue -ScopeId 198.51.100.0 -OptionId 43 -Value "http://192.0.2.10:8000/api/v1"
 ```
 
 ### Cisco IOS-XE Switch
 ```cisco
 ip dhcp pool SENSOR_VLAN20_POOL
-   network 10.200.4.0 255.255.255.0
-   default-router 10.200.4.1
-   dns-server 10.200.0.10
-   option 43 ascii "http://10.98.2.125:8000/api/v1"
+   network 198.51.100.0 255.255.255.0
+   default-router 198.51.100.1
+   dns-server 198.51.100.10
+   option 43 ascii "http://192.0.2.10:8000/api/v1"
 ```
 
 ---
@@ -280,8 +280,8 @@ Add-DhcpServerv4Class -Name "ONE-EdgeSensor" -Type Vendor -Data "ONE-EdgeSensor"
 # 2. Define Option 43 under this Vendor Class as a String
 Add-DhcpServerv4OptionDefinition -VendorClass "ONE-EdgeSensor" -OptionId 43 -Name "ONE_CMP_URL" -Type String -Description "Central Monitoring Platform URL"
 
-# 3. Assign the Option Value to your target Scope ID (e.g. 10.200.4.0)
-Set-DhcpServerv4OptionValue -ScopeId 10.200.4.0 -VendorClass "ONE-EdgeSensor" -OptionId 43 -Value "http://10.98.2.125:8000/api/v1"
+# 3. Assign the Option Value to your target Scope ID (e.g. 198.51.100.0)
+Set-DhcpServerv4OptionValue -ScopeId 198.51.100.0 -VendorClass "ONE-EdgeSensor" -OptionId 43 -Value "http://192.0.2.10:8000/api/v1"
 ```
 
 ### Linux ISC Kea DHCP (Option 60)
@@ -298,14 +298,14 @@ Edit `/etc/kea/kea-dhcp4.conf`:
           {
             "name": "vendor-encapsulated-options",
             "code": 43,
-            "data": "http://10.98.2.125:8000/api/v1"
+            "data": "http://192.0.2.10:8000/api/v1"
           }
         ]
       }
     ],
     "subnet4": [
       {
-        "subnet": "10.200.4.0/24",
+        "subnet": "198.51.100.0/24",
         "pools": [{ "pool": "10.200.4.50 - 10.200.4.200" }]
       }
     ]
@@ -319,13 +319,13 @@ Edit `/etc/dhcp/dhcpd.conf`:
 ```conf
 class "one-sensors" {
     match if option vendor-class-identifier = "ONE-EdgeSensor";
-    option vendor-encapsulated-options "http://10.98.2.125:8000/api/v1";
+    option vendor-encapsulated-options "http://192.0.2.10:8000/api/v1";
 }
 
-subnet 10.200.4.0 netmask 255.255.255.0 {
+subnet 198.51.100.0 netmask 255.255.255.0 {
     range 10.200.4.50 10.200.4.200;
-    option routers 10.200.4.1;
-    option domain-name-servers 10.200.0.10;
+    option routers 198.51.100.1;
+    option domain-name-servers 198.51.100.10;
 }
 ```
 
@@ -337,7 +337,7 @@ Edit `/etc/dnsmasq.conf`:
 dhcp-vendorclass=set:onesensor,ONE-EdgeSensor
 
 # Deliver Option 43 ONLY to matched devices
-dhcp-option=tag:onesensor,43,"http://10.98.2.125:8000/api/v1"
+dhcp-option=tag:onesensor,43,"http://192.0.2.10:8000/api/v1"
 ```
 
 ### Cisco IOS-XE / Catalyst (Option 60)
@@ -348,24 +348,24 @@ ip dhcp class ONE_SENSORS
 
 ! Apply Option 43 within DHCP Pool
 ip dhcp pool CLASSROOM_POOL
-   network 10.200.4.0 255.255.255.0
-   default-router 10.200.4.1
+   network 198.51.100.0 255.255.255.0
+   default-router 198.51.100.1
    class ONE_SENSORS
-      option 43 ascii "http://10.98.2.125:8000/api/v1"
+      option 43 ascii "http://192.0.2.10:8000/api/v1"
 ```
 
 ### Fortinet FortiGate FortiOS (Option 60)
 ```fortios
 config system dhcp server
     edit 1
-        set default-gateway 10.200.4.1
+        set default-gateway 198.51.100.1
         set netmask 255.255.255.0
         set interface "vlan20"
         config options
             edit 1
                 set code 43
                 set type string
-                set value "http://10.98.2.125:8000/api/v1"
+                set value "http://192.0.2.10:8000/api/v1"
                 set vci-string "ONE-EdgeSensor"
             next
         end
@@ -376,7 +376,7 @@ end
 ### MikroTik RouterOS (Option 60)
 ```routeros
 /ip dhcp-server option
-add name=one_cmp_opt43 code=43 value="'http://10.98.2.125:8000/api/v1'"
+add name=one_cmp_opt43 code=43 value="'http://192.0.2.10:8000/api/v1'"
 
 /ip dhcp-server option matcher
 add name=one_matcher code=60 value="ONE-EdgeSensor" option-set=one_set
@@ -399,7 +399,7 @@ If you follow **Path 3** from the decision tree, you avoid Option 43 entirely by
 ### Microsoft Windows Server DHCP (Option 224)
 ```powershell
 Add-DhcpServerv4OptionDefinition -OptionId 224 -Name "ONE_CMP_URL_PRIVATE" -Type String -Description "ONE CMP Private Option"
-Set-DhcpServerv4OptionValue -ScopeId 10.200.4.0 -OptionId 224 -Value "http://10.98.2.125:8000/api/v1"
+Set-DhcpServerv4OptionValue -ScopeId 198.51.100.0 -OptionId 224 -Value "http://192.0.2.10:8000/api/v1"
 ```
 
 ### Linux ISC Kea DHCP (`kea-dhcp4.conf`)
@@ -407,7 +407,7 @@ Set-DhcpServerv4OptionValue -ScopeId 10.200.4.0 -OptionId 224 -Value "http://10.
 {
   "name": "site-option-224",
   "code": 224,
-  "data": "http://10.98.2.125:8000/api/v1"
+  "data": "http://192.0.2.10:8000/api/v1"
 }
 ```
 
@@ -419,21 +419,21 @@ If you follow **Path 4** from the decision tree, you make **zero DHCP modificati
 
 ```mermaid
 graph LR
-    SENSOR["📡 Sensor Boot"] --> RESOLV["Reads /etc/resolv.conf<br/>search: district.k12.ca.us"]
-    RESOLV --> DNS["Query DNS: one-cmp.district.k12.ca.us"]
-    DNS --> CMP["Connect to http://10.98.2.125:8000/api/v1"]
+    SENSOR["📡 Sensor Boot"] --> RESOLV["Reads /etc/resolv.conf<br/>search: example.com"]
+    RESOLV --> DNS["Query DNS: one-cmp.example.com"]
+    DNS --> CMP["Connect to http://192.0.2.10:8000/api/v1"]
 ```
 
 ### Windows Server DNS (PowerShell)
 ```powershell
-Add-DnsServerResourceRecordA -ZoneName "district.k12.ca.us" -Name "one-cmp" -IPv4Address "10.98.2.125"
-Add-DnsServerResourceRecordA -ZoneName "district.k12.ca.us" -Name "openux-cmp" -IPv4Address "10.98.2.125"
+Add-DnsServerResourceRecordA -ZoneName "example.com" -Name "one-cmp" -IPv4Address "192.0.2.10"
+Add-DnsServerResourceRecordA -ZoneName "example.com" -Name "openux-cmp" -IPv4Address "192.0.2.10"
 ```
 
-### Linux BIND9 (`/etc/bind/db.district.k12.ca.us`)
+### Linux BIND9 (`/etc/bind/db.example.com`)
 ```bind
-one-cmp.district.k12.ca.us.    IN  A   10.98.2.125
-openux-cmp.district.k12.ca.us. IN  A   10.98.2.125
+one-cmp.example.com.    IN  A   192.0.2.10
+openux-cmp.example.com. IN  A   192.0.2.10
 ```
 
 ---
@@ -444,7 +444,7 @@ If you follow **Path 5** from the decision tree, you use static or semi-automate
 
 ### 1-Line Web Bootstrapper (With URL Presets)
 ```bash
-curl -sSL "http://10.98.2.125:8000/install.sh?site=West+High+School&room=Room+204&building=Science+Wing" | sudo bash
+curl -sSL "http://192.0.2.10:8000/install.sh?site=West+High+School&room=Room+204&building=Science+Wing" | sudo bash
 ```
 
 ### Interactive Terminal Setup Wizard (`one-wizard`)
@@ -493,7 +493,7 @@ sudo one-wizard --check-only
 ```
 **Expected Output**:
 ```text
-✔ Auto-discovered CMP endpoint: http://10.98.2.125:8000/api/v1 (via DHCP Option 43)
+✔ Auto-discovered CMP endpoint: http://192.0.2.10:8000/api/v1 (via DHCP Option 43)
 ✔ Connection Successful! (1.4 ms latency, HTTP 200 OK)
 ```
 
