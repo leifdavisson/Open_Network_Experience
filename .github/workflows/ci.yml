@@ -1,4 +1,4 @@
-name: CI — Lint, Compile & Integration Tests
+name: CI — Lint, Typecheck, V&V & Integration Tests
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  lint:
-    name: Pylint & Syntax Check
+  lint-and-typecheck:
+    name: Syntax, Mypy & Typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,47 +21,66 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pylint
           pip install -r server/requirements.txt
+          pip install mypy pylint pytest pytest-cov hypothesis
 
       - name: Compile all Python files (syntax check)
         run: |
-          python -m py_compile server/main.py
-          python -m py_compile server/schemas.py
-          python -m py_compile server/snmp_collector.py
-          python -m py_compile server/test_integration.py
-          python -m py_compile server/test_ui_comprehensive.py
-          python -m py_compile sensor/cipa_compliance.py
-          python -m py_compile sensor/browser_transaction.py
-          python -m py_compile sensor/wifi_dhcp_exporter.py
-          python -m py_compile sensor/reconciler/reconciler.py
-          python -m py_compile sensor/iperf3_runner.py
-          python -m py_compile sensor/caaspp_readiness.py
-          python -m py_compile sensor/rrm_darrp_monitor.py
-          python -m py_compile sensor/pcap_trigger.py
-          python -m py_compile sensor/evidence_collector.py
-          python -m py_compile sensor/segmentation_prober.py
-          python -m py_compile sensor/dns_multi_resolver_probe.py
-          python -m py_compile sensor/voip_jitter_probe.py
-          python -m py_compile sensor/custom_probe_runner.py
-          python -m py_compile sensor/gps_location_collector.py
+          python -m compileall -q server sensor scripts
 
-      - name: Lint server code
+      - name: Static Type Checking with Mypy
         run: |
-          pylint server/main.py server/schemas.py server/snmp_collector.py \
-            --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401,R0914 \
-            --fail-under=7.0
-
-      - name: Lint sensor code
-        run: |
-          pylint sensor/cipa_compliance.py sensor/wifi_dhcp_exporter.py sensor/caaspp_readiness.py sensor/rrm_darrp_monitor.py sensor/iperf3_runner.py sensor/pcap_trigger.py sensor/evidence_collector.py sensor/segmentation_prober.py sensor/dns_multi_resolver_probe.py sensor/voip_jitter_probe.py sensor/custom_probe_runner.py sensor/gps_location_collector.py \
-            --disable=C0114,C0115,C0116,R0903,W0613,C0103,E0401,R0914 \
-            --fail-under=7.0
+          mypy server sensor --exclude 'sensor/playwright-runner' --explicit-package-bases --ignore-missing-imports
 
       - name: Validate shell scripts
         run: |
           bash -n sensor/install.sh
           bash -n sensor/playwright-runner/entrypoint.sh
+
+  vv-test-suite:
+    name: Pytest, MC/DC & RTM Traceability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r server/requirements.txt
+          pip install pytest pytest-cov hypothesis
+
+      - name: Run Full Pytest Suite (310 Tests)
+        run: |
+          pytest --cov=server --cov=sensor --cov-report=term-missing
+
+      - name: Verify DO-178C Level A MC/DC Truth Tables
+        run: |
+          python scripts/verify_mcdc.py
+
+      - name: Audit AST Requirements Traceability Matrix (RTM)
+        run: |
+          python scripts/generate_rtm.py
+
+  chromebook-extension:
+    name: Chromebook Extension Telemetry Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Chromebook Extension Suite (16 Tests)
+        run: |
+          cd chromebook-sensor
+          npm test
 
   docker-build:
     name: Docker Build Validation
@@ -70,13 +89,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build CMP Server Image
-        run: docker build -t open-ux/cmp-server:ci-test server/
+        run: docker build -f server/Dockerfile -t open-ux/cmp-server:ci-test .
 
       - name: Build Playwright Runner Image
         run: docker build -t open-ux/playwright-runner:ci-test sensor/playwright-runner/
 
   integration-test:
-    name: Integration Tests
+    name: Live Integration Tests
     runs-on: ubuntu-latest
     needs: docker-build
     steps:
