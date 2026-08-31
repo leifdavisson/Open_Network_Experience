@@ -42,13 +42,13 @@ inhibit_rules:
 receivers:
   - name: 'default-receiver'
     webhook_configs:
-      - url: 'http://cmp-server:8000/api/v1/alerts'
+      - url: 'http://cmp-server:8000/api/v1/alerts/webhook'
         send_resolved: true
 
   # Pre-configured Slack Webhook template
   - name: 'noc-critical-channel'
     webhook_configs:
-      - url: 'http://cmp-server:8000/api/v1/alerts'
+      - url: 'http://cmp-server:8000/api/v1/alerts/webhook'
         send_resolved: true
     # slack_configs:
     #   - api_url: 'https://hooks.slack.com/services/T000/B000/XXXX'
@@ -60,7 +60,7 @@ receivers:
   # Pre-configured MS Teams / Webhook template
   - name: 'noc-rf-team'
     webhook_configs:
-      - url: 'http://cmp-server:8000/api/v1/alerts'
+      - url: 'http://cmp-server:8000/api/v1/alerts/webhook'
         send_resolved: true
     # ms_teams_configs:
     #   - webhook_url: 'https://example.webhook.office.com/webhookb2/...'

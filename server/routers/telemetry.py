@@ -10,7 +10,7 @@ import time
 import urllib.request
 import urllib.parse
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from server.schemas import EvidenceBundleInfo
 from server.security import verify_admin_key
@@ -171,6 +171,28 @@ async def get_wallboard_live_stats():
             "time_str": "Live"
         })
 
+    # Fetch real active alarms from alerts table
+    alert_summary = db.get_alerts_summary()
+    active_alarms_count = alert_summary.get("open_count", 0)
+    active_db_alerts = db.load_all_alerts(status="active", limit=10)
+
+    for alt in active_db_alerts:
+        sev_color = "RED" if alt.get("severity") == "critical" else ("AMBER" if alt.get("severity") == "warning" else "CYAN")
+        loc_str = alt.get("campus_id") or "District-Wide"
+        if alt.get("sensor_id"):
+            loc_str += f" ({alt['sensor_id']})"
+        t_val = alt.get("starts_at", now)
+        time_str = datetime.fromtimestamp(t_val, timezone.utc).strftime("%H:%M:%S") if t_val > 0 else "Live"
+        incidents.insert(0, {
+            "severity": sev_color,
+            "category": "Active Alert",
+            "title": alt.get("title", "Network Alarm"),
+            "location": loc_str,
+            "detail": alt.get("description") or f"Alert status: {alt.get('status')}",
+            "timestamp": t_val,
+            "time_str": time_str
+        })
+
     return {
         "saas": saas_map,
         "slas": {
@@ -186,7 +208,7 @@ async def get_wallboard_live_stats():
             "online": online_count,
             "offline": offline_count,
             "faults": degraded_count,
-            "alarms": 0,
+            "alarms": active_alarms_count,
             "sla_percentage": round((online_count / total_count * 100.0), 1) if total_count > 0 else 100.0
         },
         "trends": {
@@ -214,12 +236,25 @@ async def register_evidence_bundle(sensor_id: str, evidence: EvidenceBundleInfo)
 @router.get(
     "/api/v1/sensors/{sensor_id}/evidence",
     response_model=List[EvidenceBundleInfo],
-    summary="List Evidence Bundles",
+    summary="List Evidence Bundles for Sensor",
     dependencies=[Depends(verify_admin_key)]
 )
 async def list_evidence_bundles(sensor_id: str):
     """Lists diagnostic forensic bundles available for the sensor."""
     return EVIDENCE_DB.get(sensor_id, [])
+
+@router.get(
+    "/api/v1/evidence",
+    summary="List All System Evidence & Incident PCAP Bundles"
+)
+async def list_all_evidence():
+    """Returns all forensic incident evidence bundles across all edge sensors."""
+    all_ev = db.load_all_evidence()
+    flattened = []
+    for s_id, bundles in all_ev.items():
+        flattened.extend(bundles)
+    flattened.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
+    return flattened
 
 @router.get(
     "/api/v1/system/backup",

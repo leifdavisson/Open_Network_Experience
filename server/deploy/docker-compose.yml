@@ -46,7 +46,7 @@ services:
       - loki-data:/tmp/loki
     command: -config.file=/etc/loki/local-config.yaml
 
-  # 4. Prometheus Alertmanager (Alerting Daemon)
+  # 5. Prometheus Alertmanager (Alerting Daemon)
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
