@@ -160,12 +160,35 @@ On your single-board computer ([Raspberry Pi](https://www.raspberrypi.com/) 4/5 
 </p>
 
 ### 5.1 Core Management Platform (CMP) & Control Plane
-- **[FastAPI](https://fastapi.tiangolo.com/) Control Plane**: High-performance REST API with persistent SQLite storage and zero-touch subnet auto-enrollment (ZTP).
+- **[FastAPI](https://fastapi.tiangolo.com/) Control Plane**: High-performance REST API with persistent SQLite storage, live WebSocket event pipelines, and zero-touch subnet auto-enrollment (ZTP).
+- **Waterfall of Attention Navigation Hierarchy**:
+  - **`1. Monitor` (Daily NOC Triage)**: Real-time Incident Alert Center, Executive SLA Wallboard, and GIS Campus Map.
+  - **`2. Observe` (Continuous Insights)**: 6-Tier Grafana NOC dashboards, Prometheus TSDB metrics, and Loki log streams.
+  - **`3. Configure` (Infrequent / Rule Tuning)**: Alert Detection Thresholds & PromQL Rules (`alerts.rules.yml`), Visual Schedule Builder, and **Scheduled Maintenance & Construction Muting Windows**.
+  - **`4. Setup` (Provisioning & Rare Changes)**: Outbound Notification Webhooks & District Email Relays.
+- **🚨 Unified Alert Center & Prometheus Alertmanager Integration**:
+  - Native integration with [Prometheus Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) webhook receivers (`/api/v1/alerts/alertmanager-webhook`).
+  - Real-time incident triage lifecycle: `FIRING`, `ACKNOWLEDGED`, `RESOLVED`.
+  - Severity filtering, instant keyword search, and sensor diagnostic drill-downs.
+- **🔕 Scheduled Maintenance & Multi-Day Construction Muting Engine**:
+  - Defines time-bounded maintenance and facility construction muting windows (up to 7 days, 14 days, or multi-week summer renovations).
+  - Suppresses noisy outbound notifications (Slack, Teams, PagerDuty, Email, ITSM) for matching campuses, sensors, or probes.
+  - Keeps underlying telemetry and incident records intact with purple `🔕 Muted` badges.
+  - Automated advance expiration warning dispatches (24h and 2h warnings) before alerting resumes.
+- **📦 PCAP Ring-Buffer Forensics & Instant Root Cause**:
+  - Automatically freezes rolling packet capture circular ring-buffers when alarms fire.
+  - Header slicing (`-s 128`) protects student and staff privacy while capturing Layer 2–4 protocol handshakes.
+  - Wireshark/tcpdump compatible PCAP downloads and deep protocol dissection breakdowns.
+- **⚙️ Outbound Notification Channels & K-12 Integrations**:
+  - **ChatOps**: [Slack Incoming Webhooks](https://api.slack.com/messaging/webhooks), [Microsoft Teams Workflows](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using), [Discord Webhooks](https://discord.com/developers/docs/resources/webhook).
+  - **On-Call Escalation**: [PagerDuty Events API v2](https://developer.pagerduty.com/docs/events-api-v2/overview/) & [Opsgenie Alert API](https://docs.opsgenie.com/docs/alert-api).
+  - **District ITSM & Helpdesk**: [ServiceNow Table API](https://developer.servicenow.com/dev.do#!/reference/api/latest/rest), [Freshservice Webhooks](https://support.freshservice.com/en/support/solutions/articles/157457-webhooks-in-freshservice), [Jira Service Management REST API](https://developer.atlassian.com/cloud/jira/service-desk/rest/intro/), and [Zendesk Tickets API](https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/).
+  - **District Email & SMTP Relays**: [Google Workspace SMTP Relay](https://support.google.com/a/answer/176600) and [Microsoft 365 Exchange Online SMTP](https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365) with STARTTLS, SSL, and PLAIN/LOGIN authentication.
 - **Interactive GIS Campus Map**: [Leaflet.js](https://leafletjs.com/) dark-theme campus map rendering real-time glowing sensor status pins with Wi-Fi signal halos.
 - **Visual Scheduling Engine**: Configures daily runs, maintenance window repetitions, continuous intervals, and raw cron schedules with built-in safety guardrails.
 - **WYSIWYG EasyBuilder Custom Probe Studio**: Create custom HTTP/HTTPS/DNS synthetic probes via web UI with automatic fleet distribution.
 - **SNMP FortiGate Telemetry Collector**: Gathers gateway CPU, memory, and active session metrics to detect campus WAN saturation.
-- **1-Click Disaster Recovery**: Full JSON export and restore for all sensors, probes, campuses, schedules, and evidence bundles.
+- **1-Click Disaster Recovery**: Full JSON export and restore for all sensors, probes, campuses, schedules, maintenance windows, and evidence bundles.
 - **VictoriaMetrics & Grafana Provisioning**: Automated TSDB and dashboard provisioning with Alertmanager integration.
 
 ### 5.2 Edge Sensor Fleet (Linux Hardware)
@@ -204,6 +227,8 @@ On your single-board computer ([Raspberry Pi](https://www.raspberrypi.com/) 4/5 
 The project includes complete branding guidelines, competitive analyses, executive briefs, and community launch assets:
 
 * [Open `BRAND_GUIDE.md`](file:///data/Open_Network_Experience/docs/BRAND_GUIDE.md) (`file:///data/Open_Network_Experience/docs/BRAND_GUIDE.md`) — Official design system, NOC dark color palette, vector assets, and typography rules.
+* [Open `SCHEDULED_MAINTENANCE_WINDOWS.md`](file:///data/Open_Network_Experience/docs/SCHEDULED_MAINTENANCE_WINDOWS.md) (`file:///data/Open_Network_Experience/docs/SCHEDULED_MAINTENANCE_WINDOWS.md`) — Scheduled IT maintenance, multi-day facility construction muting, and automated expiration warning guides.
+* [Open `HANDOFF_ALERT_RULES_AND_WEBHOOKS.md`](file:///data/Open_Network_Experience/docs/HANDOFF_ALERT_RULES_AND_WEBHOOKS.md) (`file:///data/Open_Network_Experience/docs/HANDOFF_ALERT_RULES_AND_WEBHOOKS.md`) — Prometheus Alertmanager integration, outbound webhook channels (Slack, Teams, PagerDuty, ITSM), and district SMTP relay setups.
 * [Open `COMPARISON_ARUBA_UXI_7SIGNAL.md`](file:///data/Open_Network_Experience/docs/COMPARISON_ARUBA_UXI_7SIGNAL.md) (`file:///data/Open_Network_Experience/docs/COMPARISON_ARUBA_UXI_7SIGNAL.md`) — Detailed architectural comparison and 5-year K-12 Total Cost of Ownership (TCO) breakdown ($205k+ savings).
 * [Open `DISTRICT_IT_DIRECTOR_ONE_PAGER.md`](file:///data/Open_Network_Experience/docs/DISTRICT_IT_DIRECTOR_ONE_PAGER.md) (`file:///data/Open_Network_Experience/docs/DISTRICT_IT_DIRECTOR_ONE_PAGER.md`) — Executive 1-pager tailored for School Boards, Superintendents, and Technology Directors.
 * [Open `COMMUNITY_LAUNCH_PLAYBOOK.md`](file:///data/Open_Network_Experience/docs/COMMUNITY_LAUNCH_PLAYBOOK.md) (`file:///data/Open_Network_Experience/docs/COMMUNITY_LAUNCH_PLAYBOOK.md`) — Pre-written announcement posts and templates for Hacker News (*Show HN*), Reddit (`r/networking`, `r/k12sysadmin`, `r/homelab`), and Product Hunt.

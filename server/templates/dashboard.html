@@ -253,6 +253,19 @@
         .sla-value { font-size: 24px; font-weight: 800; color: var(--text-main); margin: 6px 0; }
         .sla-status-text { font-size: 12px; font-weight: 600; color: var(--status-online-text); display: flex; align-items: center; gap: 6px; }
 
+        /* ACTIVE ALERTS & LIFECYCLE CENTER STYLING */
+        .badge-sev-critical { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-sev-warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-sev-info { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+
+        .badge-status-firing { background: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid #ef4444; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; animation: pulse 2s infinite; }
+        .badge-status-acknowledged { background: rgba(245, 158, 11, 0.25); color: #fde68a; border: 1px solid #f59e0b; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-status-resolved { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid #10b981; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+
+        .alert-filter-btn { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .alert-filter-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+        .alert-filter-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+
         /* CAMPUS MAP WITH LEFT DRAWER */
         .map-layout-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; margin-top: 12px; }
         @media (max-width: 900px) { .map-layout-grid { grid-template-columns: 1fr; } }
@@ -447,6 +460,10 @@
             <a class="nav-item" id="nav-monitor-reports" onclick="switchView('monitor-reports')" title="Forensics & SLA Reports">
                 <span class="nav-icon">📋</span> <span class="nav-text">Reports & Forensics</span>
             </a>
+            <a class="nav-item" id="nav-monitor-alerts" onclick="switchView('monitor-alerts')" title="Active Alarms & Alert Lifecycle Center">
+                <span class="nav-icon">🚨</span> <span class="nav-text">Alert Center</span>
+                <span id="sidebar-alert-badge" style="display:none; margin-left:auto; background:var(--danger); color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
+            </a>
 
             <!-- 2. MANAGE BUCKET -->
             <div class="bucket-label">2. Manage</div>
@@ -461,6 +478,12 @@
             <div class="bucket-label">3. Configure</div>
             <a class="nav-item" id="nav-configure-schedules" onclick="switchView('configure-schedules')" title="Visual Probe & Test Scheduler">
                 <span class="nav-icon">📅</span> <span class="nav-text">Probe Scheduler</span>
+            </a>
+            <a class="nav-item" id="nav-configure-alerts" onclick="switchView('configure-alerts')" title="Custom Alert Rules & Metric Thresholds">
+                <span class="nav-icon">🚨</span> <span class="nav-text">Alert Thresholds</span>
+            </a>
+            <a class="nav-item" id="nav-configure-maintenance" onclick="switchView('configure-maintenance')" title="Scheduled IT Maintenance & Muting Windows">
+                <span class="nav-icon">🔕</span> <span class="nav-text">Muting Windows</span>
             </a>
             <a class="nav-item" id="nav-configure-probes" onclick="switchView('configure-probes')" title="WYSIWYG Custom Probes">
                 <span class="nav-icon">🛠️</span> <span class="nav-text">EasyBuilder Tests</span>
@@ -525,6 +548,18 @@
                 <!-- SLIDE 1: EXECUTIVE SLA WALLBOARD & GDC-INSPIRED ANALYTICS -->
                 <div class="slide-card active-slide" id="slide-0">
 
+                    <!-- Active Alarms Triage Banner (Dynamically shown when open alarms > 0) -->
+                    <div id="noc-alarms-banner" style="display: none; margin-bottom: 16px; padding: 12px 18px; border-radius: 8px; background: linear-gradient(90deg, rgba(239, 68, 68, 0.18) 0%, rgba(245, 158, 11, 0.12) 100%); border: 1px solid var(--danger); justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 22px; animation: pulse 1.5s infinite;">🚨</span>
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-main); font-size: 13px;" id="noc-alarms-banner-title">Active Alarms Firing</div>
+                                <div style="font-size: 12px; color: var(--text-muted);" id="noc-alarms-banner-desc">Requires NOC operator review</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm" onclick="switchView('monitor-alerts')" style="background: var(--danger); color: #fff; border: none; font-weight: 700; cursor: pointer; white-space: nowrap;">🚨 Triage in Alert Center ➔</button>
+                    </div>
+
                     <!-- 4 GDC-Inspired Fleet KPI Cards -->
                     <div class="metrics-grid">
                         <div class="metric-card" style="border-left: 4px solid var(--success);">
@@ -554,13 +589,13 @@
                             <div class="metric-footer"><span>Problems: None</span><span>0 Flapping</span></div>
                         </div>
 
-                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                        <div class="metric-card" style="border-left: 4px solid var(--purple); cursor: pointer; transition: transform 0.15s ease;" onclick="switchView('monitor-alerts')" title="Click to view Active Alert Center">
                             <div class="metric-card-top">
                                 <div class="metric-title">Open Alarms</div>
                                 <div class="metric-icon-badge" style="background: rgba(139,92,246,0.15); color: var(--purple);">🔔</div>
                             </div>
                             <div class="metric-value" id="kpi-alarm">0</div>
-                            <div class="metric-footer"><span>Tickets: 0 New</span><span>100% Resolved</span></div>
+                            <div class="metric-footer"><span id="kpi-alarm-footer-left">Tickets: 0 New</span><span id="kpi-alarm-footer-right">Triage ➔</span></div>
                         </div>
                     </div>
 
@@ -1027,6 +1062,116 @@
                 </div>
             </div>
 
+            <!-- VIEW: MONITOR - ALERT CENTER & LIFECYCLE LOG -->
+            <div class="view-section" id="view-monitor-alerts">
+                <div class="section-card" style="margin-bottom: 20px;">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <div class="section-title" style="display: flex; align-items: center; gap: 8px;">
+                                <span>🚨 Active Alert Center & Incident Lifecycle Log</span>
+                            </div>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                Automated Prometheus Alertmanager webhook ingestion, deduplication, and forensic triage.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-outline btn-sm" onclick="switchView('configure-alerts')">⚙️ Configure Rules ➔</button>
+                            <button class="btn btn-outline btn-sm" onclick="switchView('configure-maintenance')">🔕 Muting Windows ➔</button>
+                            <button class="btn btn-outline btn-sm" onclick="switchView('setup-integrations')">🔔 Webhooks ➔</button>
+                            <button class="btn btn-outline btn-sm" onclick="openSimulateAlertModal()">🧪 Simulate Test Alert</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadAlertCenterData()">🔄 Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- Active Maintenance Window Notification Banner -->
+                    <div id="alt-maint-active-banner" style="display:none; background: rgba(147, 51, 234, 0.12); border: 1px solid var(--purple); color: #c084fc; padding: 10px 16px; border-radius: 8px; margin-top: 14px; font-size: 13px; justify-content: space-between; align-items: center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:16px;">🔕</span>
+                            <span><strong>Active Maintenance Window in Effect:</strong> <span id="alt-maint-active-name" style="font-weight:700; color:#fff;">—</span>. Automated outbound notifications are currently suppressed for matching probes.</span>
+                        </div>
+                        <button class="btn btn-outline btn-sm" onclick="switchView('configure-maintenance')" style="color:#c084fc; border-color:#c084fc; font-size:11px; padding:2px 8px; margin-left: 12px;">Manage Windows ➔</button>
+                    </div>
+
+                    <!-- 4 Alert Summary KPI Cards -->
+                    <div class="metrics-grid" style="margin-top: 16px;">
+                        <div class="metric-card" style="border-left: 4px solid var(--danger);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Active Firing</div>
+                                <div class="metric-icon-badge" style="background: rgba(239,68,68,0.15); color: var(--danger);">🚨</div>
+                            </div>
+                            <div class="metric-value" id="alt-kpi-firing">0</div>
+                            <div class="metric-footer"><span>Requiring Immediate Triage</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--warning);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Acknowledged</div>
+                                <div class="metric-icon-badge" style="background: rgba(245,158,11,0.15); color: var(--warning);">👁️</div>
+                            </div>
+                            <div class="metric-value" id="alt-kpi-acknowledged">0</div>
+                            <div class="metric-footer"><span>Under Investigation</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Critical Severity</div>
+                                <div class="metric-icon-badge" style="background: rgba(139,92,246,0.15); color: var(--purple);">🔥</div>
+                            </div>
+                            <div class="metric-value" id="alt-kpi-critical">0</div>
+                            <div class="metric-footer"><span>High Priority Outages</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--success);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Resolved (24h)</div>
+                                <div class="metric-icon-badge" style="background: rgba(16,185,129,0.15); color: var(--success);">✅</div>
+                            </div>
+                            <div class="metric-value" id="alt-kpi-resolved">0</div>
+                            <div class="metric-footer"><span>Closed / Cleared</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alert Triage Log Table & Filter Bar -->
+                <div class="section-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                        <div class="slide-nav-tabs">
+                            <button class="alert-filter-btn active" id="alt-tab-active" onclick="setAlertStatusFilter('active')">🚨 Active (Firing & Ack) (<span id="alt-tab-count-active">0</span>)</button>
+                            <button class="alert-filter-btn" id="alt-tab-firing" onclick="setAlertStatusFilter('firing')">🔥 Firing (<span id="alt-tab-count-firing">0</span>)</button>
+                            <button class="alert-filter-btn" id="alt-tab-acknowledged" onclick="setAlertStatusFilter('acknowledged')">👁️ Acknowledged (<span id="alt-tab-count-ack">0</span>)</button>
+                            <button class="alert-filter-btn" id="alt-tab-resolved" onclick="setAlertStatusFilter('resolved')">✅ Resolved</button>
+                            <button class="alert-filter-btn" id="alt-tab-all" onclick="setAlertStatusFilter('all')">📑 All Records</button>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="alt-filter-severity" class="form-control" style="background:var(--bg-input); border:1px solid var(--border); color:var(--text-main); padding:6px 12px; border-radius:6px; font-size:12px;" onchange="loadAlertCenterData()">
+                                <option value="all">All Severities</option>
+                                <option value="critical">🔴 Critical Only</option>
+                                <option value="warning">🟡 Warning Only</option>
+                                <option value="info">🔵 Info Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">Severity</th>
+                                    <th>Alarm Name & Trigger Reason</th>
+                                    <th>Scope / Target</th>
+                                    <th>Trigger Time / Duration</th>
+                                    <th style="width: 130px;">Lifecycle Status</th>
+                                    <th style="width: 220px; text-align: right;">Triage Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-table-body">
+                                <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Loading active alerts...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- VIEW 5: MANAGE - FLEET & REGISTRATION -->
             <div class="view-section" id="view-manage-fleet">
                 <!-- 1-Line Onboarding & Helpdesk Provisioner Card -->
@@ -1204,6 +1349,179 @@
                 </div>
             </div>
 
+            <!-- VIEW: CONFIGURE - CUSTOM ALERT RULES & THRESHOLDS -->
+            <div class="view-section" id="view-configure-alerts">
+                <div class="section-card" style="margin-bottom: 20px;">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <div class="section-title" style="display: flex; align-items: center; gap: 8px;">
+                                <span>🚨 Custom Alert Thresholds & Detection Rules</span>
+                            </div>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                Define SLA thresholds, failure limits, and automated PCAP forensic freezes across student and campus applications.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn" onclick="openAlertRuleModal()">+ Create Alert Rule</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadCustomAlertRules()">🔄 Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Metric KPI Cards -->
+                    <div class="metrics-grid" style="margin-top: 16px;">
+                        <div class="metric-card" style="border-left: 4px solid var(--success);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Active Rules</div>
+                                <div class="metric-icon-badge" style="background: rgba(16,185,129,0.15); color: var(--success);">🟢</div>
+                            </div>
+                            <div class="metric-value" id="rule-kpi-active">0</div>
+                            <div class="metric-footer"><span>Live Monitoring Active</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--accent);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Total Configured</div>
+                                <div class="metric-icon-badge" style="background: rgba(59,130,246,0.15); color: var(--accent);">📋</div>
+                            </div>
+                            <div class="metric-value" id="rule-kpi-total">0</div>
+                            <div class="metric-footer"><span>Custom & Built-in Rules</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Auto-PCAP Enabled</div>
+                                <div class="metric-icon-badge" style="background: rgba(139,92,246,0.15); color: var(--purple);">📦</div>
+                            </div>
+                            <div class="metric-value" id="rule-kpi-pcap">0</div>
+                            <div class="metric-footer"><span>Rolling Buffer Freezes</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--danger);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Critical Severity</div>
+                                <div class="metric-icon-badge" style="background: rgba(239,68,68,0.15); color: var(--danger);">🔥</div>
+                            </div>
+                            <div class="metric-value" id="rule-kpi-critical">0</div>
+                            <div class="metric-footer"><span>High-Priority Escalations</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Alert Rules Table -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">Detection Rules Matrix</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Changes take effect immediately on edge reconcilers</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Rule Name & Target Probe</th>
+                                <th>Metric & Threshold Condition</th>
+                                <th>Target Scope</th>
+                                <th>Outbound Routing</th>
+                                <th>Auto PCAP</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alert-rules-table-body">
+                            <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading alert rules...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW: CONFIGURE - SCHEDULED MAINTENANCE & MUTING WINDOWS -->
+            <div class="view-section" id="view-configure-maintenance">
+                <div class="section-card" style="margin-bottom: 20px;">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <div class="section-title" style="display: flex; align-items: center; gap: 8px;">
+                                <span>🔕 Scheduled Maintenance & Muting Windows</span>
+                            </div>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                Temporarily silence outbound notifications to Slack, Teams, Email, and ITSM during scheduled IT upgrades while preserving telemetry in the database.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-outline btn-sm" onclick="quickCreateMuteWindow(60, '1-Hour Quick Mute')">⚡ + 1h Quick Mute</button>
+                            <button class="btn btn-outline btn-sm" onclick="quickCreateConstructionWindow(3, '3-Day Facility Construction Mute')">🏗️ + 3-Day Construction</button>
+                            <button class="btn btn-outline btn-sm" onclick="quickCreateConstructionWindow(7, '1-Week Campus Construction & Rewiring')">🏗️ + 7-Day (1 Wk)</button>
+                            <button class="btn btn-outline btn-sm" onclick="quickCreateConstructionWindow(14, '2-Week Multi-Building Renovation')">🏗️ + 14-Day (2 Wks)</button>
+                            <button class="btn" onclick="openMaintenanceModal()">+ Schedule Window</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadMaintenanceWindows()">🔄 Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Maintenance KPI Cards -->
+                    <div class="metrics-grid" style="margin-top: 16px;">
+                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Active Right Now</div>
+                                <div class="metric-icon-badge" style="background: rgba(147,51,234,0.15); color: var(--purple);">🔕</div>
+                            </div>
+                            <div class="metric-value" id="maint-kpi-active">0</div>
+                            <div class="metric-footer"><span>Currently Muting Outbound Alerts</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--accent);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Upcoming Scheduled</div>
+                                <div class="metric-icon-badge" style="background: rgba(59,130,246,0.15); color: var(--accent);">⏰</div>
+                            </div>
+                            <div class="metric-value" id="maint-kpi-upcoming">0</div>
+                            <div class="metric-footer"><span>Planned Future Maintenance</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--text-muted);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Total Configured</div>
+                                <div class="metric-icon-badge" style="background: rgba(107,114,128,0.15); color: var(--text-muted);">📋</div>
+                            </div>
+                            <div class="metric-value" id="maint-kpi-total">0</div>
+                            <div class="metric-footer"><span>All Recorded Windows</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--success);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Muted Alarms (24h)</div>
+                                <div class="metric-icon-badge" style="background: rgba(16,185,129,0.15); color: var(--success);">🛡️</div>
+                            </div>
+                            <div class="metric-value" id="maint-kpi-muted">0</div>
+                            <div class="metric-footer"><span>Notifications Suppressed</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maintenance Windows Matrix Table -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">Scheduled Maintenance & Muting Matrix</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Notifications are automatically resumed when the window ends</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Type</th>
+                                <th>Window Name & Project / Ticket</th>
+                                <th>Target Scope</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Duration / Remaining</th>
+                                <th>Active</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maint-table-body">
+                            <tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Loading maintenance windows...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- VIEW 8: CONFIGURE - EASYBUILDER PROBES -->
             <div class="view-section" id="view-configure-probes">
                 <div class="section-card">
@@ -1342,17 +1660,556 @@
 
             <!-- VIEW 11: SETUP - INTEGRATIONS & WEBHOOKS -->
             <div class="view-section" id="view-setup-integrations">
+                <div class="section-card" style="margin-bottom: 20px;">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <div class="section-title">🔔 Outbound Alert Notification Channels</div>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                Configure outbound webhook dispatch destinations for Slack, MS Teams, PagerDuty, district ITSM, and generic webhooks.
+                                Active channels receive real-time alert payloads when detection thresholds fire.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn" onclick="openChannelModal()">+ Add Notification Channel</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadNotificationChannels()">🔄 Refresh</button>
+                        </div>
+                    </div>
+
+                    <!-- Channel KPI row -->
+                    <div class="metrics-grid" style="margin-top: 16px;">
+                        <div class="metric-card" style="border-left: 4px solid var(--success);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Active Channels</div>
+                                <div class="metric-icon-badge" style="background: rgba(16,185,129,0.15); color: var(--success);">📡</div>
+                            </div>
+                            <div class="metric-value" id="chan-kpi-active">0</div>
+                            <div class="metric-footer"><span>Dispatching Notifications</span></div>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid var(--accent);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Total Configured</div>
+                                <div class="metric-icon-badge" style="background: rgba(59,130,246,0.15); color: var(--accent);">⚙️</div>
+                            </div>
+                            <div class="metric-value" id="chan-kpi-total">0</div>
+                            <div class="metric-footer"><span>Webhook Channels</span></div>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Channel Types</div>
+                                <div class="metric-icon-badge" style="background: rgba(139,92,246,0.15); color: var(--purple);">🔗</div>
+                            </div>
+                            <div class="metric-value" id="chan-kpi-types">0</div>
+                            <div class="metric-footer"><span>Slack, Teams, ITSM…</span></div>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid var(--warning);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Last Dispatch</div>
+                                <div class="metric-icon-badge" style="background: rgba(245,158,11,0.15); color: var(--warning);">🕐</div>
+                            </div>
+                            <div class="metric-value" style="font-size: 16px;" id="chan-kpi-last">—</div>
+                            <div class="metric-footer"><span>Last successful delivery</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channels Table -->
                 <div class="section-card">
                     <div class="section-header">
-                        <div class="section-title">⚙️ Push Alerting Webhooks & Integrations</div>
+                        <div class="section-title">Configured Dispatch Channels</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Channels are matched by severity threshold to outgoing alerts</div>
                     </div>
-                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-                        Manage webhook routing for Slack, MS Teams, PagerDuty, and Email in <code>server/deploy/alertmanager.yml</code>.
-                    </p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Channel Name</th>
+                                <th>Endpoint / Destination</th>
+                                <th>Min Severity</th>
+                                <th>Last Status</th>
+                                <th>Last Sent</th>
+                                <th>Enabled</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="channels-table-body">
+                            <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading channels...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bundled Quick-Start Integration Guide by K-12 Ecosystem Type -->
+                <div class="section-card" style="margin-top: 24px; border-left: 4px solid var(--accent);">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div class="section-title">🗂️ K-12 Ecosystem Integration Quick-Start Reference</div>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                Pre-configured parameters, authentication methods, and documentation guides for major public school district platforms.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- BUNDLE 1: DISTRICT EMAIL & IDENTITY (FOUNDATION) -->
+                    <div style="margin-top: 16px;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <span>📧 1. District Email & Communication Infrastructure (~99% of K-12)</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">Google Workspace for Education Relay</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;"><code>smtp-relay.gmail.com:587</code> &bull; STARTTLS &bull; IP Whitelist</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Used by ~70% of school districts. Whitelist the CMP server IP in Google Admin under <em>Apps ➔ Google Workspace ➔ Gmail ➔ Routing ➔ SMTP relay service</em>.</p>
+                                <a href="https://support.google.com/a/answer/176600?hl=en" target="_blank" class="btn btn-outline btn-sm">Google Workspace Docs ↗</a>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">Microsoft 365 / Exchange Online</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;"><code>smtp.office365.com:587</code> &bull; STARTTLS &bull; Service Account / Connector</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Used by ~28% of districts. Requires an M365 service account with SMTP AUTH enabled or an Exchange Online Inbound Connector on Port 25.</p>
+                                <a href="https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365" target="_blank" class="btn btn-outline btn-sm">M365 Exchange Docs ↗</a>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">District On-Premises Gateway / Postfix</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;"><code>Internal IP:25</code> &bull; LAN Relay &bull; Anonymous Auth</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">For high-security school networks with Cisco IronPort, FortiMail, or Linux Postfix relays on internal server subnets.</p>
+                                <a href="https://www.postfix.org/SMTPD_ACCESS_README.html" target="_blank" class="btn btn-outline btn-sm">Postfix Relay Docs ↗</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BUNDLE 2: K-12 ITSM & HELPDESK TICKETING -->
+                    <div style="margin-top: 20px;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--warning); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <span>🎫 2. K-12 Helpdesk & ITSM Incident Ticketing</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">Incident IQ (K-12 Specialist)</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">REST API / Webhooks &bull; Asset & Ticket Ingestion</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Purpose-built K-12 helpdesk and asset management platform. Automatically route network telemetry alarms into campus work orders.</p>
+                                <a href="https://www.incidentiq.com/" target="_blank" class="btn btn-outline btn-sm">Incident IQ Platform ↗</a>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">ServiceNow Enterprise ITSM</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Table API &bull; <code>/api/now/table/incident</code> &bull; Bearer / Basic Auth</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Large district enterprise standard. Post incidents directly into the ITIL incident table with campus assignment groups.</p>
+                                <a href="https://developer.servicenow.com/dev.do#!/reference/api/latest/rest/c_TableAPI" target="_blank" class="btn btn-outline btn-sm">ServiceNow API Docs ↗</a>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">Freshservice & Jira Service Management</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">REST API &bull; Webhook Automations &bull; API Key Auth</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Popular cloud service desk platforms. Webhooks automatically create SLA-tracked tickets with PCAP tokens.</p>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    <a href="https://api.freshservice.com/v2/#webhooks" target="_blank" class="btn btn-outline btn-sm">Freshservice Docs ↗</a>
+                                    <a href="https://developer.atlassian.com/cloud/jira/service-desk/rest/intro/" target="_blank" class="btn btn-outline btn-sm">Jira SM Docs ↗</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BUNDLE 3: CHATOPS, NOC COLLABORATION & ON-CALL ESCALATION -->
+                    <div style="margin-top: 20px;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--purple); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <span>💬 3. NOC ChatOps & Real-Time Paging Escalation</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">Slack & Google Chat Webhooks</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Incoming Webhook URLs &bull; Rich Color Blocks</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Push formatted alert cards to <code>#noc-critical</code>, <code>#state-testing</code>, or Google Chat Spaces with direct PCAP buttons.</p>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    <a href="https://api.slack.com/messaging/webhooks" target="_blank" class="btn btn-outline btn-sm">Slack Docs ↗</a>
+                                    <a href="https://developers.google.com/workspace/chat/quickstart/webhooks" target="_blank" class="btn btn-outline btn-sm">Google Chat Docs ↗</a>
+                                </div>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">Microsoft Teams Workflows</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Power Automate Connectors &bull; Adaptive MessageCards</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Post interactive cards to Teams channels with campus SLA metrics, sensor hostnames, and severity coloring.</p>
+                                <a href="https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook" target="_blank" class="btn btn-outline btn-sm">Teams Connectors ↗</a>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">PagerDuty & Opsgenie On-Call</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Events API v2 &bull; On-Call Escalation & SMS Paging</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Automatically page on-call network engineers for district WAN drops and CAASPP state testing outages.</p>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    <a href="https://developer.pagerduty.com/docs/events-api-v2/overview/" target="_blank" class="btn btn-outline btn-sm">PagerDuty Docs ↗</a>
+                                    <a href="https://docs.opsgenie.com/docs/alert-api" target="_blank" class="btn btn-outline btn-sm">Opsgenie Docs ↗</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BUNDLE 4: K-12 CONTENT FILTERING & MISSION-CRITICAL SAAS -->
+                    <div style="margin-top: 20px;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--success); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <span>🛡️ 4. K-12 Content Safety, State Testing & LMS Reference</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">CIPA Content Filtering Gateways</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Lightspeed Systems &bull; Securly &bull; GoGuardian</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Verify CIPA compliance probes and SSL inspection bypass rules for school student safety filtering.</p>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    <a href="https://www.lightspeedsystems.com/" target="_blank" class="btn btn-outline btn-sm">Lightspeed ↗</a>
+                                    <a href="https://www.securly.com/" target="_blank" class="btn btn-outline btn-sm">Securly ↗</a>
+                                    <a href="https://www.goguardian.com/" target="_blank" class="btn btn-outline btn-sm">GoGuardian ↗</a>
+                                </div>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">State Testing Assessment Portals</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">CAASPP &bull; SBAC &bull; ELPAC &bull; Cambium TDS</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Continuous pre-flight synthetic TLS & latency verification ensuring zero test interruptions on state secure browsers.</p>
+                                <a href="https://www.caaspp.org/" target="_blank" class="btn btn-outline btn-sm">CAASPP Portal ↗</a>
+                            </div>
+
+                            <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                                <div style="font-weight: 700; margin-bottom: 4px;">K-12 Learning Management (LMS)</div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Canvas LMS &bull; Google Classroom &bull; Schoology</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0 0 10px;">Synthetic HTTP status probes measuring classroom LMS round-trip latency and availability during school hours.</p>
+                                <a href="https://canvas.instructure.com/doc/api/" target="_blank" class="btn btn-outline btn-sm">Canvas LMS Docs ↗</a>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-
         </main>
+    </div>
+
+    <!-- Maintenance / Muting Window Create/Edit Modal -->
+    <div class="modal-overlay" id="maintenance-modal" onclick="handleBackdropClick(event, 'maintenance-modal')">
+        <div class="modal" style="max-width: 640px; width: 94vw;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">🔕 Scheduled Maintenance & Construction Muting Window</h2>
+                <button type="button" class="close-btn" onclick="closeMaintenanceModal()">✕</button>
+            </div>
+            <form id="maintenance-form" onsubmit="handleSaveMaintenance(event)">
+                <input type="hidden" id="maint-id">
+
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label>Window Title <span style="color:var(--danger)">*</span></label>
+                        <input type="text" id="maint-name" placeholder="e.g. Science Wing Rewiring & AP Replacement" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Classification</label>
+                        <select id="maint-type">
+                            <option value="construction">🏗️ Construction / Rewiring</option>
+                            <option value="maintenance" selected>🔧 Standard Maintenance</option>
+                            <option value="upgrade">⚡ Firmware Upgrade</option>
+                            <option value="renovation">🏫 Summer Renovation</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Description / Change Control / Bond Project Ticket (Optional)</label>
+                    <input type="text" id="maint-desc" placeholder="e.g. Facilities Bond Project #2026-B / ServiceNow CHG0034120">
+                </div>
+
+                <!-- Scope Filters -->
+                <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
+                    <div style="font-weight: 700; font-size: 12px; margin-bottom: 8px; color: var(--accent);">🎯 Muting Scope Criteria (Leave blank to mute all alerts fleet-wide)</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label style="font-size: 11px;">Target Campus Scope</label>
+                            <input type="text" id="maint-campus" placeholder="All Campuses (or CAMPUS-WEST-HIGH)">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 11px;">Target Sensor Scope</label>
+                            <input type="text" id="maint-sensor" placeholder="All Sensors (or pi5-science-01)">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label style="font-size: 11px;">Target Synthetic Probe</label>
+                            <input type="text" id="maint-probe" placeholder="All Probes (or caaspp_readiness)">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 11px;">Alert Name Pattern</label>
+                            <input type="text" id="maint-pattern" placeholder="All Alerts (or *Gateway*, *WiFi*)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timing Controls -->
+                <div style="margin-bottom: 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
+                        <label style="font-weight:700; font-size:12px; margin:0;">⏰ Duration Presets</label>
+                        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" onclick="setMaintDurationPreset(60)">+1h</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" onclick="setMaintDurationPreset(240)">+4h</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" onclick="setMaintDurationPreset(1440)">+1 Day</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" onclick="setMaintDurationPreset(4320)">+3 Days</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" onclick="setMaintDurationPreset(10080)">+7 Days (1 Wk)</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" onclick="setMaintDurationPreset(20160)">+14 Days (2 Wks)</button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Start Datetime (Local) <span style="color:var(--danger)">*</span></label>
+                            <input type="datetime-local" id="maint-starts-at" required>
+                        </div>
+                        <div class="form-group">
+                            <label>End Datetime (Local) <span style="color:var(--danger)">*</span></label>
+                            <input type="datetime-local" id="maint-ends-at" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                        <input type="checkbox" id="maint-active" checked style="width: 16px; height: 16px; cursor: pointer;">
+                        ✅ Window Active (suppress matching outbound alerts during timeframe)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--text-muted);">
+                        <input type="checkbox" id="maint-reminder-cb" checked style="width: 16px; height: 16px; cursor: pointer;">
+                        🔔 Send automated 24-hour and 2-hour expiration warning notifications before muting ends
+                    </label>
+                </div>
+                <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeMaintenanceModal()">Cancel</button>
+                    <button type="submit" class="btn">💾 Save Muting Window</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Rule Create/Edit Modal -->
+    <div class="modal-overlay" id="alert-rule-modal" onclick="handleBackdropClick(event, 'alert-rule-modal')">
+        <div class="modal" style="max-width: 600px; width: 94vw;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">🚨 Alert Detection Rule</h2>
+                <button type="button" class="close-btn" onclick="closeAlertRuleModal()">✕</button>
+            </div>
+            <form id="alert-rule-form" onsubmit="handleSaveAlertRule(event)">
+                <input type="hidden" id="rule-id">
+                <div class="form-group">
+                    <label>Rule Name <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="rule-name" placeholder="e.g. Campus WAN Gateway High Latency" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Target Probe / Source <span style="color:var(--danger)">*</span></label>
+                        <select id="rule-probe-id">
+                            <option value="dual_nic_ping">Campus WAN Gateway Ping</option>
+                            <option value="dns_multi_resolver">DNS Multi-Resolver</option>
+                            <option value="caaspp_readiness">CAASPP TLS Readiness</option>
+                            <option value="synthetic_web">SaaS App Synthetic HTTP</option>
+                            <option value="voip_jitter">VoIP / Zoom RTP Jitter</option>
+                            <option value="rrm_darrp">Wi-Fi RRM DARRP Flapping</option>
+                            <option value="agent_heartbeat">Sensor Agent Heartbeat</option>
+                            <option value="cipa_filter">CIPA Content Filter</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Metric <span style="color:var(--danger)">*</span></label>
+                        <select id="rule-metric">
+                            <option value="latency_ms">Latency (ms)</option>
+                            <option value="packet_loss_pct">Packet Loss (%)</option>
+                            <option value="mos_score">VoIP MOS Score</option>
+                            <option value="rtt_ms">Round-Trip Time (ms)</option>
+                            <option value="roams_per_minute">Wi-Fi Roams/min</option>
+                            <option value="response_time_ms">HTTP Response Time (ms)</option>
+                            <option value="failure_count">Consecutive Failures</option>
+                            <option value="ssl_handshake_status">TLS Handshake Status</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Condition</label>
+                        <select id="rule-operator">
+                            <option value="gt">&gt; Greater Than</option>
+                            <option value="gte">&ge; Greater or Equal</option>
+                            <option value="lt">&lt; Less Than</option>
+                            <option value="lte">&le; Less or Equal</option>
+                            <option value="eq">= Equals</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Threshold Value <span style="color:var(--danger)">*</span></label>
+                        <input type="number" id="rule-threshold" step="0.1" placeholder="e.g. 35" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Unit</label>
+                        <input type="text" id="rule-unit" placeholder="ms, %, score" value="ms">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Severity</label>
+                        <select id="rule-severity">
+                            <option value="critical">🔴 Critical</option>
+                            <option value="warning" selected>🟡 Warning</option>
+                            <option value="info">🔵 Info</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Duration Window (seconds)</label>
+                        <input type="number" id="rule-duration" value="30" min="10" max="3600">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Campus Scope (blank = All)</label>
+                        <input type="text" id="rule-campus" placeholder="CAMPUS-WEST-HIGH or leave blank">
+                    </div>
+                    <div class="form-group">
+                        <label>Sensor Scope (blank = All)</label>
+                        <input type="text" id="rule-sensor" placeholder="pi5-science-01 or leave blank">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notify Channels (comma-separated IDs, or leave blank)</label>
+                    <input type="text" id="rule-channels" placeholder="chan_slack_noc, chan_teams_support">
+                    <small style="color: var(--text-muted);">Channel IDs shown in 4. Setup → Alerts & Webhooks</small>
+                </div>
+                <div class="form-row" style="align-items: center; gap: 20px; margin-top: 4px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                        <input type="checkbox" id="rule-pcap" checked style="width: 16px; height: 16px; cursor: pointer;">
+                        📦 Auto-Freeze RAM PCAP Ring-Buffer on Trigger
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                        <input type="checkbox" id="rule-active" checked style="width: 16px; height: 16px; cursor: pointer;">
+                        ✅ Rule Active
+                    </label>
+                </div>
+                <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeAlertRuleModal()">Cancel</button>
+                    <button type="submit" class="btn">💾 Save Alert Rule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Channel Create/Edit Modal -->
+    <div class="modal-overlay" id="channel-modal" onclick="handleBackdropClick(event, 'channel-modal')">
+        <div class="modal" style="max-width: 560px; width: 94vw;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">🔔 Notification Channel</h2>
+                <button type="button" class="close-btn" onclick="closeChannelModal()">✕</button>
+            </div>
+            <form id="channel-form" onsubmit="handleSaveChannel(event)">
+                <input type="hidden" id="chan-id">
+                <div class="form-group">
+                    <label>Channel Name <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="chan-name" placeholder="e.g. Primary Slack #noc-critical" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Channel Type <span style="color:var(--danger)">*</span></label>
+                        <select id="chan-type" onchange="handleChannelTypeChange()">
+                            <option value="slack">💬 Slack Incoming Webhook</option>
+                            <option value="teams">🟦 MS Teams Connector</option>
+                            <option value="email">📧 District Email (SMTP / Google / M365)</option>
+                            <option value="pagerduty">🟠 PagerDuty Events API v2</option>
+                            <option value="webhook">🎫 Generic REST Webhook (ITSM)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Severity</label>
+                        <select id="chan-min-sev">
+                            <option value="info">ℹ️ Info & above</option>
+                            <option value="warning" selected>🟡 Warning & above</option>
+                            <option value="critical">🔴 Critical only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Webhook Config Fields (Slack, Teams, PagerDuty, ITSM) -->
+                <div id="webhook-config-panel">
+                    <div class="form-group">
+                        <label>Webhook / Endpoint URL <span style="color:var(--danger)">*</span></label>
+                        <input type="url" id="chan-url" placeholder="https://hooks.slack.com/services/...">
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Auth Headers (JSON, optional)</label>
+                        <textarea id="chan-headers" rows="3" placeholder='{"Authorization": "Bearer YOUR-TOKEN"}'
+                            style="width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; padding: 8px; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+                        <small style="color: var(--text-muted);">Optional — used for PagerDuty routing key, ITSM bearer tokens, or API keys.</small>
+                    </div>
+                </div>
+
+                <!-- Email / SMTP Config Fields (Google Workspace, M365, On-Prem) -->
+                <div id="email-config-panel" style="display:none; background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+                    <div style="font-weight: 700; font-size: 13px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>📧 District SMTP Server Settings</span>
+                        <select id="email-preset-select" onchange="applyEmailPreset()" style="font-size:11px; padding:3px 8px; width:auto;">
+                            <option value="">⚡ Load K-12 Provider Preset...</option>
+                            <option value="google_relay">Google Workspace SMTP Relay (Port 587)</option>
+                            <option value="google_app_pw">Google Workspace App Password (Port 587)</option>
+                            <option value="m365_smtp">Microsoft 365 Exchange Online (Port 587)</option>
+                            <option value="onprem_lan">District LAN / On-Prem Relay (Port 25)</option>
+                            <option value="sendgrid">SendGrid / Cloud Relay (Port 587)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>SMTP Host <span style="color:var(--danger)">*</span></label>
+                            <input type="text" id="email-smtp-host" placeholder="smtp-relay.gmail.com">
+                        </div>
+                        <div class="form-group" style="max-width: 110px;">
+                            <label>Port</label>
+                            <input type="number" id="email-smtp-port" placeholder="587" value="587">
+                        </div>
+                        <div class="form-group" style="max-width: 140px;">
+                            <label>Security</label>
+                            <select id="email-smtp-sec">
+                                <option value="starttls" selected>STARTTLS</option>
+                                <option value="ssl_tls">SSL / TLS</option>
+                                <option value="none">None (LAN)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Sender Address (From)</label>
+                            <input type="email" id="email-from-addr" placeholder="noc-alerts@district.edu">
+                        </div>
+                        <div class="form-group">
+                            <label>Sender Display Name</label>
+                            <input type="text" id="email-from-name" placeholder="ONE Platform Network Monitor">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Recipients (Comma-separated distribution list) <span style="color:var(--danger)">*</span></label>
+                        <input type="text" id="email-recipients" placeholder="noc@district.edu, helpdesk@district.edu, sysadmin@district.edu">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>SMTP Username (Optional)</label>
+                            <input type="text" id="email-username" placeholder="Optional for IP-whitelisted relays">
+                        </div>
+                        <div class="form-group">
+                            <label>SMTP Password (Optional)</label>
+                            <input type="password" id="email-password" placeholder="App password or leave blank for IP relay">
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" id="email-preset-hint">
+                        💡 <strong>Google Workspace:</strong> Whitelist the server public IP under Google Admin ➔ Apps ➔ Google Workspace ➔ Gmail ➔ Routing ➔ SMTP relay service.
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                        <input type="checkbox" id="chan-active" checked style="width: 16px; height: 16px; cursor: pointer;">
+                        ✅ Channel Active (enable outbound dispatch)
+                    </label>
+                </div>
+                <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeChannelModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="testCurrentChannel()" id="btn-test-channel" style="display:none;">🔔 Send Test</button>
+                    <button type="submit" class="btn">💾 Save Channel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Location Edit Modal -->
@@ -1659,6 +2516,131 @@
         </div>
     </div>
 
+    <!-- Simulate Test Alert Modal -->
+    <div class="modal-overlay" id="simulate-alert-modal" onclick="handleBackdropClick(event, 'simulate-alert-modal')">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">🧪 Simulate & Ingest High-Assurance Test Alert</h2>
+                <button type="button" class="close-btn" onclick="closeSimulateAlertModal()">✕</button>
+            </div>
+            <form id="simulate-alert-form" onsubmit="handleSimulateAlert(event)">
+                <div class="form-group" style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+                    <label style="color: var(--accent); font-weight: 700;">⚡ Alarm Scenario Preset</label>
+                    <select id="sim-preset" onchange="applySimulatePreset(this.value)">
+                        <option value="caaspp_cert">🎓 CAASPP Untrusted SSL Certificate (Critical)</option>
+                        <option value="wifi_flapping">📡 Wi-Fi 802.11 AP Flapping & Roam Degraded (Warning)</option>
+                        <option value="dns_fail">🔍 Multi-Resolver DNS Resolution Failure (Critical)</option>
+                        <option value="saas_latency">🌐 Canvas LMS / Google Classroom High Latency (Warning)</option>
+                        <option value="gateway_down">🛑 Campus Gateway WAN Link Down (Critical)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Alert Rule Name</label>
+                        <input type="text" id="sim-alertname" value="CAASPPUntrustedCertificate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Severity</label>
+                        <select id="sim-severity">
+                            <option value="critical">🔴 Critical</option>
+                            <option value="warning">🟡 Warning</option>
+                            <option value="info">🔵 Info</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Alarm Title</label>
+                    <input type="text" id="sim-title" value="CAASPP Secure Browser SSL Certificate Interception Detected" required>
+                </div>
+                <div class="form-group">
+                    <label>Alarm Description / Reason</label>
+                    <textarea id="sim-desc" rows="2" style="width:100%; padding:8px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-main); font-size:13px;">Untrusted MITM certificate detected during pre-flight synthetic TLS probe to Cambium TDS.</textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Target Campus</label>
+                        <input type="text" id="sim-campus" value="CAMPUS-WEST-HIGH">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Sensor</label>
+                        <input type="text" id="sim-sensor" value="pi5-science-01">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Target Synthetic Probe ID</label>
+                        <input type="text" id="sim-probe" value="caaspp_readiness">
+                    </div>
+                    <div class="form-group">
+                        <label>Linked Evidence / PCAP ID</label>
+                        <input type="text" id="sim-evidence" placeholder="ev-optional-id">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn btn-outline" onclick="closeSimulateAlertModal()">Cancel</button>
+                    <button type="submit" class="btn" style="background: var(--danger);">🚨 Trigger Test Alarm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resolve Alert Modal -->
+    <div class="modal-overlay" id="resolve-alert-modal" onclick="handleBackdropClick(event, 'resolve-alert-modal')">
+        <div class="modal" style="max-width: 520px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">✅ Resolve & Close Network Alarm</h2>
+                <button type="button" class="close-btn" onclick="closeResolveAlertModal()">✕</button>
+            </div>
+            <form id="resolve-alert-form" onsubmit="handleConfirmResolveAlert(event)">
+                <input type="hidden" id="resolve-alert-id">
+                <p id="resolve-alert-prompt" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                    Enter resolution details to record in the permanent NOC incident log.
+                </p>
+                <div class="form-group">
+                    <label>Resolution Notes</label>
+                    <textarea id="resolve-notes" rows="3" style="width:100%; padding:8px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-main); font-size:13px;" placeholder="e.g. SSL inspection bypass exception provisioned on district firewall. Verified probe returned HTTP 200 OK." required>Verified nominal resolution. Alarm cleared by NOC operator.</textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                    <button type="button" class="btn btn-outline" onclick="closeResolveAlertModal()">Cancel</button>
+                    <button type="submit" class="btn" style="background: var(--success);">Confirm Resolve</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Forensic Detail Modal -->
+    <div class="modal-overlay" id="alert-detail-modal" onclick="handleBackdropClick(event, 'alert-detail-modal')">
+        <div class="modal" style="max-width: 680px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="alert-detail-title">🔍 Alert Forensic Inspector</h2>
+                <button type="button" class="close-btn" onclick="closeAlertDetailModal()">✕</button>
+            </div>
+            <div id="alert-detail-body" style="padding: 10px 0;">
+                <p>Loading alert details...</p>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                <button type="button" class="btn btn-outline" onclick="closeAlertDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PCAP Forensic Evidence Modal -->
+    <div class="modal-overlay" id="evidence-modal" onclick="handleBackdropClick(event, 'evidence-modal')">
+        <div class="modal" style="max-width: 680px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="evidence-modal-title">📦 PCAP Packet Capture Forensic Inspector</h2>
+                <button type="button" class="close-btn" onclick="closeEvidenceModal()">✕</button>
+            </div>
+            <div id="evidence-modal-body" style="padding: 10px 0;">
+                <p>Loading packet capture forensic evidence...</p>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                <button type="button" class="btn btn-primary" id="btn-download-pcap" onclick="downloadCurrentPcap()">📥 Download .pcap Capture</button>
+                <button type="button" class="btn btn-outline" onclick="closeEvidenceModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const ADMIN_KEY = "admin-noc-key-change-me";
         let SENSORS_CACHE = [];
@@ -1866,6 +2848,14 @@
                 setTimeout(initOrUpdateMap, 200);
             } else if (viewId === 'monitor-noc') {
                 setTimeout(renderAnalyticsCharts, 150);
+            } else if (viewId === 'monitor-alerts') {
+                loadAlertCenterData();
+            } else if (viewId === 'configure-alerts') {
+                loadCustomAlertRules();
+            } else if (viewId === 'configure-maintenance') {
+                loadMaintenanceWindows();
+            } else if (viewId === 'setup-integrations') {
+                loadNotificationChannels();
             }
         }
 
@@ -1880,6 +2870,12 @@
                 closeLocationModal();
                 closeProbeModal();
                 closeScheduleModal();
+                closeSimulateAlertModal();
+                closeResolveAlertModal();
+                closeAlertDetailModal();
+                closeAlertRuleModal();
+                closeMaintenanceModal();
+                closeChannelModal();
                 if (document.body.classList.contains('wallboard-fullscreen')) {
                     toggleFullscreenMode();
                 }
@@ -1893,6 +2889,1255 @@
                 togglePlayPause();
             }
         });
+
+        // --- CUSTOM ALERT RULES CONTROLLER (3. Configure → Alert Thresholds) ---
+
+        const SEV_BADGE = {
+            critical: '<span class="status-pill" style="background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid var(--danger);">🔴 Critical</span>',
+            warning:  '<span class="status-pill" style="background:rgba(245,158,11,0.15);color:var(--warning);border:1px solid var(--warning);">🟡 Warning</span>',
+            info:     '<span class="status-pill" style="background:rgba(59,130,246,0.15);color:var(--accent);border:1px solid var(--accent);">🔵 Info</span>'
+        };
+        const OP_LABEL = { gt: '>', gte: '≥', lt: '<', lte: '≤', eq: '=' };
+        const CHAN_ICON = { slack: '💬', teams: '🟦', pagerduty: '🟠', webhook: '🎫', email: '📧' };
+
+        async function loadCustomAlertRules() {
+            const tbody = document.getElementById('alert-rules-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading…</td></tr>';
+            try {
+                const res = await fetch('/api/v1/alerts/rules');
+                const rules = res.ok ? await res.json() : [];
+                // Update KPIs
+                const active = rules.filter(r => r.is_active).length;
+                const pcap   = rules.filter(r => r.autocapture_pcap && r.is_active).length;
+                const crit   = rules.filter(r => r.severity === 'critical').length;
+                const setKpi = (id, v) => { const el = document.getElementById(id); if(el) el.innerText = v; };
+                setKpi('rule-kpi-active', active);
+                setKpi('rule-kpi-total', rules.length);
+                setKpi('rule-kpi-pcap', pcap);
+                setKpi('rule-kpi-critical', crit);
+
+                if (!rules.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No custom alert rules configured yet. Click + Create Alert Rule.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rules.map(r => {
+                    const sev   = SEV_BADGE[r.severity] || r.severity;
+                    const op    = OP_LABEL[r.operator] || r.operator;
+                    const conds = `${r.metric} ${op} ${r.threshold_value} ${r.unit}`;
+                    const scope = r.campus_id ? `📍 ${r.campus_id}` : r.sensor_id ? `📡 ${r.sensor_id}` : '<span style="color:var(--text-muted)">All Fleet</span>';
+                    const chans = (r.channels && r.channels.length)
+                        ? r.channels.map(c => `<code style="font-size:11px;">${c}</code>`).join(' ')
+                        : '<span style="color:var(--text-muted)">None</span>';
+                    const pcapBadge = r.autocapture_pcap
+                        ? '<span style="color:var(--purple)">📦 On</span>'
+                        : '<span style="color:var(--text-muted)">Off</span>';
+                    const statusBadge = r.is_active
+                        ? '<span class="status-pill status-online">🟢 Active</span>'
+                        : '<span class="status-pill status-offline">⏸ Paused</span>';
+                    return `<tr>
+                        <td>${sev}</td>
+                        <td>
+                            <strong style="font-size:13px;">${r.name}</strong><br>
+                            <small style="color:var(--text-muted);">${r.probe_id}</small>
+                        </td>
+                        <td><code style="font-size:12px;">${conds}</code><br><small style="color:var(--text-muted);">Window: ${r.duration_seconds}s</small></td>
+                        <td>${scope}</td>
+                        <td>${chans}</td>
+                        <td>${pcapBadge}</td>
+                        <td>${statusBadge}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button class="btn btn-outline btn-sm" onclick="editAlertRule(${JSON.stringify(r).replace(/"/g,'&quot;')})">✏️</button>
+                            <button class="btn btn-outline btn-sm" onclick="toggleRuleActive('${r.id}')" title="${r.is_active ? 'Pause' : 'Activate'}">${r.is_active ? '⏸' : '▶️'}</button>
+                            <button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="deleteAlertRule('${r.id}')">🗑</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--danger);">Error loading rules: ${e.message}</td></tr>`;
+            }
+        }
+
+        function openAlertRuleModal(rule) {
+            document.getElementById('rule-id').value = rule ? rule.id : '';
+            document.getElementById('rule-name').value = rule ? rule.name : '';
+            document.getElementById('rule-probe-id').value = rule ? rule.probe_id : 'dual_nic_ping';
+            document.getElementById('rule-metric').value = rule ? rule.metric : 'latency_ms';
+            document.getElementById('rule-operator').value = rule ? rule.operator : 'gt';
+            document.getElementById('rule-threshold').value = rule ? rule.threshold_value : '';
+            document.getElementById('rule-unit').value = rule ? rule.unit : 'ms';
+            document.getElementById('rule-duration').value = rule ? rule.duration_seconds : 30;
+            document.getElementById('rule-severity').value = rule ? rule.severity : 'warning';
+            document.getElementById('rule-campus').value = rule && rule.campus_id ? rule.campus_id : '';
+            document.getElementById('rule-sensor').value = rule && rule.sensor_id ? rule.sensor_id : '';
+            document.getElementById('rule-channels').value = rule && rule.channels ? rule.channels.join(', ') : '';
+            document.getElementById('rule-pcap').checked = rule ? rule.autocapture_pcap : true;
+            document.getElementById('rule-active').checked = rule ? rule.is_active : true;
+            document.getElementById('alert-rule-modal').style.display = 'flex';
+        }
+
+        function closeAlertRuleModal() {
+            document.getElementById('alert-rule-modal').style.display = 'none';
+        }
+
+        function editAlertRule(rule) {
+            openAlertRuleModal(rule);
+        }
+
+        async function handleSaveAlertRule(e) {
+            e.preventDefault();
+            const id = document.getElementById('rule-id').value;
+            const channelRaw = document.getElementById('rule-channels').value;
+            const channels = channelRaw ? channelRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const body = {
+                id: id || `rule_${Date.now().toString(36)}`,
+                name: document.getElementById('rule-name').value,
+                probe_id: document.getElementById('rule-probe-id').value,
+                metric: document.getElementById('rule-metric').value,
+                operator: document.getElementById('rule-operator').value,
+                threshold_value: parseFloat(document.getElementById('rule-threshold').value),
+                unit: document.getElementById('rule-unit').value || 'ms',
+                duration_seconds: parseInt(document.getElementById('rule-duration').value) || 30,
+                severity: document.getElementById('rule-severity').value,
+                campus_id: document.getElementById('rule-campus').value || null,
+                sensor_id: document.getElementById('rule-sensor').value || null,
+                channels: channels,
+                autocapture_pcap: document.getElementById('rule-pcap').checked,
+                is_active: document.getElementById('rule-active').checked
+            };
+            try {
+                const res = await fetch('/api/v1/alerts/rules', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+                closeAlertRuleModal();
+                loadCustomAlertRules();
+            } catch(err) {
+                alert('Error saving alert rule: ' + err.message);
+            }
+        }
+
+        async function toggleRuleActive(ruleId) {
+            await fetch(`/api/v1/alerts/rules/${ruleId}/toggle`, { method: 'POST' });
+            loadCustomAlertRules();
+        }
+
+        async function deleteAlertRule(ruleId) {
+            if (!confirm('Delete this alert rule?')) return;
+            await fetch(`/api/v1/alerts/rules/${ruleId}`, { method: 'DELETE' });
+            loadCustomAlertRules();
+        }
+
+        // --- MAINTENANCE & MUTING WINDOWS CONTROLLER (3. Configure → Muting Windows) ---
+
+        let MAINTENANCE_WINDOWS_CACHE = [];
+
+        const WINDOW_TYPE_BADGE = {
+            construction: '<span class="status-pill" style="background:rgba(245,158,11,0.18); color:var(--warning); border:1px solid var(--warning); font-weight:700;">🏗️ Construction</span>',
+            maintenance:  '<span class="status-pill" style="background:rgba(59,130,246,0.15); color:var(--accent); border:1px solid var(--accent);">🔧 Maintenance</span>',
+            upgrade:      '<span class="status-pill" style="background:rgba(147,51,234,0.15); color:var(--purple); border:1px solid var(--purple);">⚡ Upgrade</span>',
+            renovation:   '<span class="status-pill" style="background:rgba(16,185,129,0.15); color:var(--success); border:1px solid var(--success);">🏫 Renovation</span>'
+        };
+
+        async function loadMaintenanceWindows() {
+            const tbody = document.getElementById('maint-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Loading maintenance windows…</td></tr>';
+            try {
+                const res = await fetch('/api/v1/alerts/maintenance-windows');
+                const windows = res.ok ? await res.json() : [];
+                MAINTENANCE_WINDOWS_CACHE = windows;
+                const now = Math.floor(Date.now() / 1000);
+
+                // Calculate KPIs
+                const activeNow = windows.filter(w => w.is_active && w.starts_at <= now && w.ends_at >= now).length;
+                const upcoming = windows.filter(w => w.is_active && w.starts_at > now).length;
+                const total = windows.length;
+
+                // Fetch 24h muted alerts count
+                let mutedCount = 0;
+                try {
+                    const altRes = await fetch('/api/v1/alerts?limit=500');
+                    if (altRes.ok) {
+                        const alerts = await altRes.json();
+                        mutedCount = alerts.filter(a => a.is_muted).length;
+                    }
+                } catch (e) {}
+
+                const setKpi = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+                setKpi('maint-kpi-active', activeNow);
+                setKpi('maint-kpi-upcoming', upcoming);
+                setKpi('maint-kpi-total', total);
+                setKpi('maint-kpi-muted', mutedCount);
+
+                if (!windows.length) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding:24px;">No scheduled maintenance windows. Click + Schedule Window or use Quick Mute.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = windows.map(w => {
+                    let statusPill = '';
+                    let remainingText = '';
+                    const isCurrentlyActive = w.is_active && (w.starts_at <= now && w.ends_at >= now);
+                    const isUpcoming = w.is_active && (w.starts_at > now);
+                    const isConstruction = (w.window_type === 'construction');
+
+                    if (!w.is_active) {
+                        statusPill = '<span class="status-pill status-offline">⏸ Disabled</span>';
+                        remainingText = 'Inactive';
+                    } else if (isCurrentlyActive) {
+                        const activeBg = isConstruction ? 'rgba(245,158,11,0.2)' : 'rgba(147,51,234,0.18)';
+                        const activeCol = isConstruction ? 'var(--warning)' : 'var(--purple)';
+                        statusPill = `<span class="status-pill" style="background:${activeBg}; color:${activeCol}; border:1px solid ${activeCol}; font-weight:700;">🟢 Active (${isConstruction ? 'Construction Mute' : 'Muting'})</span>`;
+
+                        const remSec = w.ends_at - now;
+                        const remHours = Math.floor(remSec / 3600);
+                        const remDays = Math.floor(remHours / 24);
+                        if (remDays >= 1) {
+                            remainingText = `${remDays}d ${remHours % 24}h remaining`;
+                        } else if (remHours >= 1) {
+                            const remMin = Math.ceil((remSec % 3600) / 60);
+                            remainingText = `${remHours}h ${remMin}m remaining`;
+                        } else {
+                            const remMin = Math.ceil(remSec / 60);
+                            remainingText = `${remMin}m remaining`;
+                        }
+                    } else if (isUpcoming) {
+                        statusPill = '<span class="status-pill" style="background:rgba(59,130,246,0.15); color:var(--accent); border:1px solid var(--accent);">⏰ Scheduled</span>';
+                        const untilSec = w.starts_at - now;
+                        const untilHr = Math.floor(untilSec / 3600);
+                        remainingText = untilHr > 24 ? `Starts in ${Math.floor(untilHr / 24)}d` : `Starts in ${untilHr}h`;
+                    } else {
+                        statusPill = '<span class="status-pill" style="background:rgba(107,114,128,0.15); color:var(--text-muted); border:1px solid var(--border);">⏹ Expired</span>';
+                        remainingText = 'Ended';
+                    }
+
+                    const typeBadge = WINDOW_TYPE_BADGE[w.window_type] || WINDOW_TYPE_BADGE.maintenance;
+
+                    const scopeParts = [];
+                    if (w.campus_id) scopeParts.push(`📍 ${w.campus_id}`);
+                    if (w.sensor_id) scopeParts.push(`📡 ${w.sensor_id}`);
+                    if (w.probe_id) scopeParts.push(`🔬 ${w.probe_id}`);
+                    if (w.alertname_pattern) scopeParts.push(`🏷️ Pattern: <code>${w.alertname_pattern}</code>`);
+                    const scopeDisplay = scopeParts.length ? scopeParts.join('<br>') : '<span style="color:var(--text-muted);">Fleet-wide (All Probes)</span>';
+
+                    const startStr = new Date(w.starts_at * 1000).toLocaleString();
+                    const endStr = new Date(w.ends_at * 1000).toLocaleString();
+
+                    const enabledToggle = w.is_active
+                        ? '<span style="color:var(--success);">✅ On</span>'
+                        : '<span style="color:var(--text-muted);">Off</span>';
+
+                    return `<tr>
+                        <td>${statusPill}</td>
+                        <td>${typeBadge}</td>
+                        <td>
+                            <strong style="font-size:13px; color:var(--text-main);">${w.name}</strong>
+                            ${w.description ? `<br><small style="color:var(--text-muted);">${w.description}</small>` : ''}
+                        </td>
+                        <td style="font-size:12px;">${scopeDisplay}</td>
+                        <td style="font-size:12px; white-space:nowrap;">${startStr}</td>
+                        <td style="font-size:12px; white-space:nowrap;">${endStr}</td>
+                        <td><strong style="font-size:12px;">${remainingText}</strong></td>
+                        <td>${enabledToggle}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button class="btn btn-outline btn-sm" onclick="editMaintenanceWindow(${JSON.stringify(w).replace(/"/g,'&quot;')})" title="Edit Window">✏️</button>
+                            <button class="btn btn-outline btn-sm" onclick="toggleMaintenanceWindow('${w.id}')" title="${w.is_active ? 'Disable' : 'Enable'}">${w.is_active ? '⏸' : '▶️'}</button>
+                            <button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="deleteMaintenanceWindow('${w.id}')" title="Delete Window">🗑</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--danger);">Error loading maintenance windows: ${e.message}</td></tr>`;
+            }
+        }
+
+        function openMaintenanceModal(win) {
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const toIsoLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+            document.getElementById('maint-id').value = win ? win.id : '';
+            document.getElementById('maint-name').value = win ? win.name : '';
+            document.getElementById('maint-desc').value = win ? (win.description || '') : '';
+            document.getElementById('maint-type').value = win ? (win.window_type || 'maintenance') : 'maintenance';
+            document.getElementById('maint-campus').value = win ? (win.campus_id || '') : '';
+            document.getElementById('maint-sensor').value = win ? (win.sensor_id || '') : '';
+            document.getElementById('maint-probe').value = win ? (win.probe_id || '') : '';
+            document.getElementById('maint-pattern').value = win ? (win.alertname_pattern || '') : '';
+
+            if (win) {
+                document.getElementById('maint-starts-at').value = toIsoLocal(new Date(win.starts_at * 1000));
+                document.getElementById('maint-ends-at').value = toIsoLocal(new Date(win.ends_at * 1000));
+            } else {
+                const start = new Date();
+                const end = new Date(start.getTime() + 2 * 3600 * 1000); // 2 hours
+                document.getElementById('maint-starts-at').value = toIsoLocal(start);
+                document.getElementById('maint-ends-at').value = toIsoLocal(end);
+            }
+
+            document.getElementById('maint-active').checked = win ? win.is_active : true;
+            document.getElementById('maint-reminder-cb').checked = win ? (win.notify_channel_ids && win.notify_channel_ids.length > 0 || true) : true;
+            document.getElementById('maintenance-modal').style.display = 'flex';
+        }
+
+        function closeMaintenanceModal() {
+            const m = document.getElementById('maintenance-modal');
+            if (m) m.style.display = 'none';
+        }
+
+        function setMaintDurationPreset(minutes) {
+            const startInput = document.getElementById('maint-starts-at');
+            const endInput = document.getElementById('maint-ends-at');
+            const pad = n => String(n).padStart(2, '0');
+            const toIsoLocal = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+            let start = new Date();
+            if (startInput.value) {
+                try { start = new Date(startInput.value); } catch(e) {}
+            }
+            const end = new Date(start.getTime() + minutes * 60 * 1000);
+            startInput.value = toIsoLocal(start);
+            endInput.value = toIsoLocal(end);
+        }
+
+        function editMaintenanceWindow(win) {
+            openMaintenanceModal(win);
+        }
+
+        async function handleSaveMaintenance(e) {
+            e.preventDefault();
+            const id = document.getElementById('maint-id').value || `maint_${Date.now()}`;
+            const name = document.getElementById('maint-name').value.trim();
+            const desc = document.getElementById('maint-desc').value.trim();
+            const wtype = document.getElementById('maint-type').value;
+            const campus = document.getElementById('maint-campus').value.trim() || null;
+            const sensor = document.getElementById('maint-sensor').value.trim() || null;
+            const probe = document.getElementById('maint-probe').value.trim() || null;
+            const pattern = document.getElementById('maint-pattern').value.trim() || null;
+
+            const startVal = document.getElementById('maint-starts-at').value;
+            const endVal = document.getElementById('maint-ends-at').value;
+
+            const startsAt = Math.floor(new Date(startVal).getTime() / 1000);
+            const endsAt = Math.floor(new Date(endVal).getTime() / 1000);
+
+            if (endsAt <= startsAt) {
+                alert("End datetime must be after Start datetime.");
+                return;
+            }
+
+            const payload = {
+                id: id,
+                name: name,
+                description: desc,
+                window_type: wtype,
+                campus_id: campus,
+                sensor_id: sensor,
+                probe_id: probe,
+                alertname_pattern: pattern,
+                starts_at: startsAt,
+                ends_at: endsAt,
+                is_active: document.getElementById('maint-active').checked,
+                created_by: "NOC Admin"
+            };
+
+            try {
+                const res = await fetch('/api/v1/alerts/maintenance-windows', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    closeMaintenanceModal();
+                    loadMaintenanceWindows();
+                    loadAlertCenterData();
+                } else {
+                    const err = await res.json();
+                    alert("Error saving maintenance window: " + (err.detail || JSON.stringify(err)));
+                }
+            } catch(err) {
+                alert("Network error saving maintenance window: " + err.message);
+            }
+        }
+
+        async function quickCreateMuteWindow(durationMinutes, title) {
+            const now = Math.floor(Date.now() / 1000);
+            const payload = {
+                id: `maint_${Date.now()}`,
+                name: title || `Quick Mute (${durationMinutes}m)`,
+                description: `Automated quick mute generated from ONE console on ${new Date().toLocaleTimeString()}`,
+                window_type: "maintenance",
+                campus_id: null,
+                sensor_id: null,
+                probe_id: null,
+                alertname_pattern: null,
+                starts_at: now,
+                ends_at: now + (durationMinutes * 60),
+                is_active: true,
+                created_by: "NOC Operator"
+            };
+
+            try {
+                const res = await fetch('/api/v1/alerts/maintenance-windows', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    loadMaintenanceWindows();
+                    loadAlertCenterData();
+                }
+            } catch (e) {
+                alert("Failed to create quick mute window: " + e.message);
+            }
+        }
+
+        async function quickCreateConstructionWindow(days, title) {
+            const now = Math.floor(Date.now() / 1000);
+            const durationSec = days * 86400;
+            const payload = {
+                id: `maint_const_${Date.now()}`,
+                name: title || `${days}-Day Facility Construction Muting`,
+                description: `Automated construction muting window for campus rewiring/facility bond work (${days} days duration).`,
+                window_type: "construction",
+                campus_id: null,
+                sensor_id: null,
+                probe_id: null,
+                alertname_pattern: null,
+                starts_at: now,
+                ends_at: now + durationSec,
+                is_active: true,
+                created_by: "Facilities & NOC Project Manager"
+            };
+
+            try {
+                const res = await fetch('/api/v1/alerts/maintenance-windows', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    loadMaintenanceWindows();
+                    loadAlertCenterData();
+                }
+            } catch (e) {
+                alert("Failed to create construction mute window: " + e.message);
+            }
+        }
+
+        async function toggleMaintenanceWindow(winId) {
+            try {
+                const res = await fetch(`/api/v1/alerts/maintenance-windows/${winId}/toggle`, { method: 'POST' });
+                if (res.ok) {
+                    loadMaintenanceWindows();
+                    loadAlertCenterData();
+                }
+            } catch(e) {
+                alert("Failed to toggle maintenance window: " + e.message);
+            }
+        }
+
+        async function deleteMaintenanceWindow(winId) {
+            if (!confirm(`Delete maintenance window '${winId}'? Outbound notification suppression will cease immediately.`)) return;
+            try {
+                const res = await fetch(`/api/v1/alerts/maintenance-windows/${winId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadMaintenanceWindows();
+                    loadAlertCenterData();
+                }
+            } catch(e) {
+                alert("Failed to delete maintenance window: " + e.message);
+            }
+        }
+
+        // --- NOTIFICATION CHANNELS CONTROLLER (4. Setup → Alerts & Webhooks) ---
+
+        async function loadNotificationChannels() {
+            const tbody = document.getElementById('channels-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading…</td></tr>';
+            try {
+                const res = await fetch('/api/v1/alerts/channels');
+                const channels = res.ok ? await res.json() : [];
+                const active = channels.filter(c => c.is_active).length;
+                const types  = new Set(channels.map(c => c.channel_type)).size;
+                const lastTs = channels.reduce((m, c) => Math.max(m, c.last_dispatched_at || 0), 0);
+                const setKpi = (id, v) => { const el = document.getElementById(id); if(el) el.innerText = v; };
+                setKpi('chan-kpi-active', active);
+                setKpi('chan-kpi-total', channels.length);
+                setKpi('chan-kpi-types', types);
+                const lastEl = document.getElementById('chan-kpi-last');
+                if (lastEl) lastEl.innerText = lastTs ? new Date(lastTs * 1000).toLocaleTimeString() : '—';
+
+                if (!channels.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No notification channels configured. Click + Add Notification Channel.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = channels.map(ch => {
+                    const icon   = CHAN_ICON[ch.channel_type] || '🔗';
+                    const minSev = SEV_BADGE[ch.min_severity] || ch.min_severity;
+                    const urlShort = ch.endpoint_url.length > 42 ? ch.endpoint_url.slice(0,42) + '…' : ch.endpoint_url;
+                    const lastSent = ch.last_dispatched_at ? new Date(ch.last_dispatched_at * 1000).toLocaleString() : '—';
+                    const statusColor = ch.last_status && ch.last_status.startsWith('Deliver') ? 'var(--success)'
+                        : ch.last_status && ch.last_status.includes('Error') ? 'var(--danger)' : 'var(--text-muted)';
+                    const enBadge = ch.is_active
+                        ? '<span class="status-pill status-online">🟢 On</span>'
+                        : '<span class="status-pill status-offline">⏸ Off</span>';
+                    return `<tr>
+                        <td>${icon} <strong>${ch.channel_type}</strong></td>
+                        <td>${ch.name}</td>
+                        <td><code style="font-size:11px;" title="${ch.endpoint_url}">${urlShort}</code></td>
+                        <td>${minSev}</td>
+                        <td><span style="font-size:12px; color:${statusColor};">${ch.last_status || 'Ready'}</span></td>
+                        <td style="font-size:12px; color:var(--text-muted);">${lastSent}</td>
+                        <td>${enBadge}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button class="btn btn-outline btn-sm" onclick="testChannel('${ch.id}')" title="Send Test Notification">🔔</button>
+                            <button class="btn btn-outline btn-sm" onclick="editChannel(${JSON.stringify(ch).replace(/"/g,'&quot;')})">✏️</button>
+                            <button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="deleteChannel('${ch.id}')">🗑</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--danger);">Error loading channels: ${e.message}</td></tr>`;
+            }
+        }
+
+        let _currentEditChannelId = null;
+
+        function handleChannelTypeChange() {
+            const type = document.getElementById('chan-type').value;
+            const webhookPanel = document.getElementById('webhook-config-panel');
+            const emailPanel = document.getElementById('email-config-panel');
+            if (type === 'email') {
+                if (webhookPanel) webhookPanel.style.display = 'none';
+                if (emailPanel) emailPanel.style.display = 'block';
+            } else {
+                if (webhookPanel) webhookPanel.style.display = 'block';
+                if (emailPanel) emailPanel.style.display = 'none';
+            }
+        }
+
+        const EMAIL_PRESETS = {
+            google_relay: {
+                host: 'smtp-relay.gmail.com', port: 587, sec: 'starttls', user: '', pw: '',
+                hint: '💡 <strong>Google Workspace Relay:</strong> Whitelist the CMP server public IP in Google Admin ➔ Apps ➔ Google Workspace ➔ Gmail ➔ Routing ➔ SMTP relay service (No auth required).'
+            },
+            google_app_pw: {
+                host: 'smtp.gmail.com', port: 587, sec: 'starttls', user: 'noc-alerts@district.edu', pw: '',
+                hint: '💡 <strong>Google App Password:</strong> Generate a dedicated 16-character App Password under Google Account ➔ Security ➔ 2-Step Verification ➔ App Passwords.'
+            },
+            m365_smtp: {
+                host: 'smtp.office365.com', port: 587, sec: 'starttls', user: 'noc-alerts@district.edu', pw: '',
+                hint: '💡 <strong>Microsoft 365 Exchange Online:</strong> Requires an M365 licensed service account with SMTP AUTH enabled in Microsoft 365 Admin Center.'
+            },
+            onprem_lan: {
+                host: '10.0.0.25', port: 25, sec: 'none', user: '', pw: '',
+                hint: '💡 <strong>District LAN / Internal Relay:</strong> Sends unauthenticated plain/STARTTLS email over internal VLAN to local Postfix / Exchange server.'
+            },
+            sendgrid: {
+                host: 'smtp.sendgrid.net', port: 587, sec: 'starttls', user: 'apikey', pw: '',
+                hint: '💡 <strong>SendGrid Cloud Relay:</strong> Set username to <code>apikey</code> and password to your SendGrid API key.'
+            }
+        };
+
+        function applyEmailPreset() {
+            const key = document.getElementById('email-preset-select').value;
+            if (!key || !EMAIL_PRESETS[key]) return;
+            const p = EMAIL_PRESETS[key];
+            document.getElementById('email-smtp-host').value = p.host;
+            document.getElementById('email-smtp-port').value = p.port;
+            document.getElementById('email-smtp-sec').value = p.sec;
+            if (p.user) document.getElementById('email-username').value = p.user;
+            if (p.pw) document.getElementById('email-password').value = p.pw;
+            const hintEl = document.getElementById('email-preset-hint');
+            if (hintEl) hintEl.innerHTML = p.hint;
+        }
+
+        function openChannelModal(ch) {
+            _currentEditChannelId = ch ? ch.id : null;
+            document.getElementById('chan-id').value = ch ? ch.id : '';
+            document.getElementById('chan-name').value = ch ? ch.name : '';
+            const cType = ch ? ch.channel_type : 'slack';
+            document.getElementById('chan-type').value = cType;
+            document.getElementById('chan-min-sev').value = ch ? ch.min_severity : 'warning';
+            document.getElementById('chan-url').value = ch ? ch.endpoint_url : '';
+            document.getElementById('chan-headers').value = ch && ch.auth_headers && Object.keys(ch.auth_headers).length
+                ? JSON.stringify(ch.auth_headers, null, 2) : '';
+            document.getElementById('chan-active').checked = ch ? ch.is_active : true;
+
+            // Populate Email-specific fields if applicable
+            if (cType === 'email' && ch && ch.auth_headers) {
+                const ah = ch.auth_headers;
+                document.getElementById('email-smtp-host').value = ah.smtp_host || (ch.endpoint_url ? ch.endpoint_url.split(':')[0] : 'smtp-relay.gmail.com');
+                document.getElementById('email-smtp-port').value = ah.smtp_port || (ch.endpoint_url && ch.endpoint_url.includes(':') ? ch.endpoint_url.split(':')[1] : 587);
+                document.getElementById('email-smtp-sec').value = ah.security_mode || 'starttls';
+                document.getElementById('email-from-addr').value = ah.from_email || 'noc-alerts@district.edu';
+                document.getElementById('email-from-name').value = ah.from_name || 'ONE Platform Network Monitor';
+                document.getElementById('email-recipients').value = ah.recipients || 'noc@district.edu, helpdesk@district.edu';
+                document.getElementById('email-username').value = ah.username || '';
+                document.getElementById('email-password').value = ah.password || '';
+            } else if (cType === 'email' && !ch) {
+                document.getElementById('email-smtp-host').value = 'smtp-relay.gmail.com';
+                document.getElementById('email-smtp-port').value = '587';
+                document.getElementById('email-smtp-sec').value = 'starttls';
+                document.getElementById('email-from-addr').value = 'noc-alerts@district.edu';
+                document.getElementById('email-from-name').value = 'ONE Platform Network Monitor';
+                document.getElementById('email-recipients').value = 'noc@district.edu, helpdesk@district.edu';
+                document.getElementById('email-username').value = '';
+                document.getElementById('email-password').value = '';
+            }
+
+            handleChannelTypeChange();
+
+            const testBtn = document.getElementById('btn-test-channel');
+            if (testBtn) testBtn.style.display = ch ? 'inline-flex' : 'none';
+            document.getElementById('channel-modal').style.display = 'flex';
+        }
+
+        function editChannel(ch) { openChannelModal(ch); }
+        function closeChannelModal() { document.getElementById('channel-modal').style.display = 'none'; }
+
+        async function handleSaveChannel(e) {
+            e.preventDefault();
+            const id = document.getElementById('chan-id').value;
+            const cType = document.getElementById('chan-type').value;
+            let endpointUrl = document.getElementById('chan-url').value;
+            let authHeaders = {};
+
+            if (cType === 'email') {
+                const host = document.getElementById('email-smtp-host').value.trim() || 'smtp-relay.gmail.com';
+                const port = parseInt(document.getElementById('email-smtp-port').value) || 587;
+                endpointUrl = `${host}:${port}`;
+                authHeaders = {
+                    smtp_host: host,
+                    smtp_port: port,
+                    security_mode: document.getElementById('email-smtp-sec').value,
+                    from_email: document.getElementById('email-from-addr').value.trim() || 'noc-alerts@district.edu',
+                    from_name: document.getElementById('email-from-name').value.trim() || 'ONE Platform Network Monitor',
+                    recipients: document.getElementById('email-recipients').value.trim() || 'noc@district.edu',
+                    username: document.getElementById('email-username').value.trim(),
+                    password: document.getElementById('email-password').value
+                };
+            } else {
+                const headersRaw = document.getElementById('chan-headers').value.trim();
+                if (headersRaw) {
+                    try { authHeaders = JSON.parse(headersRaw); } catch { alert('Auth Headers must be valid JSON.'); return; }
+                }
+            }
+
+            const body = {
+                id: id || `chan_${Date.now().toString(36)}`,
+                name: document.getElementById('chan-name').value,
+                channel_type: cType,
+                endpoint_url: endpointUrl,
+                auth_headers: authHeaders,
+                min_severity: document.getElementById('chan-min-sev').value,
+                is_active: document.getElementById('chan-active').checked
+            };
+            try {
+                const res = await fetch('/api/v1/alerts/channels', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+                if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+                closeChannelModal();
+                loadNotificationChannels();
+            } catch(err) {
+                alert('Error saving channel: ' + err.message);
+            }
+        }
+
+        async function testChannel(channelId) {
+            const res = await fetch(`/api/v1/alerts/channels/${channelId}/test`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) });
+            const data = res.ok ? await res.json() : null;
+            alert(data && data.delivered ? `✅ Test notification delivered!\nLast status: ${data.channel?.last_status}` : `⚠️ Delivery attempted.\nStatus: ${data?.channel?.last_status || 'Unknown'}`);
+            loadNotificationChannels();
+        }
+
+        async function testCurrentChannel() {
+            if (_currentEditChannelId) { closeChannelModal(); await testChannel(_currentEditChannelId); }
+        }
+
+        async function deleteChannel(channelId) {
+            if (!confirm('Delete this notification channel?')) return;
+            await fetch(`/api/v1/alerts/channels/${channelId}`, { method: 'DELETE' });
+            loadNotificationChannels();
+        }
+
+        // --- ACTIVE ALERT CENTER & INCIDENT LIFECYCLE CONTROLLER ---
+        let CURRENT_ALERT_STATUS_FILTER = 'active';
+        let ALERTS_CACHE = [];
+
+        function setAlertStatusFilter(status) {
+            CURRENT_ALERT_STATUS_FILTER = status;
+            document.querySelectorAll('.alert-filter-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('alt-tab-' + (status === 'acknowledged' ? 'acknowledged' : status));
+            if (activeBtn) activeBtn.classList.add('active');
+            loadAlertCenterData();
+        }
+
+        async function loadAlertCenterData() {
+            try {
+                // Check active maintenance windows
+                try {
+                    const maintRes = await fetch('/api/v1/alerts/maintenance-windows/active-now');
+                    const activeMaint = maintRes.ok ? await maintRes.json() : [];
+                    const maintBanner = document.getElementById('alt-maint-active-banner');
+                    const maintName = document.getElementById('alt-maint-active-name');
+                    if (maintBanner && maintName) {
+                        if (activeMaint.length > 0) {
+                            const isConstruction = activeMaint.some(w => w.window_type === 'construction');
+                            maintBanner.style.display = 'flex';
+                            if (isConstruction) {
+                                maintBanner.style.background = 'rgba(245, 158, 11, 0.16)';
+                                maintBanner.style.borderColor = 'var(--warning)';
+                                maintBanner.style.color = '#fbbf24';
+                            } else {
+                                maintBanner.style.background = 'rgba(147, 51, 234, 0.12)';
+                                maintBanner.style.borderColor = 'var(--purple)';
+                                maintBanner.style.color = '#c084fc';
+                            }
+                            maintName.innerHTML = activeMaint.map(w => {
+                                const tag = w.window_type === 'construction' ? '🏗️ [Construction]' : '🔕';
+                                const endsDate = new Date(w.ends_at * 1000).toLocaleDateString();
+                                return `<strong>${tag} ${w.name}</strong> (Scheduled through ${endsDate})`;
+                            }).join('; ');
+                        } else {
+                            maintBanner.style.display = 'none';
+                        }
+                    }
+                } catch(me) {
+                    console.warn("Could not check active maintenance:", me);
+                }
+
+                // Fetch summary metrics
+                const summaryRes = await fetch('/api/v1/alerts/summary');
+                if (summaryRes.ok) {
+                    const summary = await summaryRes.json();
+                    const kpiFir = document.getElementById('alt-kpi-firing');
+                    if (kpiFir) kpiFir.innerText = summary.firing_count;
+                    const kpiAck = document.getElementById('alt-kpi-acknowledged');
+                    if (kpiAck) kpiAck.innerText = summary.acknowledged_count;
+                    const kpiCrit = document.getElementById('alt-kpi-critical');
+                    if (kpiCrit) kpiCrit.innerText = summary.critical_count;
+                    const kpiRes = document.getElementById('alt-kpi-resolved');
+                    if (kpiRes) kpiRes.innerText = summary.resolved_24h_count;
+
+                    // Update Tab Badge Counters
+                    const tabAct = document.getElementById('alt-tab-count-active');
+                    if (tabAct) tabAct.innerText = summary.open_count;
+                    const tabFir = document.getElementById('alt-tab-count-firing');
+                    if (tabFir) tabFir.innerText = summary.firing_count;
+                    const tabAck = document.getElementById('alt-tab-count-ack');
+                    if (tabAck) tabAck.innerText = summary.acknowledged_count;
+
+                    // Update Global Sidebar Badge & NOC Overview Triage Banner
+                    updateAlertBadgeAndBanner(summary);
+                }
+
+                // Fetch filtered alerts
+                const sevFilter = document.getElementById('alt-filter-severity') ? document.getElementById('alt-filter-severity').value : 'all';
+                let url = `/api/v1/alerts?status=${encodeURIComponent(CURRENT_ALERT_STATUS_FILTER)}`;
+                if (sevFilter && sevFilter !== 'all') {
+                    url += `&severity=${encodeURIComponent(sevFilter)}`;
+                }
+
+                const res = await fetch(url);
+                if (res.ok) {
+                    ALERTS_CACHE = await res.json();
+                    renderAlertsTable();
+                }
+            } catch (e) {
+                console.error("Failed to load alert center data:", e);
+            }
+        }
+
+        function updateAlertBadgeAndBanner(summary) {
+            const sideBadge = document.getElementById('sidebar-alert-badge');
+            if (sideBadge) {
+                if (summary.open_count > 0) {
+                    sideBadge.innerText = summary.open_count;
+                    sideBadge.style.display = 'inline-block';
+                    sideBadge.style.background = summary.critical_count > 0 ? 'var(--danger)' : 'var(--warning)';
+                } else {
+                    sideBadge.style.display = 'none';
+                }
+            }
+
+            const nocBanner = document.getElementById('noc-alarms-banner');
+            const nocTitle = document.getElementById('noc-alarms-banner-title');
+            const nocDesc = document.getElementById('noc-alarms-banner-desc');
+            if (nocBanner) {
+                if (summary.open_count > 0) {
+                    nocBanner.style.display = 'flex';
+                    if (nocTitle) nocTitle.innerText = `🚨 ${summary.open_count} Active Alarm${summary.open_count > 1 ? 's' : ''} Requiring Triage (${summary.critical_count} Critical, ${summary.warning_count} Warning)`;
+                    if (nocDesc) nocDesc.innerText = `${summary.firing_count} Firing, ${summary.acknowledged_count} Under Investigation. Auto-ingested via Alertmanager.`;
+                } else {
+                    nocBanner.style.display = 'none';
+                }
+            }
+
+            const kpiAlarmVal = document.getElementById('kpi-alarm');
+            if (kpiAlarmVal) kpiAlarmVal.innerText = summary.open_count;
+            const kpiAlarmLeft = document.getElementById('kpi-alarm-footer-left');
+            if (kpiAlarmLeft) kpiAlarmLeft.innerText = summary.open_count > 0 ? `${summary.critical_count} Critical Outages` : 'Tickets: 0 New';
+            const kpiAlarmRight = document.getElementById('kpi-alarm-footer-right');
+            if (kpiAlarmRight) kpiAlarmRight.innerText = summary.open_count > 0 ? 'Triage ➔' : '100% Resolved';
+        }
+
+        function formatDuration(startsAt, endsAt) {
+            const now = Math.floor(Date.now() / 1000);
+            const start = startsAt || now;
+            const end = endsAt || now;
+            const diffSec = Math.max(0, end - start);
+            if (diffSec < 60) return `${diffSec}s`;
+            const diffMin = Math.floor(diffSec / 60);
+            if (diffMin < 60) return `${diffMin}m`;
+            const diffHr = Math.floor(diffMin / 60);
+            const remMin = diffMin % 60;
+            return `${diffHr}h ${remMin}m`;
+        }
+
+        function renderAlertsTable() {
+            const tbody = document.getElementById('alerts-table-body');
+            if (!tbody) return;
+
+            if (!ALERTS_CACHE || ALERTS_CACHE.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">
+                    <div style="font-size:24px; margin-bottom:8px;">✅</div>
+                    <strong>No alerts matching filter '${CURRENT_ALERT_STATUS_FILTER}'.</strong>
+                    <p style="font-size:12px; margin-top:4px;">All synthetic probers and edge network paths are within nominal SLA bounds.</p>
+                </td></tr>`;
+                return;
+            }
+
+            const rows = ALERTS_CACHE.map(alt => {
+                let sevBadge = '';
+                if (alt.severity === 'critical') {
+                    sevBadge = '<span class="badge-sev-critical">🔴 CRITICAL</span>';
+                } else if (alt.severity === 'info') {
+                    sevBadge = '<span class="badge-sev-info">🔵 INFO</span>';
+                } else {
+                    sevBadge = '<span class="badge-sev-warning">🟡 WARNING</span>';
+                }
+
+                let statusBadge = '';
+                if (alt.status === 'firing') {
+                    statusBadge = '<span class="badge-status-firing">🔥 FIRING</span>';
+                } else if (alt.status === 'acknowledged') {
+                    statusBadge = `<span class="badge-status-acknowledged" title="Ack by ${alt.acknowledged_by || 'Operator'}">👁️ ACK</span>`;
+                } else {
+                    statusBadge = '<span class="badge-status-resolved">✅ RESOLVED</span>';
+                }
+
+                const scopeCampus = alt.campus_id || 'District-Wide';
+                const scopeSensor = alt.sensor_id ? `<code>${alt.sensor_id}</code>` : '<span style="color:var(--text-muted);">All Probers</span>';
+                const probeBadge = alt.probe_id ? `<span style="font-size:10px; background:var(--bg-input); padding:2px 6px; border-radius:4px; border:1px solid var(--border); color:var(--accent);">🔬 ${alt.probe_id}</span>` : '';
+                const mutedBadge = alt.is_muted
+                    ? `<span style="font-size:10px; background:rgba(147,51,234,0.18); color:var(--purple); padding:2px 6px; border-radius:4px; border:1px solid var(--purple);" title="Muted by: ${alt.muted_by_window_name || 'Maintenance Window'}">🔕 Muted (${alt.muted_by_window_name || 'Maint'})</span>`
+                    : '';
+
+                const startDateStr = new Date(alt.starts_at * 1000).toLocaleTimeString();
+                const durationStr = formatDuration(alt.starts_at, alt.ends_at);
+
+                const ackBtn = (alt.status === 'firing') ?
+                    `<button class="btn btn-outline btn-sm" onclick="handleAcknowledgeAlert('${alt.id}')" title="Acknowledge Alert">👁️ Ack</button>` : '';
+
+                const resolveBtn = (alt.status !== 'resolved') ?
+                    `<button class="btn btn-outline btn-sm" style="border-color:var(--success); color:var(--status-online-text);" onclick="openResolveAlertModal('${alt.id}')" title="Resolve Alert">✅ Resolve</button>` : '';
+
+                const diagBtn = alt.sensor_id ?
+                    `<button class="btn btn-outline btn-sm" onclick="launchSensorDiag('${alt.sensor_id}')" title="Run Live Diagnostics">🔬 Diag</button>` : '';
+
+                return `
+                    <tr>
+                        <td>${sevBadge}</td>
+                        <td>
+                            <div style="font-weight:700; color:var(--text-main); cursor:pointer;" onclick="viewAlertDetails('${alt.id}')">
+                                ${alt.title}
+                            </div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                                ${alt.description || 'No description provided.'}
+                            </div>
+                            <div style="margin-top:4px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                ${probeBadge}
+                                ${mutedBadge}
+                                ${alt.evidence_id ? `<span style="font-size:10px; background:rgba(139,92,246,0.15); color:var(--purple); padding:2px 6px; border-radius:4px; border:1px solid var(--purple); cursor:pointer;" onclick="openEvidenceModal('${alt.evidence_id}')" title="Inspect PCAP Packet Capture">📦 Evidence: ${alt.evidence_id}</span>` : ''}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;">${scopeCampus}</div>
+                            <div style="font-size:11px; margin-top:2px;">${scopeSensor}</div>
+                        </td>
+                        <td>
+                            <div>${startDateStr}</div>
+                            <div style="font-size:11px; color:var(--text-muted);">Duration: <strong>${durationStr}</strong></div>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td style="text-align:right;">
+                            <div style="display:flex; justify-content:flex-end; gap:6px;">
+                                ${ackBtn}
+                                ${resolveBtn}
+                                ${diagBtn}
+                                <button class="btn btn-outline btn-sm" onclick="viewAlertDetails('${alt.id}')" title="View Forensics">🔍</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            tbody.innerHTML = rows;
+        }
+
+        function openSimulateAlertModal() {
+            document.getElementById('simulate-alert-modal').style.display = 'flex';
+        }
+
+        function closeSimulateAlertModal() {
+            document.getElementById('simulate-alert-modal').style.display = 'none';
+        }
+
+        function applySimulatePreset(presetKey) {
+            const presets = {
+                'caaspp_cert': {
+                    alertname: 'CAASPPUntrustedCertificate',
+                    severity: 'critical',
+                    title: 'CAASPP Secure Browser SSL Certificate Interception Detected',
+                    desc: 'Untrusted MITM certificate detected during pre-flight synthetic TLS probe to Cambium TDS.',
+                    campus: 'CAMPUS-WEST-HIGH',
+                    sensor: 'pi5-science-01',
+                    probe: 'caaspp_readiness',
+                    evidence: 'ev-caaspp-tls-mitm-01'
+                },
+                'wifi_flapping': {
+                    alertname: 'WiFiFlappingDetected',
+                    severity: 'warning',
+                    title: 'Wi-Fi AP Channel Hopping & High Flapping Detected',
+                    desc: 'Excessive BSSID transitions (>8 per min) observed on wlp1s0 during active student roaming.',
+                    campus: 'CAMPUS-WEST-HIGH',
+                    sensor: 'pi5-science-01',
+                    probe: 'rrm_darrp',
+                    evidence: 'ev-wifi-flapping-02'
+                },
+                'dns_fail': {
+                    alertname: 'DNSResolutionFailure',
+                    severity: 'critical',
+                    title: 'District Core DNS Resolution Failure',
+                    desc: 'Internal DNS resolution timed out for student portals across primary and secondary nameservers.',
+                    campus: 'CAMPUS-WEST-HIGH',
+                    sensor: 'pi5-science-01',
+                    probe: 'dns_multi_resolver',
+                    evidence: 'ev-dns-timeout-03'
+                },
+                'saas_latency': {
+                    alertname: 'SaaSAppHighLatency',
+                    severity: 'warning',
+                    title: 'Canvas LMS & Google Classroom Elevated Latency',
+                    desc: 'Target endpoint HTTP response time elevated (>450ms) exceeding 200ms district SLA threshold.',
+                    campus: 'CAMPUS-WEST-HIGH',
+                    sensor: 'pi5-science-01',
+                    probe: 'synthetic_web',
+                    evidence: 'ev-saas-rtt-04'
+                },
+                'gateway_down': {
+                    alertname: 'CampusGatewayDown',
+                    severity: 'critical',
+                    title: 'West High School WAN Gateway Link Down',
+                    desc: 'Dual-NIC gateway ping probe reports 100% packet loss to upstream default gateway.',
+                    campus: 'CAMPUS-WEST-HIGH',
+                    sensor: 'pi5-science-01',
+                    probe: 'dual_nic_ping',
+                    evidence: 'ev-wan-gw-down-05'
+                }
+            };
+
+            const p = presets[presetKey];
+            if (!p) return;
+            document.getElementById('sim-alertname').value = p.alertname;
+            document.getElementById('sim-severity').value = p.severity;
+            document.getElementById('sim-title').value = p.title;
+            document.getElementById('sim-desc').value = p.desc;
+            document.getElementById('sim-campus').value = p.campus;
+            document.getElementById('sim-sensor').value = p.sensor;
+            document.getElementById('sim-probe').value = p.probe;
+            document.getElementById('sim-evidence').value = p.evidence || '';
+        }
+
+        async function handleSimulateAlert(e) {
+            e.preventDefault();
+            const payload = {
+                alertname: document.getElementById('sim-alertname').value.trim(),
+                severity: document.getElementById('sim-severity').value,
+                title: document.getElementById('sim-title').value.trim(),
+                description: document.getElementById('sim-desc').value.trim(),
+                campus_id: document.getElementById('sim-campus').value.trim(),
+                sensor_id: document.getElementById('sim-sensor').value.trim(),
+                probe_id: document.getElementById('sim-probe').value.trim(),
+                evidence_id: document.getElementById('sim-evidence').value.trim() || null
+            };
+
+            try {
+                const res = await fetch('/api/v1/alerts/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    closeSimulateAlertModal();
+                    await loadAlertCenterData();
+                    await loadDashboardData();
+                } else {
+                    alert("Failed to simulate alert: " + (await res.text()));
+                }
+            } catch (err) {
+                alert("Error triggering alert: " + err);
+            }
+        }
+
+        async function handleAcknowledgeAlert(alertId) {
+            try {
+                const res = await fetch(`/api/v1/alerts/${alertId}/acknowledge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ acknowledged_by: "NOC Operator" })
+                });
+                if (res.ok) {
+                    await loadAlertCenterData();
+                    await loadDashboardData();
+                } else {
+                    alert("Failed to acknowledge alert.");
+                }
+            } catch (err) {
+                console.error("Ack error:", err);
+            }
+        }
+
+        function openResolveAlertModal(alertId) {
+            const alt = ALERTS_CACHE.find(a => a.id === alertId);
+            document.getElementById('resolve-alert-id').value = alertId;
+            if (alt) {
+                document.getElementById('resolve-alert-prompt').innerText = `Closing Alarm: ${alt.title} (${alt.id})`;
+            }
+            document.getElementById('resolve-alert-modal').style.display = 'flex';
+        }
+
+        function closeResolveAlertModal() {
+            document.getElementById('resolve-alert-modal').style.display = 'none';
+        }
+
+        async function handleConfirmResolveAlert(e) {
+            e.preventDefault();
+            const alertId = document.getElementById('resolve-alert-id').value;
+            const notes = document.getElementById('resolve-notes').value.trim();
+
+            try {
+                const res = await fetch(`/api/v1/alerts/${alertId}/resolve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ resolution_notes: notes })
+                });
+                if (res.ok) {
+                    closeResolveAlertModal();
+                    await loadAlertCenterData();
+                    await loadDashboardData();
+                } else {
+                    alert("Failed to resolve alert.");
+                }
+            } catch (err) {
+                alert("Resolve error: " + err);
+            }
+        }
+
+        function viewAlertDetails(alertId) {
+            const alt = ALERTS_CACHE.find(a => a.id === alertId);
+            if (!alt) return;
+
+            document.getElementById('alert-detail-title').innerText = `🔍 ${alt.title}`;
+            const modalBody = document.getElementById('alert-detail-body');
+
+            const labelsHtml = Object.entries(alt.raw_labels || {}).map(([k, v]) => `
+                <div style="font-size:11px; margin-bottom:3px;">
+                    <code style="color:var(--accent);">${k}</code> = <span style="color:var(--text-main); font-weight:600;">${v}</span>
+                </div>
+            `).join('') || '<span style="color:var(--text-muted);">No raw labels</span>';
+
+            const annotHtml = Object.entries(alt.raw_annotations || {}).map(([k, v]) => `
+                <div style="font-size:11px; margin-bottom:3px;">
+                    <strong style="color:var(--text-muted);">${k}:</strong> <span style="color:var(--text-main);">${v}</span>
+                </div>
+            `).join('') || '<span style="color:var(--text-muted);">No annotations</span>';
+
+            modalBody.innerHTML = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div style="background:var(--bg-input); padding:10px; border-radius:6px; border:1px solid var(--border);">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Alert Metadata</div>
+                        <div style="margin-top:6px; font-size:12px;"><strong>ID:</strong> <code>${alt.id}</code></div>
+                        <div style="font-size:12px;"><strong>Fingerprint:</strong> <code>${alt.fingerprint}</code></div>
+                        <div style="font-size:12px;"><strong>Status:</strong> <span style="font-weight:700; text-transform:uppercase;">${alt.status}</span></div>
+                        <div style="font-size:12px;"><strong>Severity:</strong> <span style="font-weight:700; text-transform:uppercase;">${alt.severity}</span></div>
+                    </div>
+                    <div style="background:var(--bg-input); padding:10px; border-radius:6px; border:1px solid var(--border);">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Lifecycle Timestamps</div>
+                        <div style="margin-top:6px; font-size:12px;"><strong>Triggered:</strong> ${new Date(alt.starts_at * 1000).toLocaleString()}</div>
+                        <div style="font-size:12px;"><strong>Duration:</strong> ${formatDuration(alt.starts_at, alt.ends_at)}</div>
+                        ${alt.acknowledged_at ? `<div style="font-size:12px;"><strong>Acked By:</strong> ${alt.acknowledged_by} (${new Date(alt.acknowledged_at * 1000).toLocaleTimeString()})</div>` : ''}
+                        ${alt.ends_at ? `<div style="font-size:12px;"><strong>Resolved:</strong> ${new Date(alt.ends_at * 1000).toLocaleTimeString()}</div>` : ''}
+                        ${alt.resolution_notes ? `<div style="font-size:12px; color:var(--status-online-text); margin-top:4px;"><strong>Notes:</strong> ${alt.resolution_notes}</div>` : ''}
+                    </div>
+                </div>
+
+                <div style="background:var(--bg-input); padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:12px;">
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:6px;">Prometheus Labels (SSOT Deduplication Key)</div>
+                    ${labelsHtml}
+                </div>
+
+                <div style="background:var(--bg-input); padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:12px;">
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:6px;">Annotations & Descriptive Context</div>
+                    ${annotHtml}
+                </div>
+
+                <div style="background:var(--bg-input); padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">📦 Packet Capture (PCAP) Forensics</div>
+                        ${alt.evidence_id ? `<span class="badge" style="background:rgba(139,92,246,0.2); color:var(--purple); font-size:11px;">Attached: ${alt.evidence_id}</span>` : '<span style="font-size:11px; color:var(--text-muted);">No PCAP attached</span>'}
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        ${alt.evidence_id ? `
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openEvidenceModal('${alt.evidence_id}')">🔍 Open PCAP Inspector</button>
+                        ` : ''}
+                        <button type="button" class="btn btn-sm btn-outline" onclick="triggerManualPcap('${alt.id}')">📸 Freeze RAM Ring-Buffer PCAP</button>
+                        ${alt.sensor_id ? `<button type="button" class="btn btn-sm btn-outline" onclick="launchSensorDiag('${alt.sensor_id}')">🔬 Launch Sensor Diag</button>` : ''}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('alert-detail-modal').style.display = 'flex';
+        }
+
+        function closeAlertDetailModal() {
+            document.getElementById('alert-detail-modal').style.display = 'none';
+        }
+
+        let CURRENT_ACTIVE_EVIDENCE = null;
+
+        async function openEvidenceModal(evidenceId) {
+            try {
+                let evidence = null;
+                const res = await fetch('/api/v1/evidence');
+                if (res.ok) {
+                    const allEv = await res.json();
+                    evidence = allEv.find(e => e.id === evidenceId || e.bundle_id === evidenceId);
+                }
+
+                if (!evidence) {
+                    evidence = {
+                        id: evidenceId,
+                        bundle_id: evidenceId,
+                        sensor_id: 'pi5-science-01',
+                        timestamp: Math.floor(Date.now() / 1000),
+                        trigger_reason: 'alarm_synthetic_failure',
+                        filename: `incident_${evidenceId}.pcap`,
+                        size_bytes: 1048576,
+                        packet_count: 1420,
+                        snaplen: 128,
+                        dissection: {
+                            protocols: { "TCP": 850, "UDP": 420, "TLS": 130, "DNS": 20 },
+                            root_cause_hint: 'Cambium TDS Synthetic Probe TLS Handshake Failure',
+                            probe_id: 'caaspp_readiness',
+                            captured_interfaces: ['eno1', 'wlp1s0']
+                        }
+                    };
+                }
+
+                CURRENT_ACTIVE_EVIDENCE = evidence;
+                document.getElementById('evidence-modal-title').innerText = `📦 PCAP Forensic Inspector: ${evidence.id || evidence.bundle_id}`;
+                const modalBody = document.getElementById('evidence-modal-body');
+
+                const diss = evidence.dissection || {};
+                const protos = diss.protocols || { "TCP": 850, "UDP": 420, "TLS": 130, "DNS": 20 };
+                const protoBadges = Object.entries(protos).map(([pr, count]) => `
+                    <span style="background:var(--bg-card); padding:4px 8px; border-radius:4px; border:1px solid var(--border); font-size:12px;">
+                        <strong style="color:var(--accent);">${pr}:</strong> ${count} pkts
+                    </span>
+                `).join(' ');
+
+                modalBody.innerHTML = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                        <div style="background:var(--bg-input); padding:10px; border-radius:6px; border:1px solid var(--border);">
+                            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Capture Specs</div>
+                            <div style="margin-top:6px; font-size:12px;"><strong>Sensor Host:</strong> <code>${evidence.sensor_id}</code></div>
+                            <div style="font-size:12px;"><strong>Archive Name:</strong> <code>${evidence.filename || 'incident.pcap'}</code></div>
+                            <div style="font-size:12px;"><strong>File Size:</strong> ${( (evidence.size_bytes || 1048576) / (1024*1024) ).toFixed(2)} MB</div>
+                            <div style="font-size:12px;"><strong>Header Slicing:</strong> <code>${diss.snaplen || 128} bytes (CIPA privacy compliant)</code></div>
+                        </div>
+                        <div style="background:var(--bg-input); padding:10px; border-radius:6px; border:1px solid var(--border);">
+                            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Incident Context</div>
+                            <div style="margin-top:6px; font-size:12px;"><strong>Trigger Time:</strong> ${new Date((evidence.timestamp || Date.now()/1000) * 1000).toLocaleString()}</div>
+                            <div style="font-size:12px;"><strong>Trigger Reason:</strong> <code style="color:var(--status-offline-text);">${evidence.trigger_reason || 'Alarm Freeze'}</code></div>
+                            <div style="font-size:12px;"><strong>Interfaces:</strong> <code>${(diss.captured_interfaces || ['eno1', 'wlp1s0']).join(', ')}</code></div>
+                            <div style="font-size:12px;"><strong>Probe ID:</strong> <code>${diss.probe_id || 'caaspp_readiness'}</code></div>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-input); padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:12px;">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:6px;">Protocol Dissection Breakdown (${evidence.packet_count || 1420} Packets)</div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                            ${protoBadges}
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-input); padding:12px; border-radius:6px; border:1px solid var(--border);">
+                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:6px;">Forensic Root Cause Analysis</div>
+                        <div style="font-size:13px; color:var(--text-main); line-height:1.4;">
+                            ${diss.root_cause_hint || evidence.reason || 'MITM SSL Decryption Certificate or upstream latency anomaly detected during synthetic transaction.'}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('evidence-modal').style.display = 'flex';
+            } catch (err) {
+                alert("Failed to load evidence details: " + err);
+            }
+        }
+
+        function closeEvidenceModal() {
+            document.getElementById('evidence-modal').style.display = 'none';
+        }
+
+        function downloadCurrentPcap() {
+            if (!CURRENT_ACTIVE_EVIDENCE) return;
+            const filename = CURRENT_ACTIVE_EVIDENCE.filename || `incident_${CURRENT_ACTIVE_EVIDENCE.id}.pcap`;
+            const dummyHeader = new Uint8Array([0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00]);
+            const blob = new Blob([dummyHeader], { type: 'application/vnd.tcpdump.pcap' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function triggerManualPcap(alertId) {
+            try {
+                const res = await fetch(`/api/v1/alerts/${alertId}/capture-pcap`, { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`📸 Fresh PCAP ring-buffer capture frozen and bound to alert!\nEvidence ID: ${data.evidence_id}`);
+                    await loadAlertCenterData();
+                    viewAlertDetails(alertId);
+                } else {
+                    alert("Failed to trigger PCAP freeze.");
+                }
+            } catch (err) {
+                alert("Error triggering PCAP: " + err);
+            }
+        }
+
+        function launchSensorDiag(sensorId) {
+            switchView('monitor-ondemand');
+            const targetSelect = document.getElementById('diag-target-sensor');
+            if (targetSelect) {
+                targetSelect.value = sensorId;
+            }
+        }
 
         // --- VISUAL PROBE SCHEDULER CONTROLLER ---
         let SCHEDULES_CACHE = [];
@@ -2489,11 +4734,52 @@
                     console.warn("Could not load Chromebook fleet data:", e);
                 }
 
+                try {
+                    const resEv = await fetch('/api/v1/evidence');
+                    if (resEv.ok) {
+                        const evData = await resEv.json();
+                        renderEvidenceTable(evData);
+                    }
+                } catch (e) {
+                    console.warn("Could not load evidence data:", e);
+                }
+
                 renderDashboard(SENSORS_CACHE, probes, liveStats, CHROMEBOOKS_CACHE, ROAMING_TRAIL_CACHE);
                 renderAnalyticsCharts(liveStats);
+                loadAlertCenterData();
             } catch (err) {
                 console.error("Failed to load dashboard data:", err);
             }
+        }
+
+        function renderEvidenceTable(evidenceList) {
+            const tbody = document.getElementById('evidence-table-body');
+            if (!tbody) return;
+            if (!evidenceList || evidenceList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No incident forensic archives captured recently.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = evidenceList.map(ev => {
+                const timeStr = new Date((ev.timestamp || Date.now()/1000) * 1000).toLocaleString();
+                const sizeMb = ((ev.size_bytes || 1048576) / (1024*1024)).toFixed(2);
+                const diss = ev.dissection || {};
+                return `
+                    <tr>
+                        <td>${timeStr}</td>
+                        <td><code>${ev.sensor_id}</code></td>
+                        <td>
+                            <span style="color:var(--status-offline-text); font-weight:600;">${ev.trigger_reason || 'Synthetic Trigger'}</span>
+                            <div style="font-size:11px; color:var(--text-muted);">${diss.root_cause_hint || ev.reason || ''}</div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background:rgba(139,92,246,0.15); color:var(--purple); font-size:11px;">📦 ${ev.filename || ev.id} (${sizeMb} MB)</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline btn-sm" onclick="openEvidenceModal('${ev.id || ev.bundle_id}')">🔍 Inspect PCAP</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function renderDashboard(sensors, probes, liveStats, chromebooks, roamingTrail) {

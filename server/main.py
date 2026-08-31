@@ -36,6 +36,7 @@ from server.routers import (
     probes,
     schedules,
     telemetry,
+    alerts,
     ui
 )
 
@@ -278,6 +279,7 @@ app.include_router(campuses.router)
 app.include_router(probes.router)
 app.include_router(schedules.router)
 app.include_router(telemetry.router)
+app.include_router(alerts.router)
 app.include_router(ui.router)
 
 if __name__ == "__main__":

@@ -1,0 +1,147 @@
+# Open Network Experience (ONE) — Prometheus & VictoriaMetrics Alerting Rules
+# Copyright (C) 2026 Open Network Experience Authors.
+# Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
+
+groups:
+  - name: one-k12-mission-critical-alerts
+    interval: 15s
+    rules:
+      # 1. State Testing (CAASPP / Cambium TDS) Untrusted TLS Certificate
+      - alert: CAASPPUntrustedCertificate
+        expr: probe_http_ssl{job="blackbox-saas-apps", instance=~".*cambiumtds.*"} == 0 or probe_success{job="blackbox-saas-apps", instance=~".*cambiumtds.*"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          category: "State Testing"
+          probe_id: "caaspp_readiness"
+          autocapture_pcap: "true"
+        annotations:
+          summary: "CAASPP Secure Browser SSL Certificate Interception Detected"
+          description: "Cambium TDS synthetic probe failed TLS handshake or encountered untrusted MITM certificate. State Testing lockdown browser will block student logins."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_CAASPP.md"
+
+      # 2. Campus Gateway WAN Link Down
+      - alert: CampusGatewayDown
+        expr: probe_success{job="blackbox-gateway-ping"} == 0
+        for: 45s
+        labels:
+          severity: critical
+          category: "WAN Infrastructure"
+          probe_id: "dual_nic_ping"
+          autocapture_pcap: "true"
+        annotations:
+          summary: "Campus WAN Default Gateway Unreachable"
+          description: "Dual-NIC continuous ICMP/TCP gateway ping reports 100% packet loss to default gateway."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_GATEWAY.md"
+
+      # 3. Core DNS Multi-Resolver Failure
+      - alert: DNSResolutionFailure
+        expr: probe_success{job="blackbox-dns-probes"} == 0 or probe_dns_lookup_time_seconds{job="blackbox-dns-probes"} > 0.500
+        for: 30s
+        labels:
+          severity: critical
+          category: "Core Services"
+          probe_id: "dns_multi_resolver"
+          autocapture_pcap: "true"
+        annotations:
+          summary: "District Core DNS Multi-Resolver Outage / High Latency"
+          description: "Synthetic DNS resolution to internal or upstream nameservers failed or exceeded 500ms threshold."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_DNS.md"
+
+      # 4. Wi-Fi AP Flapping & Roam Degradation
+      - alert: WiFiFlappingDetected
+        expr: rate(wifi_roam_events_total[5m]) > 0.15 or wifi_link_quality_pct < 40
+        for: 1m
+        labels:
+          severity: warning
+          category: "RF Health"
+          probe_id: "rrm_darrp"
+          autocapture_pcap: "true"
+        annotations:
+          summary: "Wi-Fi AP Channel Hopping & High Flapping Rate"
+          description: "Excessive BSSID transitions or degraded RF link quality detected on edge Wi-Fi interface."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_WIFI.md"
+
+      # 5. District Core SaaS Outage (Canvas / Google Classroom / i-Ready)
+      - alert: SaaSAppUnreachable
+        expr: probe_success{job="blackbox-saas-apps"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: "District SaaS"
+          probe_id: "synthetic_web"
+          autocapture_pcap: "true"
+        annotations:
+          summary: "District Core Learning Platform Endpoint Unreachable"
+          description: "Synthetic HTTP check to educational SaaS portal (Canvas LMS, Google Classroom, or i-Ready) returned non-200 status code."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_SAAS.md"
+
+      # 6. District SaaS Elevated Latency Spike
+      - alert: SaaSAppHighLatency
+        expr: probe_duration_seconds{job="blackbox-saas-apps"} > 0.450
+        for: 2m
+        labels:
+          severity: warning
+          category: "District SaaS"
+          probe_id: "synthetic_web"
+          autocapture_pcap: "false"
+        annotations:
+          summary: "District Learning Application Latency SLA Spike"
+          description: "HTTP round-trip response time for SaaS applications is elevated (>450ms), degrading classroom UX."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_SAAS.md"
+
+      # 7. VoIP & Zoom Media Stream Degradation
+      - alert: VoIPJitterDegraded
+        expr: voip_mos_score < 3.8 or voip_jitter_ms > 30.0 or voip_packet_loss_pct > 2.0
+        for: 1m
+        labels:
+          severity: warning
+          category: "Real-Time Media"
+          probe_id: "voip_jitter"
+          autocapture_pcap: "true"
+        annotations:
+          summary: "Classroom VoIP & Zoom RTP Stream Jitter Degradation"
+          description: "Mean Opinion Score (MOS) degraded below 3.8 or UDP packet jitter exceeds 30ms threshold."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_VOIP.md"
+
+      # 8. Edge Hardware Sensor Offline
+      - alert: SensorAgentOffline
+        expr: up{job="sensor-node-metrics"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: "Fleet Health"
+          probe_id: "node_exporter"
+          autocapture_pcap: "false"
+        annotations:
+          summary: "Edge Telemetry Prober Hardware Offline"
+          description: "Sensor host failed to report Prometheus metrics or zero-trust heartbeat for >120 seconds."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_FLEET.md"
+
+      # 9. CIPA Safety Filter Inspection Bypass
+      - alert: CIPABypassDetected
+        expr: cipa_test_domain_blocked == 0
+        for: 30s
+        labels:
+          severity: critical
+          category: "Student Safety"
+          probe_id: "cipa_compliance"
+          autocapture_pcap: "true"
+        annotations:
+          summary: "CIPA Content Filter Inspection Bypass / Ineffective Block"
+          description: "Synthetic prober accessed prohibited test domain without firewall SSL/DNS block interception."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_CIPA.md"
+
+      # 10. Student Chromebook Fleet RF Signal Critical
+      - alert: ChromebookFleetRssiCritical
+        expr: chromebook_wifi_rssi_dbm < -78
+        for: 2m
+        labels:
+          severity: warning
+          category: "1:1 Fleet"
+          probe_id: "chromebook_telemetry"
+          autocapture_pcap: "false"
+        annotations:
+          summary: "Student Chromebook Fleet Weak Wi-Fi Signal Coverage"
+          description: "Cluster of student 1:1 Chromebooks operating below -78 dBm RSSI, indicating AP coverage hole."
+          runbook_url: "https://github.com/leifdavisson/Open_Network_Experience/blob/main/docs/RUNBOOK_CHROMEBOOK.md"

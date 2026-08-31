@@ -407,3 +407,129 @@ class SensorStatusResponseSafe(BaseModel):
             reported_containers=reported_containers,
             target_config=safe_config
         )
+
+# --- Alertmanager & Alert Lifecycle Schemas ---
+
+class AlertmanagerAlert(BaseModel):
+    status: str = Field("firing", description="Alert status: 'firing' or 'resolved'")
+    labels: Dict[str, str] = Field(default_factory=dict, description="Key-value labels identifying the alert")
+    annotations: Dict[str, str] = Field(default_factory=dict, description="Descriptive annotations")
+    startsAt: Optional[str] = Field(None, description="ISO8601 start timestamp")
+    endsAt: Optional[str] = Field(None, description="ISO8601 end timestamp")
+    generatorURL: Optional[str] = Field(None, description="Source URL / rule link")
+    fingerprint: Optional[str] = Field(None, description="Unique Alertmanager fingerprint hash")
+
+class AlertmanagerWebhookPayload(BaseModel):
+    version: Optional[str] = "4"
+    groupKey: Optional[str] = None
+    status: Optional[str] = "firing"
+    receiver: Optional[str] = None
+    groupLabels: Optional[Dict[str, str]] = Field(default_factory=dict)
+    commonLabels: Optional[Dict[str, str]] = Field(default_factory=dict)
+    commonAnnotations: Optional[Dict[str, str]] = Field(default_factory=dict)
+    externalURL: Optional[str] = None
+    alerts: List[AlertmanagerAlert] = Field(default_factory=list)
+
+class AlertRecord(BaseModel):
+    id: str
+    fingerprint: str
+    status: str = Field(..., description="'firing', 'acknowledged', 'resolved'")
+    severity: str = Field("warning", description="'critical', 'warning', 'info'")
+    title: str
+    description: Optional[str] = ""
+    sensor_id: Optional[str] = None
+    campus_id: Optional[str] = None
+    probe_id: Optional[str] = None
+    starts_at: int
+    ends_at: Optional[int] = None
+    acknowledged_at: Optional[int] = None
+    acknowledged_by: Optional[str] = None
+    resolution_notes: Optional[str] = ""
+    evidence_id: Optional[str] = None
+    is_muted: Optional[bool] = False
+    muted_by_window_id: Optional[str] = None
+    muted_by_window_name: Optional[str] = None
+    raw_labels: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    raw_annotations: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    updated_at: Optional[int] = None
+
+class AlertAcknowledgeRequest(BaseModel):
+    acknowledged_by: Optional[str] = Field("NOC Operator", description="Operator identity acknowledging alarm")
+
+class AlertResolveRequest(BaseModel):
+    resolution_notes: Optional[str] = Field("Resolved via CMP Webhook/Console", description="Resolution notes")
+
+class AlertSimulateRequest(BaseModel):
+    alertname: str = Field("CAASPPUntrustedCertificate", description="Alarm name / rule")
+    severity: str = Field("critical", description="Severity: critical, warning, info")
+    title: Optional[str] = Field("CAASPP Secure Browser SSL Certificate Interception Detected", description="Alarm Title")
+    description: Optional[str] = Field("Untrusted MITM certificate detected during pre-flight synthetic TLS probe to Cambium TDS.", description="Alarm Details")
+    campus_id: Optional[str] = Field("CAMPUS-WEST-HIGH", description="Target campus")
+    sensor_id: Optional[str] = Field("pi5-science-01", description="Target sensor")
+    probe_id: Optional[str] = Field("caaspp_readiness", description="Target synthetic probe")
+    evidence_id: Optional[str] = Field(None, description="Linked PCAP or log forensic ID")
+
+class AlertSummaryResponse(BaseModel):
+    open_count: int
+    firing_count: int
+    acknowledged_count: int
+    critical_count: int
+    warning_count: int
+    info_count: int
+    resolved_24h_count: int
+    total_count: int
+
+class CustomAlertRuleSpec(BaseModel):
+    id: str = Field(..., description="Unique Rule identifier")
+    name: str = Field(..., description="Human-readable rule name")
+    probe_id: str = Field(..., description="Target probe: caaspp_readiness, dual_nic_ping, dns_multi_resolver, etc.")
+    metric: str = Field("latency_ms", description="Metric to evaluate: latency_ms, packet_loss_pct, mos_score, failure_count, etc.")
+    operator: str = Field("gt", description="Comparison operator: gt, lt, eq, gte, lte")
+    threshold_value: float = Field(..., description="Numerical threshold limit")
+    unit: Optional[str] = Field("ms", description="Unit of measurement: ms, %, score, count")
+    duration_seconds: Optional[int] = Field(30, description="Evaluation window / duration before firing")
+    severity: str = Field("critical", description="Severity level: critical, warning, info")
+    campus_id: Optional[str] = Field(None, description="Scope filter by campus or None for all")
+    sensor_id: Optional[str] = Field(None, description="Scope filter by sensor or None for all")
+    channels: List[str] = Field(default_factory=list, description="Target notification channel IDs")
+    autocapture_pcap: bool = Field(True, description="Automatically freeze RAM circular PCAP buffer on trigger")
+    is_active: bool = Field(True, description="Whether rule evaluation is active")
+    created_at: Optional[int] = None
+    updated_at: Optional[int] = None
+
+class NotificationChannelSpec(BaseModel):
+    id: str = Field(..., description="Unique Channel identifier")
+    name: str = Field(..., description="Channel name: e.g. Primary Slack, Teams Alerting")
+    channel_type: str = Field("slack", description="Type: slack, teams, webhook, pagerduty, email")
+    endpoint_url: str = Field(..., description="Webhook URL, API endpoint, or SMTP host")
+    auth_headers: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Custom HTTP headers, auth tokens, or SMTP configuration")
+    min_severity: str = Field("warning", description="Minimum severity to dispatch: info, warning, critical")
+    is_active: bool = Field(True, description="Whether outbound dispatch is enabled")
+    last_dispatched_at: Optional[int] = None
+    last_status: Optional[str] = None
+    created_at: Optional[int] = None
+    updated_at: Optional[int] = None
+
+class ChannelTestRequest(BaseModel):
+    sample_title: Optional[str] = "TEST ALARM — Open Network Experience (ONE)"
+    sample_severity: Optional[str] = "warning"
+    sample_message: Optional[str] = "This is a test notification verifying outbound webhook delivery from the ONE Central Monitoring Platform."
+
+class MaintenanceWindowSpec(BaseModel):
+    id: str = Field(..., description="Unique Maintenance Window ID")
+    name: str = Field(..., description="Descriptive maintenance window title")
+    description: Optional[str] = Field(None, description="Reason or change control ticket reference")
+    window_type: Optional[str] = Field("maintenance", description="Type: maintenance, construction, upgrade, renovation")
+    campus_id: Optional[str] = Field(None, description="Scope filter by campus (None = All)")
+    sensor_id: Optional[str] = Field(None, description="Scope filter by sensor (None = All)")
+    probe_id: Optional[str] = Field(None, description="Scope filter by probe (None = All)")
+    alertname_pattern: Optional[str] = Field(None, description="Glob/pattern match on alertname or None for all")
+    starts_at: int = Field(..., description="Start UTC epoch timestamp")
+    ends_at: int = Field(..., description="End UTC epoch timestamp")
+    is_active: bool = Field(True, description="Whether the window is enabled")
+    reminded_24h: Optional[bool] = Field(False, description="Whether 24-hour expiration warning was dispatched")
+    reminded_2h: Optional[bool] = Field(False, description="Whether 2-hour expiration warning was dispatched")
+    notify_channel_ids: Optional[List[str]] = Field(default_factory=list, description="Target notification channels for expiration warnings")
+    created_by: Optional[str] = Field("NOC Admin", description="Creator identity")
+    created_at: Optional[int] = None
+    updated_at: Optional[int] = None
