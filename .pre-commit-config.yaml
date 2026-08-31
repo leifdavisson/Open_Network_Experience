@@ -17,7 +17,7 @@ repos:
     rev: 1.7.8
     hooks:
       - id: bandit
-        args: [-ll, -r, server/, sensor/]
+        args: [-lll, -r, server/, sensor/]
 
   # 4. Standard formatting & hygiene hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
