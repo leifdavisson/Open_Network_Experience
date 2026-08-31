@@ -129,7 +129,7 @@ To deploy the ONE Chromebook Sensor across your school district or enterprise fl
 
 ```json
 {
-  "cmp_server_url": "https://cmp.your-district.edu:8000",
+  "cmp_server_url": "https://cmp.example.edu:8000",
   "api_key": "YOUR_DISTRICT_SENSOR_KEY",
   "campus_id": "CAMPUS-WEST-HIGH",
   "probe_interval_seconds": 60,

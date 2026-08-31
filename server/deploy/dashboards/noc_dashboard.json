@@ -97,7 +97,7 @@
                   {
                     "targetBlank": true,
                     "title": "⚡ Open CMP Live Diagnostics Action Center",
-                    "url": "http://10.98.2.125:8000/#view-monitor-ondemand"
+                    "url": "http://192.0.2.10:8000/#view-monitor-ondemand"
                   }
                 ]
               }

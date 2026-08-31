@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 540" width="1280" height="540" fill="none">
+  <defs>
+    <!-- Background Canvas Gradient -->
+    <radialGradient id="heroBg" cx="50%" cy="25%" r="85%">
+      <stop offset="0%" stop-color="#142036" />
+      <stop offset="55%" stop-color="#0B0F19" />
+      <stop offset="100%" stop-color="#05070D" />
+    </radialGradient>
+
+    <!-- Synthetic Hex Gradients -->
+    <linearGradient id="edgeProberGradHero" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+
+    <linearGradient id="controlPlaneGradHero" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0066FF" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+
+    <linearGradient id="clientExtGradHero" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#00F0FF" />
+    </linearGradient>
+
+    <linearGradient id="corePulseGradHero" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00F0FF" />
+      <stop offset="50%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#0066FF" />
+    </linearGradient>
+
+    <!-- Card Background Gradient -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#131D31" />
+      <stop offset="100%" stop-color="#0B1120" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="glowHero" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Animated Style Elements -->
+    <style>
+      @keyframes sweepGlow {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+      @keyframes floatHero {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes dashAnim {
+        to { stroke-dashoffset: -72; }
+      }
+      .animated-hex-hero { animation: floatHero 5s ease-in-out infinite; }
+      .animated-dash-hero { animation: dashAnim 8s linear infinite; }
+    </style>
+
+    <pattern id="gridHero" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#1E293B" stroke-width="1" opacity="0.4"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1280" height="540" fill="url(#heroBg)" rx="16" />
+  <rect width="1280" height="540" fill="url(#gridHero)" rx="16" />
+
+  <!-- Ambient Light Halos -->
+  <circle cx="640" cy="180" r="300" fill="#00D2FF" opacity="0.08" filter="url(#glowHero)"/>
+  <circle cx="200" cy="300" r="240" fill="#0066FF" opacity="0.06" filter="url(#glowHero)"/>
+  <circle cx="1080" cy="300" r="240" fill="#10B981" opacity="0.06" filter="url(#glowHero)"/>
+
+  <!-- Left Telemetry Display Card: Live SLAs -->
+  <g transform="translate(60, 60)">
+    <rect width="320" height="400" rx="16" fill="url(#cardGrad)" stroke="#22304A" stroke-width="1.5" />
+    <rect x="20" y="20" width="280" height="34" rx="8" fill="#0B0F19" stroke="#1E293B" />
+    <text x="35" y="42" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="800" fill="#38BDF8" letter-spacing="1">NOC EXECUTIVE SLA WALL</text>
+
+    <!-- Metric 1: Uptime -->
+    <g transform="translate(20, 75)">
+      <rect width="280" height="85" rx="10" fill="#0F172A" stroke="#10B981" stroke-width="1.2" />
+      <text x="18" y="28" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" fill="#64748B">STATE TESTING READINESS</text>
+      <text x="18" y="58" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="26" font-weight="900" fill="#10B981">100% PASS</text>
+      <text x="18" y="74" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="600" fill="#34D399">CAASPP &amp; Cambium TDS Verified</text>
+    </g>
+
+    <!-- Metric 2: Latency & RF -->
+    <g transform="translate(20, 175)">
+      <rect width="280" height="85" rx="10" fill="#0F172A" stroke="#00D2FF" stroke-width="1.2" />
+      <text x="18" y="28" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" fill="#64748B">SYNTHETIC ROUND-TRIP TIME</text>
+      <text x="18" y="58" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="26" font-weight="900" fill="#00D2FF">18.2 ms</text>
+      <text x="18" y="74" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="600" fill="#38BDF8">0.0% Jitter &amp; Packet Loss</text>
+    </g>
+
+    <!-- Metric 3: AP Roaming / RRM -->
+    <g transform="translate(20, 275)">
+      <rect width="280" height="95" rx="10" fill="#0F172A" stroke="#8B5CF6" stroke-width="1.2" />
+      <text x="18" y="28" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" fill="#64748B">WI-FI RRM / DARRP STABILITY</text>
+      <text x="18" y="58" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="24" font-weight="900" fill="#A78BFA">0 Flapping</text>
+      <text x="18" y="78" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="600" fill="#C4B5FD">6 GHz / Wi-Fi 6E Channel Locked</text>
+    </g>
+  </g>
+
+  <!-- Center Piece: Hero Synthetic Hex Pulse Mascot & Brand Slogan -->
+  <g transform="translate(640, 200)">
+    <g class="animated-hex-hero" transform="translate(0, 0)">
+      <g transform="translate(-160, -160) scale(0.625)">
+        <!-- Interlocking Segment A -->
+        <path d="M 256 50 L 395 130 L 395 210 L 310 160 L 256 128 L 202 160 L 170 140 Z"
+              fill="url(#edgeProberGradHero)" stroke="#00D2FF" stroke-width="2" />
+
+        <!-- Interlocking Segment B -->
+        <path d="M 420 175 L 420 337 L 281 418 L 281 320 L 335 288 L 335 225 Z"
+              fill="url(#controlPlaneGradHero)" stroke="#10B981" stroke-width="2" />
+
+        <!-- Interlocking Segment C -->
+        <path d="M 231 418 L 92 337 L 92 175 L 177 225 L 177 288 L 231 320 Z"
+              fill="url(#clientExtGradHero)" stroke="#0066FF" stroke-width="2" />
+
+        <!-- Inner Core Aperture & Pulse -->
+        <g filter="url(#glowHero)">
+          <polygon class="animated-dash-hero"
+                   points="256,180 320,217 320,295 256,332 192,295 192,217"
+                   fill="#0F172A" stroke="url(#corePulseGradHero)" stroke-width="5" stroke-dasharray="12 6" />
+          <path d="M 216 256 L 236 256 L 246 232 L 256 280 L 266 240 L 276 256 L 296 256"
+                fill="none" stroke="#00F0FF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="256" cy="256" r="5" fill="#10B981" />
+        </g>
+      </g>
+    </g>
+
+    <!-- Center Typography -->
+    <text x="0" y="110" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="34" font-weight="900" letter-spacing="-0.5" fill="#FFFFFF">
+      OPEN <tspan fill="#00D2FF">NETWORK</tspan> EXPERIENCE
+    </text>
+    <text x="0" y="145" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700" fill="#38BDF8" letter-spacing="1">
+      "Every Packet Accountable. Every Experience Verified."
+    </text>
+    <text x="0" y="175" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#94A3B8" letter-spacing="2">
+      100% OPEN SOURCE // AGPLv3 // ZERO VENDOR LOCK-IN
+    </text>
+  </g>
+
+  <!-- Right Display Card: Dual-NIC Architecture Breakdown -->
+  <g transform="translate(900, 60)">
+    <rect width="320" height="400" rx="16" fill="url(#cardGrad)" stroke="#22304A" stroke-width="1.5" />
+    <rect x="20" y="20" width="280" height="34" rx="8" fill="#0B0F19" stroke="#1E293B" />
+    <text x="35" y="42" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="800" fill="#10B981" letter-spacing="1">DUAL-NIC SCIENTIFIC CONTROL</text>
+
+    <!-- Segment 1: Wired Baseline -->
+    <g transform="translate(20, 75)">
+      <rect width="280" height="85" rx="10" fill="#0F172A" stroke="#334155" stroke-width="1.2" />
+      <text x="18" y="26" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="800" fill="#34D399">NIC 1: Wired (eth0)</text>
+      <text x="18" y="46" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="600" fill="#94A3B8">Scientific Control Baseline</text>
+      <text x="18" y="66" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#64748B">RTT: 1.8ms | Loss: 0.0%</text>
+      <circle cx="255" cy="24" r="5" fill="#10B981" />
+    </g>
+
+    <!-- Segment 2: Wireless RF Prober -->
+    <g transform="translate(20, 175)">
+      <rect width="280" height="85" rx="10" fill="#0F172A" stroke="#334155" stroke-width="1.2" />
+      <text x="18" y="26" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="800" fill="#38BDF8">NIC 2: Wi-Fi (wlan0)</text>
+      <text x="18" y="46" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="600" fill="#94A3B8">Student RF Experience Prober</text>
+      <text x="18" y="66" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#64748B">RTT: 19.4ms | RSSI: -54 dBm</text>
+      <circle cx="255" cy="24" r="5" fill="#00D2FF" />
+    </g>
+
+    <!-- Segment 3: Chromebook 1:1 Telemetry -->
+    <g transform="translate(20, 275)">
+      <rect width="280" height="95" rx="10" fill="#0F172A" stroke="#334155" stroke-width="1.2" />
+      <text x="18" y="26" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="800" fill="#A78BFA">ChromeOS Fleet Extension</text>
+      <text x="18" y="46" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="600" fill="#94A3B8">Manifest V3 Ingestion Bridge</text>
+      <text x="18" y="66" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#64748B">VoIP MOS: 4.42 (Google Meet)</text>
+      <circle cx="255" cy="24" r="5" fill="#8B5CF6" />
+    </g>
+  </g>
+</svg>

@@ -7,28 +7,20 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 import os
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.schemas import (
     LocationSpec,
     SensorReconcileResponse
 )
-from server.security import (
-    ADMIN_API_KEY,
-    verify_admin_key,
-    verify_api_key_constant_time
-)
 from server.state import (
     SENSORS_DB,
     PROBES_DB,
     SCHEDULES_DB,
-    EVIDENCE_DB,
-    ROAMING_EVENTS_DB,
-    DEFAULT_TARGET_CONTAINERS,
-    DEFAULT_TARGET_WIFI,
-    get_or_create_sensor
+    EVIDENCE_DB
 )
 import server.db as db
 
@@ -271,6 +263,13 @@ app.add_middleware(
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_endpoint() -> Response:
+    fav_path = os.path.join(static_dir, "favicon.svg")
+    if os.path.exists(fav_path):
+        return FileResponse(fav_path, media_type="image/svg+xml")
+    return Response(status_code=204)
 
 app.include_router(auth.router)
 app.include_router(onboarding.router)

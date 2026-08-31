@@ -181,19 +181,19 @@ def test_parse_option43_tlv_or_string():
     assert res_with_api == {"cmp_url": "https://cmp.district.k12.ca.us/api/v1"}
 
     # Hex-encoded ASCII string
-    hex_ascii = "http://10.98.2.100:8000/api/v1".encode("utf-8").hex()
+    hex_ascii = "http://192.0.2.100:8000/api/v1".encode("utf-8").hex()
     res_hex = wizard.parse_option43_tlv_or_string(hex_ascii)
-    assert res_hex == {"cmp_url": "http://10.98.2.100:8000/api/v1"}
+    assert res_hex == {"cmp_url": "http://192.0.2.100:8000/api/v1"}
 
     # Sub-Option TLV binary format:
-    # Sub-Opt 1 (cmp_url): "http://10.98.0.10:8000"
+    # Sub-Opt 1 (cmp_url): "http://192.0.2.10:8000"
     # Sub-Opt 2 (campus): "West Campus"
     # Sub-Opt 3 (building): "Building B"
     # Sub-Opt 4 (room): "Room 105"
     # Sub-Opt 5 (token): "enroll-secret-123"
     tlv_bytes = bytearray()
-    tlv_bytes.extend([1, len("http://10.98.0.10:8000")])
-    tlv_bytes.extend("http://10.98.0.10:8000".encode("utf-8"))
+    tlv_bytes.extend([1, len("http://192.0.2.10:8000")])
+    tlv_bytes.extend("http://192.0.2.10:8000".encode("utf-8"))
     tlv_bytes.extend([2, len("West Campus")])
     tlv_bytes.extend("West Campus".encode("utf-8"))
     tlv_bytes.extend([3, len("Building B")])
@@ -205,7 +205,7 @@ def test_parse_option43_tlv_or_string():
 
     res_tlv = wizard.parse_option43_tlv_or_string(tlv_bytes.hex())
     assert res_tlv is not None
-    assert res_tlv["cmp_url"] == "http://10.98.0.10:8000/api/v1"
+    assert res_tlv["cmp_url"] == "http://192.0.2.10:8000/api/v1"
     assert res_tlv["campus"] == "West Campus"
     assert res_tlv["building"] == "Building B"
     assert res_tlv["room"] == "Room 105"
@@ -431,7 +431,7 @@ def test_run_interactive_wizard_full_flow(tmp_path, capsys):
 
     existing_cfg = {
         "sensor_id": "existing-sensor-123",
-        "cmp_url": "http://10.98.2.100:8000/api/v1",
+        "cmp_url": "http://192.0.2.100:8000/api/v1",
         "api_key": "existing_key_abc",
         "initial_location": {
             "district": "Kern High School District",
@@ -477,7 +477,7 @@ def test_run_interactive_wizard_full_flow(tmp_path, capsys):
         with patch("wizard.WIFI_CONFIG_PATH", str(wpa_file)):
             with patch("wizard.SERVICE_PATH", str(svc_file)):
                 with patch("wizard.is_root", return_value=True):
-                    with patch("wizard.discover_cmp_endpoints", return_value=[{"url": "http://10.98.2.100:8000/api/v1", "source": "DHCP"}]):
+                    with patch("wizard.discover_cmp_endpoints", return_value=[{"url": "http://192.0.2.100:8000/api/v1", "source": "DHCP"}]):
                         with patch("wizard.test_cmp_connectivity", return_value=(False, "Connection refused", 10.0)):
                             with patch("builtins.input", side_effect=lambda *args: next(prompt_iter)):
                                 with patch("getpass.getpass", return_value="StaffWifiPassword99!"):
@@ -589,7 +589,7 @@ def test_inspect_hardware_read_exceptions(tmp_path):
     eth0_dir = net_dir / "eth0"
     eth0_dir.mkdir(parents=True)
 
-    with patch("os.path.exists", side_effect=lambda p: p in ("/proc/meminfo", "/sys/class/net", f"/sys/class/net/eth0/operstate")):
+    with patch("os.path.exists", side_effect=lambda p: p in ("/proc/meminfo", "/sys/class/net", "/sys/class/net/eth0/operstate")):
         with patch("builtins.open", side_effect=OSError("I/O error")):
             with patch("os.listdir", return_value=["eth0"]):
                 hw = wizard.inspect_hardware()
@@ -646,7 +646,7 @@ def test_test_cmp_connectivity_schemeless_and_200():
     mock_resp.__enter__.return_value = mock_resp
 
     with patch("urllib.request.urlopen", return_value=mock_resp):
-        healthy, status_msg, lat = wizard.test_cmp_connectivity("cmp.district.edu:8000/api/v1")
+        healthy, status_msg, lat = wizard.test_cmp_connectivity("cmp.example.edu:8000/api/v1")
         assert healthy is True
         assert "HTTP 200 OK" in status_msg
 
@@ -727,7 +727,7 @@ def test_run_non_interactive_full(tmp_path, capsys):
     svc_path = tmp_path / "sensor-reconciler.service"
 
     mock_args = MagicMock()
-    mock_args.cmp = "10.98.2.125:8000"
+    mock_args.cmp = "192.0.2.10:8000"
     mock_args.sensor_id = "test-batch-uuid"
     mock_args.site = "Lincoln High School"
     mock_args.building = "Building C"
@@ -790,7 +790,7 @@ def test_main_routing(tmp_path):
     test_args = [
         "wizard.py",
         "--non-interactive",
-        "--cmp", "http://10.98.2.125:8000/api/v1",
+        "--cmp", "http://192.0.2.10:8000/api/v1",
         "--site", "South High",
         "--room", "Lab 3",
         "--wifi-ssid", "District-Staff",

@@ -215,7 +215,7 @@ A complete starter template is located in [`sensor/examples/custom_synthetic_pro
 #!/usr/bin/env python3
 import time, urllib.request, os
 
-TARGET_URL = "https://canvas.district.edu/login"
+TARGET_URL = "https://canvas.example.edu/login"
 OUTPUT_FILE = "/var/lib/node_exporter/textfile_collector/custom_canvas.prom"
 
 def test_canvas():
@@ -288,7 +288,7 @@ python3 /usr/local/bin/rrm_darrp_monitor.py
 python3 /usr/local/bin/cipa_compliance.py
 
 # Run a 100 Mbps rate-limited bandwidth test
-python3 /usr/local/bin/iperf3_runner.py --server speedtest.district.org --bandwidth-cap 100
+python3 /usr/local/bin/iperf3_runner.py --server speedtest.example.com --bandwidth-cap 100
 ```
 
 ### Q4: How do I change the administrative API key?

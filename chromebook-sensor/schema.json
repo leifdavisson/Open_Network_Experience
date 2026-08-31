@@ -5,7 +5,7 @@
     "cmp_server_url": {
       "type": "string",
       "title": "ONE Central Monitoring Platform (CMP) Server URL",
-      "description": "Base HTTPS URL of the Central Monitoring Platform API (e.g., https://cmp.district.edu:8000)",
+      "description": "Base HTTPS URL of the Central Monitoring Platform API (e.g., https://cmp.example.edu:8000)",
       "default": "http://localhost:8000"
     },
     "api_key": {

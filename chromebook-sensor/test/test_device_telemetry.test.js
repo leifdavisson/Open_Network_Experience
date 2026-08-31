@@ -20,7 +20,7 @@ test("Device Telemetry - Resolves enterprise device attributes dynamically", asy
   assert.strictEqual(attrs.serialNumber, "5CD9440ABC");
   assert.strictEqual(attrs.assetId, "ASSET-CB-90210");
   assert.strictEqual(attrs.annotatedLocation, "West High Room 204");
-  assert.strictEqual(attrs.annotatedUser, "student.jdoe@district.edu");
+  assert.strictEqual(attrs.annotatedUser, "student.jdoe@example.edu");
   assert.strictEqual(attrs.hostname, "cb-student-204-01");
   assert.strictEqual(attrs.macAddress, "00:1A:2B:3C:4D:5E");
   assert.strictEqual(attrs.ipv4Address, "10.200.4.155");
@@ -71,7 +71,7 @@ test("Device Telemetry - Deterministic identity resolution", async () => {
   assert.strictEqual(ident.serial_number, "5CD9440ABC");
   assert.strictEqual(ident.asset_id, "ASSET-CB-90210");
   assert.strictEqual(ident.location, "West High Room 204");
-  assert.strictEqual(ident.annotated_user, "student.jdoe@district.edu");
+  assert.strictEqual(ident.annotated_user, "student.jdoe@example.edu");
   assert.strictEqual(ident.directory_device_id, "dir-dev-12345");
   assert.strictEqual(ident.mac_address, "00:1A:2B:3C:4D:5E");
 });

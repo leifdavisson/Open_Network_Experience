@@ -284,7 +284,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             "id": f"ui-test-probe-{int(time.time())}",
             "name": "District SSO Login Portal",
             "probe_type": "http",
-            "target": "https://sso.district.edu",
+            "target": "https://sso.example.edu",
             "cadence_minutes": 5,
             "timeout_seconds": 3.0,
             "expected_status_code": 200,

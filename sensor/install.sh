@@ -15,7 +15,7 @@
 #     sudo ./install.sh --wizard
 #
 #   Local Install with parameters:
-#     sudo ./install.sh --cmp http://10.98.2.125:8000/api/v1 --site "City Center" --room "IT Ops"
+#     sudo ./install.sh --cmp http://192.0.2.10:8000/api/v1 --site "City Center" --room "IT Ops"
 #
 
 set -euo pipefail

@@ -11,7 +11,7 @@ test("Reporter - Builds standardized Chromebook Sensor payload with full hardwar
     serial_number: "5CD9440ABC",
     asset_id: "ASSET-CB-90210",
     location: "West High Room 204",
-    annotated_user: "student.jdoe@district.edu",
+    annotated_user: "student.jdoe@example.edu",
     directory_device_id: "dir-dev-12345",
     hostname: "cb-student-204-01",
     mac_address: "00:1A:2B:3C:4D:5E",
@@ -69,7 +69,7 @@ test("Reporter - Builds standardized Chromebook Sensor payload with full hardwar
   assert.strictEqual(payload.campus_id, "CAMPUS-WEST-HIGH");
   assert.strictEqual(payload.device_info.serial_number, "5CD9440ABC");
   assert.strictEqual(payload.device_info.asset_id, "ASSET-CB-90210");
-  assert.strictEqual(payload.device_info.annotated_user, "student.jdoe@district.edu");
+  assert.strictEqual(payload.device_info.annotated_user, "student.jdoe@example.edu");
   assert.strictEqual(payload.device_info.directory_device_id, "dir-dev-12345");
   assert.strictEqual(payload.hardware.cpu.usage_percent, 18.5);
   assert.strictEqual(payload.hardware.battery.level_percent, 94);

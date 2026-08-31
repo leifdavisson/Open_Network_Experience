@@ -10,9 +10,6 @@ Comprehensive Unit Test Suite for Edge Synthetic Probes:
 
 import os
 import sys
-import tempfile
-import json
-import pytest
 from unittest.mock import patch, MagicMock, mock_open
 
 # Ensure sensor directory is in sys.path
@@ -166,15 +163,7 @@ def test_dns_discover_local_resolvers(tmp_path):
 
 def test_custom_probe_runner_http_match():
     """Verifies WYSIWYG custom probe execution with body regex validation."""
-    probe_spec = {
-        "id": "canvas_lms",
-        "name": "Canvas LMS Health",
-        "probe_type": "http",
-        "target": "https://canvas.district.edu/health",
-        "timeout_seconds": 5.0,
-        "expected_status_code": 200,
-        "match_body_regex": r"\"status\":\s*\"ok\""
-    }
+
 
     mock_res = MagicMock()
     mock_res.getcode.return_value = 200
@@ -183,7 +172,7 @@ def test_custom_probe_runner_http_match():
 
     with patch("urllib.request.urlopen", return_value=mock_res):
         is_success, latency, status_code = custom_probe_runner.execute_http_probe(
-            target="https://canvas.district.edu/health",
+            target="https://canvas.example.edu/health",
             timeout=5.0,
             expected_status=200,
             match_regex="status"

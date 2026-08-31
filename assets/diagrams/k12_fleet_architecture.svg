@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580" width="100%" height="100%">
+  <defs>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="cyanBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1000" height="580" rx="20" fill="#0B0F19" stroke="#1E293B" stroke-width="2"/>
+
+  <!-- Main Title -->
+  <text x="500" y="45" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="900" fill="#FFFFFF" letter-spacing="1">
+    OPEN NETWORK EXPERIENCE (ONE) — END-TO-END PLATFORM ARCHITECTURE
+  </text>
+  <text x="500" y="70" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#94A3B8">
+    Distributed Edge Hardware &amp; Chromebook Fleet Ingestion into Central Control Plane
+  </text>
+
+  <!-- Left: Edge Tier -->
+  <g transform="translate(40, 100)">
+    <rect width="280" height="440" rx="16" fill="url(#cardBg)" stroke="#38BDF8" stroke-width="2"/>
+    <text x="140" y="35" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="16" font-weight="800" fill="#38BDF8">EDGE SENSORS &amp; FLEET</text>
+
+    <!-- Box 1: Linux Prober -->
+    <rect x="15" y="55" width="250" height="110" rx="10" fill="#111827" stroke="#334155"/>
+    <text x="25" y="80" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">Hardware Prober (Pi/x86)</text>
+    <text x="25" y="100" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Dual-NIC (eth0 / wlan0)</text>
+    <text x="25" y="118" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• CAASPP &amp; CIPA Probers</text>
+    <text x="25" y="136" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Wi-Fi RRM/DARRP Flapping Monitor</text>
+    <text x="25" y="154" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• iPerf3 Rate-limited Bandwidth</text>
+
+    <!-- Box 2: Chromebook Sensor -->
+    <rect x="15" y="180" width="250" height="110" rx="10" fill="#111827" stroke="#334155"/>
+    <text x="25" y="205" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">1:1 Chromebook Fleets</text>
+    <text x="25" y="225" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• ChromeOS Manifest V3 Extension</text>
+    <text x="25" y="243" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• STUN WebRTC &amp; MOS Scoring</text>
+    <text x="25" y="261" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• AP Roaming &amp; RSSI dBm Listener</text>
+    <text x="25" y="279" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Offline IndexedDB Queue Buffer</text>
+
+    <!-- Box 3: Network Infrastructure -->
+    <rect x="15" y="305" width="250" height="110" rx="10" fill="#111827" stroke="#334155"/>
+    <text x="25" y="330" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">Infrastructure Telemetry</text>
+    <text x="25" y="350" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• FortiGate SNMP Gateway Poller</text>
+    <text x="25" y="368" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• CPU, Memory &amp; Session Saturation</text>
+    <text x="25" y="386" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• DHCP Option 43 / DNS Autodiscover</text>
+  </g>
+
+  <!-- Center: CMP Control Plane -->
+  <g transform="translate(360, 100)">
+    <rect width="280" height="440" rx="16" fill="url(#cardBg)" stroke="#6366F1" stroke-width="2"/>
+    <text x="140" y="35" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="16" font-weight="800" fill="#A5B4FC">CMP CONTROL PLANE</text>
+
+    <rect x="15" y="55" width="250" height="360" rx="10" fill="#111827" stroke="#334155"/>
+    <text x="25" y="85" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="14" font-weight="800" fill="#00F0FF">FastAPI Engine (Port 8000)</text>
+
+    <text x="25" y="115" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#E2E8F0">1. Zero-Trust Security</text>
+    <text x="35" y="133" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• TOFU Queue &amp; Auto-ZTP Subnets</text>
+    <text x="35" y="151" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Revocable Bearer API Keys</text>
+
+    <text x="25" y="180" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#E2E8F0">2. Configuration &amp; Studio</text>
+    <text x="35" y="198" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• WYSIWYG EasyBuilder Prober Studio</text>
+    <text x="35" y="216" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Cron &amp; Daily Maintenance Window</text>
+
+    <text x="25" y="245" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#E2E8F0">3. Ingestion &amp; Push Sinks</text>
+    <text x="35" y="263" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• VictoriaMetrics Prometheus Exporter</text>
+    <text x="35" y="281" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Grafana Loki Log Streams</text>
+
+    <text x="25" y="310" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#E2E8F0">4. SSOT Database &amp; DR</text>
+    <text x="35" y="328" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Persistent SQLite Database</text>
+    <text x="35" y="346" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• 1-Click JSON Backup &amp; Restore</text>
+    <text x="35" y="364" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Forensic PCAP Evidence Vault</text>
+  </g>
+
+  <!-- Right: Presentation & Observability -->
+  <g transform="translate(680, 100)">
+    <rect width="280" height="440" rx="16" fill="url(#cardBg)" stroke="#10B981" stroke-width="2"/>
+    <text x="140" y="35" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="16" font-weight="800" fill="#34D399">PRESENTATION &amp; NOC</text>
+
+    <!-- Box 1: CMP Web Console -->
+    <rect x="15" y="55" width="250" height="110" rx="10" fill="#111827" stroke="#334155"/>
+    <text x="25" y="80" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">Interactive Web Console</text>
+    <text x="25" y="100" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Leaflet GIS Campus Heatmaps</text>
+    <text x="25" y="118" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Live Sensor Status &amp; Wi-Fi Halos</text>
+    <text x="25" y="136" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• On-Demand Diagnostics Trigger</text>
+
+    <!-- Box 2: Grafana NOC Wallboards -->
+    <rect x="15" y="180" width="250" height="110" rx="10" fill="#111827" stroke="#334155"/>
+    <text x="25" y="205" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">Grafana NOC Dashboards</text>
+    <text x="25" y="225" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• CAASPP Readiness Wallboard</text>
+    <text x="25" y="243" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Wi-Fi RF &amp; Channel Flapping Matrix</text>
+    <text x="25" y="261" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Chromebook Real-Time Fleet View</text>
+    <text x="25" y="279" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• CIPA Filtering Compliance Audit</text>
+
+    <!-- Box 3: Notification Alerts -->
+    <rect x="15" y="305" width="250" height="110" rx="10" fill="#111827" stroke="#334155"/>
+    <text x="25" y="330" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" font-weight="800" fill="#F8FAFC">Alerting &amp; Integrations</text>
+    <text x="25" y="350" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Alertmanager Multi-Channel Sinks</text>
+    <text x="25" y="368" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Slack / Discord / Webhook Dispatches</text>
+    <text x="25" y="386" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">• Email Incident Summary Reports</text>
+  </g>
+
+  <!-- Connection Links -->
+  <path d="M 320 280 L 360 280" stroke="#00F0FF" stroke-width="3" stroke-dasharray="4,4"/>
+  <path d="M 640 280 L 680 280" stroke="#10B981" stroke-width="3"/>
+</svg>
