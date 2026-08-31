@@ -1,0 +1,66 @@
+"""
+Open Network Experience (ONE) - Visual Unified Schedules Router
+Copyright (C) 2026 Open Network Experience Authors.
+Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
+"""
+
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
+from server.schemas import UnifiedScheduleSpec
+from server.security import verify_admin_key
+from server.state import SCHEDULES_DB
+import server.db as db
+
+router = APIRouter(prefix="/api/v1/schedules", tags=["Probe Schedules"])
+
+@router.get(
+    "",
+    response_model=List[UnifiedScheduleSpec],
+    summary="List Visual Probe Schedules",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def list_schedules():
+    """Lists all configured probe schedules with calendar days, timing windows, and guardrails."""
+    return list(SCHEDULES_DB.values())
+
+@router.post(
+    "",
+    summary="Create/Update Visual Probe Schedule",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def save_schedule_endpoint(schedule: UnifiedScheduleSpec):
+    """Saves or updates a visual calendar or interval probe schedule."""
+    sch_dict = schedule.model_dump()
+    SCHEDULES_DB[schedule.id] = sch_dict
+    db.save_schedule(sch_dict)
+    return {"status": "success", "message": f"Schedule '{schedule.name}' saved.", "schedule": sch_dict}
+
+@router.delete(
+    "/{schedule_id}",
+    summary="Delete Probe Schedule",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def delete_schedule_endpoint(schedule_id: str):
+    """Deletes a probe schedule."""
+    if schedule_id in SCHEDULES_DB:
+        del SCHEDULES_DB[schedule_id]
+        db.delete_schedule(schedule_id)
+        return {"status": "success", "message": f"Schedule '{schedule_id}' deleted."}
+    raise HTTPException(status_code=404, detail="Schedule not found")
+
+@router.put(
+    "/{schedule_id}/toggle",
+    summary="Toggle Probe Schedule Active Status",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def toggle_schedule_endpoint(schedule_id: str):
+    """Enables or disables a probe schedule."""
+    if schedule_id in SCHEDULES_DB:
+        new_state = db.toggle_schedule(schedule_id)
+        SCHEDULES_DB[schedule_id]["is_active"] = new_state
+        return {
+            "status": "success",
+            "is_active": new_state,
+            "message": f"Schedule '{schedule_id}' is now {'active' if new_state else 'paused'}."
+        }
+    raise HTTPException(status_code=404, detail="Schedule not found")

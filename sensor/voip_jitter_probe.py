@@ -17,7 +17,7 @@ import time
 import socket
 import struct
 import argparse
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/voip_jitter.prom"
 
@@ -66,7 +66,7 @@ def probe_udp_jitter(
     packet_count: int = 20,
     interval_sec: float = 0.02, # 20ms G.711 voice cadence
     timeout_sec: float = 1.0,
-    interface: str = None
+    interface: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Sends a burst of UDP probe packets at 20ms voice cadence and measures jitter & loss.

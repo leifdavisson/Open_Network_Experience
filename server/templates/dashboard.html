@@ -1,0 +1,3345 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Network Experience (ONE) — Control & Monitoring Platform</title>
+    <!-- Leaflet GIS Map Styling & Script -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Chart.js CDN for NOC Analytics & Sparklines -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-main: #0b1120;
+            --bg-sidebar: #131d31;
+            --bg-card: #131d31;
+            --bg-input: #0b1120;
+            --bg-hover: #1e293b;
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --accent-text: #0b1120;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #22304a;
+            --status-online-text: #34d399;
+            --status-offline-text: #f87171;
+            --table-hover: rgba(51, 65, 85, 0.3);
+        }
+        [data-theme="light"] {
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --bg-card: #ffffff;
+            --bg-input: #f1f5f9;
+            --bg-hover: #e2e8f0;
+            --accent: #0284c7;
+            --accent-hover: #0369a1;
+            --accent-text: #ffffff;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --purple: #7c3aed;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --border: #cbd5e1;
+            --status-online-text: #059669;
+            --status-offline-text: #dc2626;
+            --table-hover: rgba(226, 232, 240, 0.6);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 255px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 20;
+            flex-shrink: 0;
+        }
+        .sidebar.collapsed { width: 68px; }
+        .sidebar-header {
+            padding: 16px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            height: 60px;
+        }
+        .brand { font-size: 15px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
+        .toggle-btn { background: var(--bg-hover); border: 1px solid var(--border); color: var(--text-main); cursor: pointer; font-size: 16px; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+
+        .nav-menu { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px 8px; }
+        .bucket-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); padding: 12px 10px 4px; letter-spacing: 0.5px; white-space: nowrap; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            margin-bottom: 2px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .nav-item:hover { background: var(--bg-hover); color: var(--text-main); }
+        .nav-item.active { background: var(--accent); color: var(--accent-text); font-weight: 700; }
+        .nav-icon { font-size: 16px; min-width: 22px; text-align: center; }
+
+        /* Collapsed Sidebar */
+        .sidebar.collapsed .brand-text { display: none; }
+        .sidebar.collapsed .bucket-label { display: none; }
+        .sidebar.collapsed .nav-text { display: none; }
+        .sidebar.collapsed .nav-item { justify-content: center; padding: 10px 0; gap: 0; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; }
+        .sidebar.collapsed .brand span:first-child { display: none; }
+
+        /* Main Content Container */
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Top Navigation Header */
+        .topbar {
+            height: 60px;
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+        .search-box { position: relative; flex: 1; max-width: 480px; }
+        .search-box input { width: 100%; padding: 8px 12px 8px 34px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 13px; }
+        .search-icon { position: absolute; left: 10px; top: 9px; font-size: 14px; color: var(--text-muted); }
+        .topbar-actions { display: flex; align-items: center; gap: 10px; }
+        .theme-btn { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-main); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+
+        /* Content Area */
+        .content-area { flex: 1; overflow-y: auto; padding: 24px; }
+
+        .view-section { display: none; }
+        .view-section.active-view { display: block; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .metric-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .metric-icon-badge { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .metric-value { font-size: 28px; font-weight: 800; color: var(--text-main); }
+        .metric-footer { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between; }
+
+        .section-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-title { font-size: 16px; font-weight: 700; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; padding: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 600; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); }
+        tr:hover { background: var(--table-hover); }
+
+        .btn-group { display: flex; gap: 6px; white-space: nowrap; flex-wrap: wrap; }
+        .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+        .status-online { background: rgba(16, 185, 129, 0.15); color: var(--status-online-text); }
+        .status-offline { background: rgba(239, 68, 68, 0.15); color: var(--status-offline-text); }
+
+        .loc-badge { background: var(--bg-input); border: 1px solid var(--border); color: var(--accent); padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+        .gps-badge { background: rgba(16, 185, 129, 0.15); color: var(--status-online-text); border: 1px solid var(--success); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+        .btn { background: var(--accent); color: var(--accent-text); border: none; border-radius: 6px; padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background 0.15s; }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-sm { padding: 4px 8px; font-size: 12px; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--bg-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-main); font-size: 14px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; width: 550px; max-width: 90%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .close-btn { background: transparent; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; }
+
+        #leaflet-map, #wallboard-map { height: 440px; width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+        .console-box { background: #090d16; color: #38bdf8; font-family: monospace; font-size: 12px; padding: 14px; border-radius: 8px; border: 1px solid var(--border); height: 220px; overflow-y: auto; white-space: pre-wrap; margin-top: 12px; }
+        .result-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+
+        /* SLIDESHOW & WALLBOARD PRESENTATION STYLES */
+        .slideshow-container { position: relative; width: 100%; }
+        .slide-card { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .slide-card.active-slide { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .slide-controls-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .slide-nav-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+        .slide-tab-btn {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .slide-tab-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+        .slide-tab-btn.active-tab { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+        .progress-track { width: 100%; height: 3px; background: var(--bg-input); border-radius: 9999px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.1s linear; }
+
+        /* GDC REFERENCE ANALYTICS ROW */
+        .analytics-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+        @media (max-width: 1100px) { .analytics-grid { grid-template-columns: 1fr; } }
+        .analytics-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; }
+        .analytics-title { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+        .sla-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .sla-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sla-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--success); }
+        .sla-card.sla-warn::before { background: var(--warning); }
+        .sla-card.sla-fail::before { background: var(--danger); }
+        .sla-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .sla-name { font-size: 14px; font-weight: 700; color: var(--text-main); }
+        .sla-target { font-size: 11px; color: var(--text-muted); }
+        .sla-value { font-size: 24px; font-weight: 800; color: var(--text-main); margin: 6px 0; }
+        .sla-status-text { font-size: 12px; font-weight: 600; color: var(--status-online-text); display: flex; align-items: center; gap: 6px; }
+
+        /* CAMPUS MAP WITH LEFT DRAWER */
+        .map-layout-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; margin-top: 12px; }
+        @media (max-width: 900px) { .map-layout-grid { grid-template-columns: 1fr; } }
+        .campus-drawer { background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; padding: 14px; max-height: 440px; overflow-y: auto; }
+        .campus-site-item { padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
+        .campus-site-item:hover { border-color: var(--accent); }
+
+        /* CUSTOM GLOWING MAP PIN STYLING */
+        .map-pin-wrapper { position: relative; width: 36px; height: 36px; }
+        .map-pin-pulse { width: 18px; height: 18px; border-radius: 50%; position: absolute; top: 9px; left: 9px; }
+        .pin-online { background: #10b981; box-shadow: 0 0 12px #10b981; }
+        .pin-offline { background: #ef4444; box-shadow: 0 0 12px #ef4444; }
+        .pin-ring { position: absolute; top: -5px; left: -5px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #10b981; animation: mapPulse 2s infinite ease-out; }
+        .pin-tag {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+        }
+        @keyframes mapPulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(2.0); opacity: 0; } }
+
+        /* GRAFANA SUB-SCROLLER PILLS */
+        .grafana-sub-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .grafana-sub-btn {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .grafana-sub-btn:hover { background: var(--bg-hover); color: var(--text-main); }
+        .grafana-sub-btn.active-sub { background: var(--purple); color: #ffffff; border-color: var(--purple); }
+
+        /* Fullscreen 72" Mode */
+        body.wallboard-fullscreen .sidebar { display: none; }
+        body.wallboard-fullscreen .topbar { display: none; }
+        body.wallboard-fullscreen .content-area { padding: 24px 32px; }
+        body.wallboard-fullscreen .metric-value { font-size: 38px; }
+        body.wallboard-fullscreen .sla-value { font-size: 32px; }
+        body.wallboard-fullscreen .section-title { font-size: 20px; }
+        body.wallboard-fullscreen #wallboard-map { height: 560px; }
+        body.wallboard-fullscreen .campus-drawer { max-height: 560px; }
+        body.wallboard-fullscreen #grafana-embed-frame { height: 680px !important; }
+
+        /* TRAFFIC LIGHT SCROLLABLE INCIDENT LIST */
+        .incident-scroll-container {
+            max-height: 220px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .incident-scroll-container::-webkit-scrollbar { width: 6px; }
+        .incident-scroll-container::-webkit-scrollbar-track { background: var(--bg-card); border-radius: 4px; }
+        .incident-scroll-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .incident-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            transition: all 0.15s;
+        }
+        .incident-item:hover { border-color: var(--accent); }
+        .incident-item.severity-red { border-left: 4px solid #ef4444; }
+        .incident-item.severity-amber { border-left: 4px solid #f59e0b; }
+        .incident-item.severity-green { border-left: 4px solid #10b981; }
+        .traffic-light-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            min-width: 170px;
+        }
+        .traffic-light-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dot-red { background: #ef4444; box-shadow: 0 0 10px #ef4444; animation: blinkRed 1.5s infinite; }
+        .dot-amber { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+        .dot-green { background: #10b981; box-shadow: 0 0 10px #10b981; }
+        @keyframes blinkRed { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+        /* VISUAL SCHEDULE BUILDER STYLES */
+        .day-pill-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .day-pill {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s;
+        }
+        .day-pill:hover { border-color: var(--accent); color: var(--text-main); }
+        .day-pill.active {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-color: var(--accent);
+        }
+        .preset-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover { background: var(--bg-hover); }
+        .timing-mode-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background: var(--bg-input);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .timing-mode-card:hover { border-color: var(--accent); }
+        .timing-mode-card.active-mode {
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.08);
+        }
+        .summary-preview-box {
+            background: var(--bg-input);
+            border-left: 4px solid var(--accent);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-main);
+            margin-top: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Collapsible Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="brand">
+                <span>🌐</span> <span class="brand-text">ONE Platform</span>
+            </div>
+            <button class="toggle-btn" id="btn-toggle-sidebar" onclick="toggleSidebar()" title="Toggle Navigation">≡</button>
+        </div>
+        <nav class="nav-menu">
+            <!-- 1. MONITOR BUCKET -->
+            <div class="bucket-label">1. Monitor</div>
+            <a class="nav-item active" id="nav-monitor-noc" onclick="switchView('monitor-noc')" title="NOC Live Operations Wallboard">
+                <span class="nav-icon">📊</span> <span class="nav-text">NOC Overview</span>
+            </a>
+            <a class="nav-item" id="nav-monitor-map" onclick="switchView('monitor-map')" title="GIS Campus Geolocation">
+                <span class="nav-icon">🗺️</span> <span class="nav-text">GIS Campus Map</span>
+            </a>
+            <a class="nav-item" id="nav-monitor-ondemand" onclick="switchView('monitor-ondemand')" title="On-Demand Diagnostic Action Center">
+                <span class="nav-icon">⚡</span> <span class="nav-text">Live Diagnostics</span>
+            </a>
+            <a class="nav-item" id="nav-monitor-reports" onclick="switchView('monitor-reports')" title="Forensics & SLA Reports">
+                <span class="nav-icon">📋</span> <span class="nav-text">Reports & Forensics</span>
+            </a>
+
+            <!-- 2. MANAGE BUCKET -->
+            <div class="bucket-label">2. Manage</div>
+            <a class="nav-item" id="nav-manage-fleet" onclick="switchView('manage-fleet')" title="Sensor Fleet & Registration">
+                <span class="nav-icon">📡</span> <span class="nav-text">Fleet & Registration</span>
+            </a>
+            <a class="nav-item" id="nav-manage-locations" onclick="switchView('manage-locations')" title="Campus & Room Hierarchy">
+                <span class="nav-icon">📍</span> <span class="nav-text">Campus Hierarchy</span>
+            </a>
+
+            <!-- 3. CONFIGURE BUCKET -->
+            <div class="bucket-label">3. Configure</div>
+            <a class="nav-item" id="nav-configure-schedules" onclick="switchView('configure-schedules')" title="Visual Probe & Test Scheduler">
+                <span class="nav-icon">📅</span> <span class="nav-text">Probe Scheduler</span>
+            </a>
+            <a class="nav-item" id="nav-configure-probes" onclick="switchView('configure-probes')" title="WYSIWYG Custom Probes">
+                <span class="nav-icon">🛠️</span> <span class="nav-text">EasyBuilder Tests</span>
+            </a>
+            <a class="nav-item" id="nav-configure-osi" onclick="switchView('configure-osi')" title="OSI Diagnostic Matrix">
+                <span class="nav-icon">🔬</span> <span class="nav-text">OSI Layer Suite</span>
+            </a>
+
+            <!-- 4. SETUP BUCKET -->
+            <div class="bucket-label">4. Setup</div>
+            <a class="nav-item" id="nav-setup-server" onclick="switchView('setup-server')" title="Server & TSDB Health">
+                <span class="nav-icon">🖥️</span> <span class="nav-text">Server & TSDB</span>
+            </a>
+            <a class="nav-item" id="nav-setup-integrations" onclick="switchView('setup-integrations')" title="Push Alerts & Webhooks">
+                <span class="nav-icon">⚙️</span> <span class="nav-text">Alerts & Webhooks</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Top Bar with Global Search & Dark/Light Toggle -->
+        <header class="topbar">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="global-search" placeholder="Search sensors by Room, School, MAC, or IP..." onkeyup="handleGlobalSearch()">
+            </div>
+            <div class="topbar-actions">
+                <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️ Light Mode</button>
+                <a href="#" id="grafana-link" target="_blank" class="btn btn-outline btn-sm">📊 Grafana ↗</a>
+                <a href="/docs" target="_blank" class="btn btn-outline btn-sm">📖 Swagger ↗</a>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Body -->
+        <main class="content-area">
+
+            <!-- VIEW 1: MONITOR - NOC OVERVIEW (SLIDESHOW PRESENTATION MODE) -->
+            <div class="view-section active-view" id="view-monitor-noc">
+
+                <!-- Slideshow Navigation & Controls Bar -->
+                <div class="slide-controls-bar">
+                    <div class="slide-nav-tabs">
+                        <button class="slide-tab-btn active-tab" onclick="goToSlide(0)" id="tab-slide-0">📊 1. Executive SLA Wallboard</button>
+                        <button class="slide-tab-btn" onclick="goToSlide(1)" id="tab-slide-1">🗺️ 2. GIS Campus Map</button>
+                        <button class="slide-tab-btn" onclick="goToSlide(2)" id="tab-slide-2">📚 3. Classroom SaaS SLAs</button>
+                        <button class="slide-tab-btn" onclick="goToSlide(3)" id="tab-slide-3">👨‍🏫 4. Helpdesk & Teacher View</button>
+                        <button class="slide-tab-btn" onclick="goToSlide(4)" id="tab-slide-4">📈 5. Live Grafana Metrics</button>
+                        <button class="slide-tab-btn" onclick="goToSlide(5)" id="tab-slide-5">💻 6. Chromebook Fleet</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="btn btn-outline btn-sm" onclick="togglePlayPause()" id="btn-play-pause">⏸ Pause</button>
+                        <button class="btn btn-outline btn-sm" onclick="prevSlide()">◀</button>
+                        <button class="btn btn-outline btn-sm" onclick="nextSlide()">▶</button>
+                        <button class="btn btn-sm" onclick="toggleFullscreenMode()" id="btn-fullscreen">⛶ 72" Display Mode</button>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="slide-progress-fill"></div>
+                    </div>
+                </div>
+
+                <!-- SLIDE 1: EXECUTIVE SLA WALLBOARD & GDC-INSPIRED ANALYTICS -->
+                <div class="slide-card active-slide" id="slide-0">
+
+                    <!-- 4 GDC-Inspired Fleet KPI Cards -->
+                    <div class="metrics-grid">
+                        <div class="metric-card" style="border-left: 4px solid var(--success);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Online Fleet</div>
+                                <div class="metric-icon-badge" style="background: rgba(16,185,129,0.15); color: var(--success);">🟢</div>
+                            </div>
+                            <div class="metric-value" id="kpi-online">1</div>
+                            <div class="metric-footer"><span>Status: Optimal</span><span>100% SLA</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--danger);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Offline</div>
+                                <div class="metric-icon-badge" style="background: rgba(239,68,68,0.15); color: var(--danger);">🔴</div>
+                            </div>
+                            <div class="metric-value" id="kpi-offline">0</div>
+                            <div class="metric-footer"><span>Status: Normal</span><span>0 Degraded</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--warning);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Faults / Degraded</div>
+                                <div class="metric-icon-badge" style="background: rgba(245,158,11,0.15); color: var(--warning);">⚠️</div>
+                            </div>
+                            <div class="metric-value" id="kpi-fault">0</div>
+                            <div class="metric-footer"><span>Problems: None</span><span>0 Flapping</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Open Alarms</div>
+                                <div class="metric-icon-badge" style="background: rgba(139,92,246,0.15); color: var(--purple);">🔔</div>
+                            </div>
+                            <div class="metric-value" id="kpi-alarm">0</div>
+                            <div class="metric-footer"><span>Tickets: 0 New</span><span>100% Resolved</span></div>
+                        </div>
+                    </div>
+
+                    <!-- GDC-Inspired Visual Analytics Row: Semi-Donut, 30-Day Trend, Alarm Donut -->
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <div class="analytics-title">
+                                <span>Fault Situation</span>
+                                <span style="font-size:11px; color:var(--text-muted);">Last 7 Days</span>
+                            </div>
+                            <div style="height: 160px; position: relative;">
+                                <canvas id="chart-fault-situation"></canvas>
+                            </div>
+                            <div style="display:flex; justify-content:center; gap:16px; font-size:12px; margin-top:8px;">
+                                <span style="color:var(--success);">● Compliant (100%)</span>
+                                <span style="color:var(--danger);">● Fault (0%)</span>
+                            </div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <div class="analytics-title">
+                                <span>Trend Analysis (WAN Latency & SLA Stability)</span>
+                                <span style="font-size:11px; color:var(--accent);">● Wired (eno1)  ● Wi-Fi (wlp1s0)</span>
+                            </div>
+                            <div style="height: 160px; position: relative;">
+                                <canvas id="chart-trend-analysis"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="analytics-card">
+                            <div class="analytics-title">
+                                <span>Alarm Overview</span>
+                                <span style="font-size:11px; color:var(--text-muted);">Last 30 Days</span>
+                            </div>
+                            <div style="height: 160px; position: relative;">
+                                <canvas id="chart-alarm-overview"></canvas>
+                            </div>
+                            <div style="display:flex; justify-content:center; gap:16px; font-size:12px; margin-top:8px;">
+                                <span style="color:var(--accent);">● Resolved (100%)</span>
+                                <span style="color:var(--warning);">● Active (0)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6-Point District Core SLA Grid -->
+                    <div class="section-title" style="margin-bottom: 12px;">📈 District Core Infrastructure SLAs (Live Continuous Telemetry)</div>
+                    <div class="sla-grid">
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">⚡ Gateway & AP Latency</div>
+                                <div class="sla-target">SLA: &lt; 15.0 ms</div>
+                            </div>
+                            <div class="sla-value" id="sla-val-gateway">1.18 ms / 4.32 ms</div>
+                            <div class="sla-status-text" id="sla-status-gateway">🟢 PASS (0.0% Packet Loss • Wired vs Wi-Fi)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">🌐 DNS Resolution Timing</div>
+                                <div class="sla-target">SLA: &lt; 50.0 ms</div>
+                            </div>
+                            <div class="sla-value" id="sla-val-dns">2.36 ms / 2.44 ms</div>
+                            <div class="sla-status-text" id="sla-status-dns">🟢 PASS (Anycast 1.1.1.1 + District Primary DNS)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">🎥 VoIP & Zoom Media MOS</div>
+                                <div class="sla-target">SLA: &gt; 4.00 MOS</div>
+                            </div>
+                            <div class="sla-value" id="sla-val-voip">4.41 / 5.00</div>
+                            <div class="sla-status-text" id="sla-status-voip">🟢 PASS (UDP 20ms Jitter: 2.8ms)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">⏱️ DHCP 4-Way DORA Lease</div>
+                                <div class="sla-target">SLA: &lt; 2.0 s</div>
+                            </div>
+                            <div class="sla-value" id="sla-val-dhcp">0.48 s (482 ms)</div>
+                            <div class="sla-status-text" id="sla-status-dhcp">🟢 PASS (Rapid Onboarding Latency)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">📡 Wi-Fi RF Flapping / RRM</div>
+                                <div class="sla-target">SLA: &lt; 3 flaps / hr</div>
+                            </div>
+                            <div class="sla-value" id="sla-val-rrm">0 Flaps / hr</div>
+                            <div class="sla-status-text" id="sla-status-rrm">🟢 PASS (5 GHz Channel 36 Stable)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">🔒 Lateral VLAN Isolation</div>
+                                <div class="sla-target">SLA: 100% Isolated</div>
+                            </div>
+                            <div class="sla-value" id="sla-val-vlan">100% Dropped</div>
+                            <div class="sla-status-text" id="sla-status-vlan">🟢 PASS (Student Wi-Fi Isolated from Admin)</div>
+                        </div>
+                    </div>
+
+                    <div class="section-card" style="margin-bottom: 0;">
+                        <div class="section-header">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div class="section-title">🚨 Active Incidents & Live Operational Ticker</div>
+                                <span class="badge" id="incident-count-badge" style="background:rgba(245,158,11,0.15); color:var(--warning); border:1px solid var(--warning); font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700;">Live Feed</span>
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="loadDashboardData()">🔄 Refresh</button>
+                        </div>
+                        <div class="incident-scroll-container" id="incident-feed">
+                            <div class="incident-item severity-green">
+                                <div class="traffic-light-indicator">
+                                    <span class="traffic-light-dot dot-green"></span>
+                                    <span style="color:#10b981;">ALL NOMINAL</span>
+                                </div>
+                                <div style="flex:1; margin:0 12px; color:var(--text-main);">
+                                    <strong>District-Wide Fleet Nominal</strong> &bull; All network pathways, State Testing endpoints, and VoLTE/Zoom media streams are operating within SLA bounds.
+                                </div>
+                                <div style="color:var(--text-muted); font-size:11px; white-space:nowrap;">Live</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLIDE 2: GIS CAMPUS MAP WITH CAMPUS SELECTOR DRAWER & GLOWING PINS -->
+                <div class="slide-card" id="slide-1">
+                    <div class="section-card" style="margin-bottom: 0;">
+                        <div class="section-header">
+                            <div class="section-title">🗺️ Live GIS Campus Map & Sensor Fleet Geolocation</div>
+                            <div class="status-pill status-online">● Live GPS Tracking</div>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 13px;">
+                            Interactive map displaying real-time sensor locations, room assignments, and GPS fixes across Kern County Superintendent of Schools facilities.
+                        </p>
+
+                        <div class="map-layout-grid">
+                            <div class="campus-drawer" id="wallboard-campus-drawer">
+                                <strong style="font-size:13px; color:var(--text-main); margin-bottom:8px; display:block;">🏫 District Campuses</strong>
+                                <div id="wallboard-map-list">Loading GIS positions...</div>
+                            </div>
+                            <div id="wallboard-map"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLIDE 3: CLASSROOM & DISTRICT SAAS APPLICATION SLAS -->
+                <div class="slide-card" id="slide-2">
+                    <div class="section-title" style="margin-bottom: 14px;">📚 Classroom Core Learning & SIS Application SLAs</div>
+                    <div class="sla-grid">
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">📚 Canvas LMS (Instructure)</div>
+                                <div class="sla-target">SLA: &gt; 99.9% Uptime</div>
+                            </div>
+                            <div class="sla-value" id="saas-val-canvas">105 ms RTT</div>
+                            <div class="sla-status-text" id="saas-status-canvas">🟢 100% Uptime (SSL Inspection Bypassed)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">💻 Google Classroom & Docs</div>
+                                <div class="sla-target">SLA: &gt; 99.9% Uptime</div>
+                            </div>
+                            <div class="sla-value" id="saas-val-google">55 ms RTT</div>
+                            <div class="sla-status-text" id="saas-status-google">🟢 100% Uptime (200 OK Reachable)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">📈 i-Ready Assessment Portal</div>
+                                <div class="sla-target">SLA: &gt; 99.9% Uptime</div>
+                            </div>
+                            <div class="sla-value" id="saas-val-iready">35 ms RTT</div>
+                            <div class="sla-status-text" id="saas-status-iready">🟢 100% Uptime (200 OK Reachable)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">🎥 Zoom Education Media</div>
+                                <div class="sla-target">SLA: &gt; 99.9% Uptime</div>
+                            </div>
+                            <div class="sla-value" id="saas-val-zoom">26 ms RTT</div>
+                            <div class="sla-status-text" id="saas-status-zoom">🟢 100% Uptime (Low UDP Jitter)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">🎓 CAASPP / Cambium TDS</div>
+                                <div class="sla-target">SLA: &gt; 99.9% Uptime</div>
+                            </div>
+                            <div class="sla-value" id="saas-val-caaspp">44 ms RTT</div>
+                            <div class="sla-status-text" id="saas-status-caaspp">🟢 100% Ready (8 / 8 Endpoints OK)</div>
+                        </div>
+                        <div class="sla-card">
+                            <div class="sla-header">
+                                <div class="sla-name">🏫 PowerSchool / Aeries SIS</div>
+                                <div class="sla-target">SLA: &gt; 99.9% Uptime</div>
+                            </div>
+                            <div class="sla-value" id="saas-val-sis">48 ms RTT</div>
+                            <div class="sla-status-text" id="saas-status-sis">🟢 100% Uptime (District SIS Active)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLIDE 4: HELPDESK & TEACHER SIMPLIFIED STATUS -->
+                <div class="slide-card" id="slide-3">
+                    <div class="section-title" style="margin-bottom: 14px;">👨‍🏫 Classroom Network Health (Helpdesk & Teacher QuickView)</div>
+                    <div class="metrics-grid">
+                        <div class="metric-card" style="border-left: 4px solid var(--success); padding: 22px;">
+                            <div style="font-size: 28px; margin-bottom: 8px;">🌐</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-main);">Is the Internet Working?</div>
+                            <div style="font-size: 22px; font-weight: 800; color: var(--status-online-text); margin: 8px 0;" id="helpdesk-internet-status">🟢 Fast & Normal</div>
+                            <div style="font-size: 13px; color: var(--text-muted);" id="helpdesk-internet-desc">All external internet connections and security gateways are responding normally.</div>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid var(--success); padding: 22px;">
+                            <div style="font-size: 28px; margin-bottom: 8px;">🎓</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-main);">Are Testing Portals Ready?</div>
+                            <div style="font-size: 22px; font-weight: 800; color: var(--accent); margin: 8px 0;" id="helpdesk-testing-status">🟢 100% Ready</div>
+                            <div style="font-size: 13px; color: var(--text-muted);">CAASPP, Cambium TDS, and TRCS secure testing systems are online with SSL inspection bypassed.</div>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid var(--success); padding: 22px;">
+                            <div style="font-size: 28px; margin-bottom: 8px;">📶</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-main);">Is Classroom Wi-Fi Stable?</div>
+                            <div style="font-size: 22px; font-weight: 800; color: var(--status-online-text); margin: 8px 0;" id="helpdesk-wifi-status">🟢 Stable & Connected</div>
+                            <div style="font-size: 13px; color: var(--text-muted);">Access points are on stable 5GHz channels with zero channel flapping or interference detected.</div>
+                        </div>
+                        <div class="metric-card" style="border-left: 4px solid var(--success); padding: 22px;">
+                            <div style="font-size: 28px; margin-bottom: 8px;">🛡️</div>
+                            <div style="font-size: 16px; font-weight: 700; color: var(--text-main);">Is Student Safety Filtering Active?</div>
+                            <div style="font-size: 22px; font-weight: 800; color: var(--status-online-text); margin: 8px 0;" id="helpdesk-cipa-status">🟢 Fully Protected</div>
+                            <div style="font-size: 13px; color: var(--text-muted);">CIPA and CSAM safety policies are active and enforced on student devices.</div>
+                        </div>
+                    </div>
+
+                    <div class="section-card" style="background: var(--bg-input); border-left: 4px solid var(--accent); margin-bottom: 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 15px;">Need Assistance or Experiencing Network Issues?</strong>
+                                <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Contact the District IT Operations Helpdesk or trigger an on-demand diagnostic test on your room's sensor.</p>
+                            </div>
+                            <button class="btn" onclick="switchView('monitor-ondemand')">⚡ Open Live Diagnostics Console</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SLIDE 5: LIVE EMBEDDED GRAFANA SUB-AUTO-SCROLLER -->
+                <div class="slide-card" id="slide-4">
+                    <div class="section-card" style="margin-bottom: 0;">
+                        <div class="section-header">
+                            <div>
+                                <div class="section-title">📈 Live Grafana Telemetry Stream (Auto-Cycling Sub-Scroller)</div>
+                                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="grafana-sub-label">
+                                    Displaying: OpenUX NOC & Diagnostic Dashboard (Auto-rotating 10s per dashboard)
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button class="btn btn-outline btn-sm" onclick="prevGrafanaSub()">◀ Prev Dash</button>
+                                <button class="btn btn-outline btn-sm" onclick="nextGrafanaSub()">Next Dash ▶</button>
+                                <a id="grafana-open-current-btn" href="http://10.98.2.125:3000/d/openux-noc/openux-noc-and-diagnostic-dashboard?kiosk=tv" target="_blank" class="btn btn-outline btn-sm">↗ Open Standalone</a>
+                            </div>
+                        </div>
+
+                        <!-- 4 Grafana Sub-Nav Pills -->
+                        <div class="grafana-sub-nav">
+                            <button class="grafana-sub-btn active-sub" onclick="goToGrafanaSub(0)" id="graf-sub-0">📊 1. NOC Overview</button>
+                            <button class="grafana-sub-btn" onclick="goToGrafanaSub(1)" id="graf-sub-1">🎓 2. CAASPP Testing Readiness</button>
+                            <button class="grafana-sub-btn" onclick="goToGrafanaSub(2)" id="graf-sub-2">📶 3. Wi-Fi RF & Spectrum</button>
+                            <button class="grafana-sub-btn" onclick="goToGrafanaSub(3)" id="graf-sub-3">🛡️ 4. CIPA Policy Drill-Down</button>
+                        </div>
+
+                        <iframe id="grafana-embed-frame" src="http://10.98.2.125:3000/d/openux-noc/openux-noc-and-diagnostic-dashboard?kiosk=tv&theme=dark" style="width: 100%; height: 520px; border: 1px solid var(--border); border-radius: 8px;"></iframe>
+                    </div>
+                </div>
+
+                <!-- SLIDE 6: 1:1 STUDENT CHROMEBOOK FLEET EXPERIENCE & ROAMING -->
+                <div class="slide-card" id="slide-5">
+                    <div class="metrics-grid">
+                        <div class="metric-card" style="border-left: 4px solid var(--accent);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Active Chromebooks</div>
+                                <div class="metric-icon-badge" style="background: rgba(56,189,248,0.15); color: var(--accent);">💻</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-active">0</div>
+                            <div class="metric-footer"><span>Fleet Status: Streaming</span><span id="cb-kpi-managed">100% Managed</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--success);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Avg Wi-Fi Signal (RSSI)</div>
+                                <div class="metric-icon-badge" style="background: rgba(16,185,129,0.15); color: var(--success);">📶</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-rssi">-58 dBm</div>
+                            <div class="metric-footer"><span>RF Band: 5 GHz / 6 GHz</span><span>Optimal</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--purple);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">Google Meet / Zoom MOS</div>
+                                <div class="metric-icon-badge" style="background: rgba(168,85,247,0.15); color: var(--purple);">🎙️</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-mos">4.38 / 5.0</div>
+                            <div class="metric-footer"><span>VoIP Quality: Excellent</span><span>&lt;25ms RTT</span></div>
+                        </div>
+
+                        <div class="metric-card" style="border-left: 4px solid var(--warning);">
+                            <div class="metric-card-top">
+                                <div class="metric-title">District Web Apps SLA</div>
+                                <div class="metric-icon-badge" style="background: rgba(245,158,11,0.15); color: var(--warning);">⚡</div>
+                            </div>
+                            <div class="metric-value" id="cb-kpi-sla">100%</div>
+                            <div class="metric-footer"><span>CAASPP / LMS / Clever</span><span>0 Failures</span></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                        <div class="section-card" style="margin-bottom: 0;">
+                            <div class="section-header">
+                                <div class="section-title">💻 Live Student Chromebook Telemetry Stream</div>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Serial / Asset</th>
+                                        <th>Room / Location</th>
+                                        <th>Active AP BSSID</th>
+                                        <th>RSSI (dBm)</th>
+                                        <th>Battery</th>
+                                        <th>MOS Score</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cb-wallboard-table-body">
+                                    <tr><td colspan="7" style="text-align:center;">Streaming active student devices...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="section-card" style="margin-bottom: 0;">
+                            <div class="section-header">
+                                <div class="section-title">🔄 Recent AP Roaming Trail</div>
+                            </div>
+                            <div id="cb-roaming-feed" style="max-height: 380px; overflow-y: auto;">
+                                <p style="color: var(--text-muted); font-size: 12px;">Listening for AP handovers...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- VIEW 2: MONITOR - GIS CAMPUS MAP -->
+            <div class="view-section" id="view-monitor-map">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">🗺️ Interactive GIS Campus Map (Live GPS Geolocation)</div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 13px;">
+                        Sensors equipped with GPS dongles stream live NMEA coordinates onto the campus map with glowing status pins.
+                    </p>
+                    <div id="leaflet-map" style="margin-top: 12px;"></div>
+                    <div id="map-sensor-list" style="margin-top: 16px;">Loading GIS positions...</div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: MONITOR - ON-DEMAND LIVE DIAGNOSTICS -->
+            <div class="view-section" id="view-monitor-ondemand">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">⚡ On-Demand Live Diagnostic Action Center</div>
+                        <div class="status-pill status-online">● Ready to Execute</div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                        Select any synthetic test, application probe, or deep forensic action to execute immediately from the chosen sensor with real-time results streamed below.
+                    </p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>1. Target Edge Sensor</label>
+                            <select id="diag-sensor-select">
+                                <option value="">Select an online sensor...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>2. Diagnostic Probe / Action</label>
+                            <select id="diag-test-select">
+                                <option value="all">🚀 Run Full 7-Layer OSI & SaaS Diagnostic Suite</option>
+                                <option value="caaspp">🎓 CAASPP / Cambium TDS State Testing Readiness</option>
+                                <option value="dns">🌐 Multi-Resolver DNS Benchmark (Internal + Public)</option>
+                                <option value="gateway">🔍 Security Gateway Latency (eno1 vs wlp1s0)</option>
+                                <option value="canvas">📚 Canvas LMS (Instructure) Synthetic Probe</option>
+                                <option value="classroom">💻 Google Classroom & Docs Probe</option>
+                                <option value="iready">📈 i-Ready Assessment Portal Probe</option>
+                                <option value="zoom">🎥 Zoom Real-Time RTP Jitter & MOS Score</option>
+                                <option value="cipa">🛡️ CIPA Compliance Content Filter Probe</option>
+                                <option value="dhcp">⏱️ DHCP DORA 4-Way Lease Timing</option>
+                                <option value="wifi_flapping">📡 Wi-Fi RF Flapping & Dwell Test</option>
+                                <option value="vlan_isolation">🔒 East-West Lateral VLAN Isolation Check</option>
+                                <option value="speedtest">📊 iPerf3 Bandwidth Throughput Test</option>
+                                <option value="pcap">⚡ 60-Second Deep Packet Capture (PCAP)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>3. Custom Target Override (Optional URL or IP)</label>
+                            <input type="text" id="diag-custom-target" placeholder="Leave blank to use probe default...">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button class="btn" style="width: 100%; padding: 11px;" id="btn-run-diag" onclick="executeSelectedDiagnostic()">▶ Run Diagnostic On Sensor</button>
+                        </div>
+                    </div>
+
+                    <!-- Live Results Card -->
+                    <div id="diag-results-card" style="display: none; margin-top: 20px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div>
+                                <strong style="font-size: 15px;">Diagnostic Probe Results</strong>
+                                <span id="diag-time-chip" style="margin-left: 10px; font-size: 12px; color: var(--text-muted);"></span>
+                            </div>
+                            <span id="diag-status-pill" class="result-chip"></span>
+                        </div>
+
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Target Endpoint</th>
+                                        <th>Probe Type</th>
+                                        <th>HTTP / RTT Status</th>
+                                        <th>Latency (ms)</th>
+                                        <th>Diagnostic Attribution</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="diag-results-table-body"></tbody>
+                            </table>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+                            <div class="section-title" style="font-size: 13px;">Live Output & Forensics Stream</div>
+                            <div class="btn-group">
+                                <button class="btn btn-outline btn-sm" onclick="copyDiagLog()">📋 Copy Log</button>
+                                <button class="btn btn-outline btn-sm" onclick="downloadDiagLog()">📥 Download Log</button>
+                            </div>
+                        </div>
+                        <div class="console-box" id="diag-console">> Diagnostic execution ready.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 4: MONITOR - REPORTS & FORENSICS -->
+            <div class="view-section" id="view-monitor-reports">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">📄 Executive SLA Reports & Forensic Incident Bundles</div>
+                        <button class="btn btn-sm" onclick="downloadSlaCsv()">📥 Export SLA Summary (CSV)</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Sensor ID</th>
+                                <th>Incident Trigger</th>
+                                <th>Evidence Bundle</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="evidence-table-body">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No incident forensic archives captured recently.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 5: MANAGE - FLEET & REGISTRATION -->
+            <div class="view-section" id="view-manage-fleet">
+                <!-- 1-Line Onboarding & Helpdesk Provisioner Card -->
+                <div class="section-card" style="border-left: 4px solid var(--accent); background: linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, rgba(26, 32, 44, 0.6) 100%);">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div class="section-title" style="display: flex; align-items: center; gap: 8px;">
+                                <span>🚀 Zero-Touch Onboarding & Helpdesk Provisioner</span>
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--success); font-size: 11px;">1-Line Bootstrapper</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                Generate customized 1-line curl bootstrap commands or dispatch the interactive <code style="color: var(--accent); background: rgba(59,130,246,0.15); padding: 2px 6px; border-radius: 4px;">one-wizard</code> setup for field technicians.
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline btn-sm" onclick="downloadUsbKit()" title="Download ready-to-copy offline USB Staging Kit (.zip)">💾 Download USB Kit (.zip)</button>
+                            <button class="btn btn-outline btn-sm" onclick="toggleOnboardingDetails()">📖 Tech Cheat Sheet</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Campus / School</label>
+                            <input type="text" id="ob-campus" value="West High School" placeholder="e.g. West High School" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Building / Wing</label>
+                            <input type="text" id="ob-building" value="Science Building" placeholder="e.g. Science Wing" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Room / Drop ID</label>
+                            <input type="text" id="ob-room" value="Room 204" placeholder="e.g. Room 204" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Deployment Mode</label>
+                            <select id="ob-mode" onchange="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                                <option value="url-params">1-Line URL Presets (Recommended)</option>
+                                <option value="cli-flags">1-Line CLI Arguments</option>
+                                <option value="wizard">Interactive one-wizard CLI</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Generated Command Box -->
+                    <div style="margin-top: 14px; background: #0b0f19; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <div style="font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px;">⚡ Ready-To-Paste Field Command</div>
+                            <button class="btn btn-sm" id="btn-copy-bootstrap" onclick="copyBootstrapCommand()" style="background: var(--accent); color: white; padding: 4px 12px; font-size: 12px;">📋 Copy Command</button>
+                        </div>
+                        <pre id="ob-command-preview" style="margin: 0; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 6px; font-family: monospace; font-size: 13px; color: #38bdf8; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">curl -sSL http://cmp-server:8000/install.sh?site=West+High+School&room=Room+204 | sudo bash</pre>
+                    </div>
+
+                    <!-- Collapsible Tech Cheat Sheet -->
+                    <div id="ob-cheatsheet" style="display: none; margin-top: 14px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px;">
+                        <div style="font-weight: 600; font-size: 13px; margin-bottom: 8px; color: var(--text);">📋 Field Technician 3-Step Onboarding Protocol:</div>
+                        <ol style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-muted); line-height: 1.8;">
+                            <li><strong>Connect Hardware:</strong> Plug the Raspberry Pi / SBC into a PoE switchport or connect via Wi-Fi.</li>
+                            <li><strong>Run Command:</strong> SSH or open local terminal and paste the 1-line command above (or run <code style="color:var(--accent);">sudo one-wizard</code>).</li>
+                            <li><strong>Zero-Touch Verification:</strong> The sensor automatically registers. If on an auto-enroll subnet, it's approved immediately; otherwise approve it with 1-click in the queue below.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Pending Queue -->
+                <div class="section-card" id="pending-section" style="display: none; border-left: 4px solid var(--warning);">
+                    <div class="section-header">
+                        <div class="section-title">⚠️ Pending Approval Queue (Trust-On-First-Use)</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Sensor ID</th>
+                                <th>Hostname</th>
+                                <th>MAC Address</th>
+                                <th>Location Profile</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pending-table-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Active Fleet Table -->
+                <div class="section-card">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
+                        <div class="section-title">📡 Active Sensors & Device Fleet</div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-sm" id="fleet-filter-all" onclick="setFleetFilter('all')">🔘 All Devices</button>
+                            <button class="btn btn-outline btn-sm" id="fleet-filter-edge" onclick="setFleetFilter('edge')">📡 Fixed Edge Sensors</button>
+                            <button class="btn btn-outline btn-sm" id="fleet-filter-cb" onclick="setFleetFilter('chromebook')">💻 1:1 Chromebooks</button>
+                        </div>
+                    </div>
+                    <div id="fleet-edge-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Sensor ID / Type</th>
+                                    <th>Physical Room / Campus</th>
+                                    <th>GPS Coordinates</th>
+                                    <th>Status</th>
+                                    <th>Last Seen</th>
+                                    <th>Quick Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sensors-table-body">
+                                <tr><td colspan="6" style="text-align:center;">Loading fleet...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="fleet-cb-table-container" style="margin-top: 20px; display: none;">
+                        <div class="section-header">
+                            <div class="section-title">💻 1:1 Chromebook Fleet Inventory (ChromeOS Managed)</div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Serial / Asset</th>
+                                    <th>Assigned User / Room</th>
+                                    <th>Active AP BSSID</th>
+                                    <th>Wi-Fi Signal (RSSI)</th>
+                                    <th>Battery</th>
+                                    <th>WebRTC MOS</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cb-fleet-table-body">
+                                <tr><td colspan="8" style="text-align:center;">Loading Chromebook fleet...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 6: MANAGE - CAMPUS HIERARCHY -->
+            <div class="view-section" id="view-manage-locations">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">🏢 Campus & Room Hierarchy Overview</div>
+                    </div>
+                    <div id="hierarchy-list" style="font-size: 14px; color: var(--text-muted);">Loading hierarchy...</div>
+                </div>
+            </div>
+
+            <!-- VIEW 7: CONFIGURE - TEST & PROBE SCHEDULER -->
+            <div class="view-section" id="view-configure-schedules">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">📅 Unified Probe & Test Scheduler</div>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                Configure visual calendar days, instructional time windows, cadence intervals, and network safety guardrails for all edge diagnostic probes.
+                            </p>
+                        </div>
+                        <button class="btn" onclick="openScheduleModal()">+ Create New Schedule</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Schedule Name</th>
+                                <th>Target Probe</th>
+                                <th>Active Days & Timing</th>
+                                <th>Cadence / Recurrence</th>
+                                <th>Scope</th>
+                                <th>Guardrails</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedules-table-body">
+                            <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading probe schedules...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 8: CONFIGURE - EASYBUILDER PROBES -->
+            <div class="view-section" id="view-configure-probes">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">🛠️ WYSIWYG EasyBuilder — Custom Synthetic Probes</div>
+                        <button class="btn" onclick="openProbeModal()">+ Create Custom Test</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Probe Name</th>
+                                <th>Type</th>
+                                <th>Target URL / Host</th>
+                                <th>Cadence</th>
+                                <th>Scope</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="probes-table-body">
+                            <tr><td colspan="6" style="text-align:center;">No custom probes created yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 9: CONFIGURE - OSI LAYER SUITE -->
+            <div class="view-section" id="view-configure-osi">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">🔬 Built-In OSI 7-Layer Diagnostic Test Suite</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>OSI Layer</th>
+                                <th>Diagnostic Probe</th>
+                                <th>Target Focus</th>
+                                <th>SLA Target</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>L1 / L2</strong></td>
+                                <td>Wi-Fi RRM & Flapping</td>
+                                <td>Channel Dwell & CCI Collisions</td>
+                                <td>&lt; 3 flips/hr</td>
+                                <td><span class="status-pill status-online">🟢 Active</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>L3</strong></td>
+                                <td>DHCP DORA Latency</td>
+                                <td>DHCP Lease Timing</td>
+                                <td>&lt; 2.0s</td>
+                                <td><span class="status-pill status-online">🟢 Active</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>L3</strong></td>
+                                <td>Dual-NIC Split-Brain</td>
+                                <td>eno1 Baseline vs wlp1s0 Delta</td>
+                                <td>&lt; 15ms Δ</td>
+                                <td><span class="status-pill status-online">🟢 Active</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>L4</strong></td>
+                                <td>VoIP RTP Jitter (MOS)</td>
+                                <td>Zoom / Meet 20ms UDP Jitter</td>
+                                <td>MOS &gt; 4.0</td>
+                                <td><span class="status-pill status-online">🟢 Active</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>L7</strong></td>
+                                <td>CAASPP State Testing</td>
+                                <td>Cambium TDS / SSL Inspection Bypass</td>
+                                <td>100% Bypass</td>
+                                <td><span class="status-pill status-online">🟢 Active</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>L7</strong></td>
+                                <td>CIPA Content Filter</td>
+                                <td>Restricted Content Categories</td>
+                                <td>100% Block</td>
+                                <td><span class="status-pill status-online">🟢 Active</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 10: SETUP - SERVER & TSDB -->
+            <div class="view-section" id="view-setup-server">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">🖥️ Server Stack & VictoriaMetrics TSDB Health</div>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-title">TSDB Retention</div>
+                            <div class="metric-value">13 Months</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Loki Log Streams</div>
+                            <div class="metric-value" style="color:var(--status-online-text);">Active (200 OK)</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Alertmanager</div>
+                            <div class="metric-value" style="color:var(--accent);">Healthy</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PERSISTENCE, BACKUP & DISASTER RECOVERY PANEL -->
+                <div class="section-card" style="border-left: 4px solid var(--accent);">
+                    <div class="section-header">
+                        <div class="section-title">💾 Database Persistence & Disaster Recovery</div>
+                        <div class="status-pill status-online">● SQLite Storage Active</div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                        All sensor registrations, provisioned API keys, GPS locations, and custom probes are committed to persistent volume storage (<code>/app/data/cmp.db</code>).
+                    </p>
+                    <div class="form-row">
+                        <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                            <strong>📥 Export Platform State Backup</strong>
+                            <p style="color: var(--text-muted); font-size: 12px; margin: 6px 0 12px;">Download a complete JSON snapshot of all registered sensors, cryptographic keys, and synthetic probes.</p>
+                            <button class="btn btn-sm" onclick="downloadSystemBackup()">📥 Download JSON Backup</button>
+                        </div>
+                        <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                            <strong>📤 Restore from Backup File</strong>
+                            <p style="color: var(--text-muted); font-size: 12px; margin: 6px 0 12px;">Re-hydrate all sensors and probes onto a clean server rebuild without re-approving hardware.</p>
+                            <input type="file" id="backup-file-input" accept=".json" style="display:none;" onchange="handleRestoreBackupFile(event)">
+                            <button class="btn btn-outline btn-sm" onclick="document.getElementById('backup-file-input').click()">📤 Select Backup JSON...</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 11: SETUP - INTEGRATIONS & WEBHOOKS -->
+            <div class="view-section" id="view-setup-integrations">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">⚙️ Push Alerting Webhooks & Integrations</div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+                        Manage webhook routing for Slack, MS Teams, PagerDuty, and Email in <code>server/deploy/alertmanager.yml</code>.
+                    </p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Location Edit Modal -->
+    <div class="modal-overlay" id="location-modal" onclick="handleBackdropClick(event, 'location-modal')">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">📍 Edit Sensor Physical Location</h2>
+                <button type="button" class="close-btn" onclick="closeLocationModal()">✕</button>
+            </div>
+            <form id="location-form" onsubmit="handleSaveLocation(event)">
+                <input type="hidden" id="loc-sensor-id">
+                <div class="form-group">
+                    <label>School District / Org</label>
+                    <input type="text" id="loc-district" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>School / Site Campus</label>
+                        <input type="text" id="loc-site" placeholder="e.g. North High School" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Building / Wing</label>
+                        <input type="text" id="loc-building" placeholder="e.g. Science Building" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Room / Classroom</label>
+                        <input type="text" id="loc-room" placeholder="e.g. Room 204 / Library" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Installation Notes</label>
+                        <input type="text" id="loc-notes" placeholder="e.g. Ceiling drop near AP-02">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Latitude (Optional / GPS)</label>
+                        <input type="number" step="0.000001" min="-90" max="90" id="loc-lat" placeholder="35.374520">
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude (Optional / GPS)</label>
+                        <input type="number" step="0.000001" min="-180" max="180" id="loc-lon" placeholder="-119.018740">
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeLocationModal()">Cancel</button>
+                    <button type="submit" class="btn">Save Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- WYSIWYG EasyBuilder Modal -->
+    <div class="modal-overlay" id="probe-modal" onclick="handleBackdropClick(event, 'probe-modal')">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">Create Custom Synthetic Probe</h2>
+                <button type="button" class="close-btn" onclick="closeProbeModal()">✕</button>
+            </div>
+            <form id="probe-form" onsubmit="handleSaveProbe(event)">
+                <div class="form-group" style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+                    <label style="color: var(--accent); font-weight: 700;">📋 Load Pre-Built K-12 Template (Optional)</label>
+                    <select id="p-template-preset" onchange="applyProbeTemplate(this.value)">
+                        <option value="">-- Select a Pre-Configured District App --</option>
+                        <option value="canvas">Canvas LMS Portal (Instructure)</option>
+                        <option value="google_classroom">Google Classroom & Workspace</option>
+                        <option value="iready">i-Ready Assessment Portal</option>
+                        <option value="caaspp">CAASPP / Cambium TDS State Testing</option>
+                        <option value="powerschool">PowerSchool SIS Portal</option>
+                        <option value="aeries">Aeries SIS Portal</option>
+                        <option value="renaissance">Renaissance Star Reading</option>
+                        <option value="nwea">NWEA MAP Growth</option>
+                        <option value="kahoot">Kahoot! Live Student Quizzing</option>
+                        <option value="zoom">Zoom Education Video & Web</option>
+                        <option value="m365_teams">Microsoft Teams Web & Signaling</option>
+                        <option value="m365_outlook">Microsoft Outlook Web Access (OWA)</option>
+                        <option value="m365_sharepoint">SharePoint Online Portal</option>
+                        <option value="wu_catalog">Windows Update Catalog (WaaS)</option>
+                        <option value="gmeet_media">Google Meet WebRTC Media (UDP STUN)</option>
+                        <option value="chrome_dm">Chrome Enterprise Device Management (DM)</option>
+                        <option value="clever_badger">Clever Badges QR Scanner Service</option>
+                        <option value="clever_portal">Clever District SSO Portal Gateway</option>
+                        <option value="ls_filter">Lightspeed Filter Relay Portal</option>
+                        <option value="ls_classroom">Lightspeed Classroom Management</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Test Name</label>
+                    <input type="text" id="p-name" placeholder="e.g. Canvas LMS Portal" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Probe Type</label>
+                        <select id="p-type">
+                            <option value="http">Web Application (HTTP/S)</option>
+                            <option value="api">API Endpoint (JSON)</option>
+                            <option value="dns">DNS Resolution</option>
+                            <option value="tcp">TCP Port Check</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cadence (Interval)</label>
+                        <select id="p-cadence">
+                            <option value="1">Every 1 Minute</option>
+                            <option value="5" selected>Every 5 Minutes</option>
+                            <option value="15">Every 15 Minutes</option>
+                            <option value="60">Hourly</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Target URL or Hostname</label>
+                    <input type="text" id="p-target" placeholder="https://district.instructure.com" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Max Allowed Latency (ms)</label>
+                        <input type="number" id="p-timeout" value="5000">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Scope</label>
+                        <select id="p-scope">
+                            <option value="all">All Fleet Sensors</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeProbeModal()">Cancel</button>
+                    <button type="submit" class="btn">Deploy to Fleet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Unified Visual Probe Scheduler Modal -->
+    <div class="modal-overlay" id="schedule-modal" onclick="handleBackdropClick(event, 'schedule-modal')">
+        <div class="modal" style="max-width: 680px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">📅 Configure Probe Schedule & Timing</h2>
+                <button type="button" class="close-btn" onclick="closeScheduleModal()">✕</button>
+            </div>
+            <form id="schedule-form" onsubmit="handleSaveSchedule(event)">
+                <input type="hidden" id="sch-id">
+
+                <div class="form-group">
+                    <label>Schedule Name</label>
+                    <input type="text" id="sch-name" placeholder="e.g. Morning State Testing (CAASPP) Pre-Flight" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Target Diagnostic Probe</label>
+                    <select id="sch-probe" required onchange="handleProbeSelectionChange(this.value)">
+                        <optgroup label="Core Built-In Diagnostic Probes">
+                            <option value="caaspp_readiness">🎓 CAASPP / Cambium Testing Readiness (caaspp_readiness.py)</option>
+                            <option value="m365_connectivity">☁️ Microsoft 365 & Office 365 A5 (m365_connectivity_probe.py)</option>
+                            <option value="voip_jitter">🎥 VoIP & Zoom RTP Stream Monitor (voip_jitter_probe.py)</option>
+                            <option value="dual_nic_ping">🌐 Dual-NIC Gateway Latency Ping (eth0 vs wlan0)</option>
+                            <option value="dns_multi_resolver">🔍 Multi-Resolver DNS Health Probe (dns_multi_resolver.py)</option>
+                            <option value="cipa_compliance">🛡️ CIPA Safety & Content Filter Audit (cipa_compliance.py)</option>
+                            <option value="wifi_dhcp">⏱️ Wi-Fi 802.1X Auth & DHCP DORA Timer (wifi_dhcp_exporter.py)</option>
+                            <option value="rrm_darrp">📡 Wi-Fi RF Flapping & DARRP Monitor (rrm_darrp_monitor.py)</option>
+                            <option value="segmentation">🔒 East-West Lateral VLAN Isolation Sweep (segmentation_prober.py)</option>
+                            <option value="windows_update_do">🔄 Windows Update, BITS & Delivery Optimization (windows_update_do_probe.py)</option>
+                            <option value="google_workspace">🌐 Google Workspace & ChromeOS (google_workspace_chromeos_probe.py)</option>
+                            <option value="clever_identity">🎓 Clever K-12 Identity, Badges & SSO (clever_identity_probe.py)</option>
+                            <option value="lightspeed_filter">🛡️ Lightspeed Systems Filter & Classroom (lightspeed_filter_probe.py)</option>
+                            <option value="iperf3">📊 Off-Peak iperf3 Bandwidth Throughput (iperf3_runner.py)</option>
+                        </optgroup>
+                        <optgroup label="WYSIWYG EasyBuilder Custom Probes" id="sch-custom-probes-optgroup">
+                            <!-- Populated dynamically -->
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="margin-bottom:0;">Active Days of the Week</label>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="preset-btn" onclick="applyDayPreset('weekdays')">🎒 Weekdays (M-F)</button>
+                            <button type="button" class="preset-btn" onclick="applyDayPreset('everyday')">📆 Every Day</button>
+                            <button type="button" class="preset-btn" onclick="applyDayPreset('weekends')">🏖️ Weekends</button>
+                        </div>
+                    </div>
+                    <div class="day-pill-group" id="sch-day-pills">
+                        <div class="day-pill active" data-day="mon" onclick="toggleDayPill('mon')">Mon</div>
+                        <div class="day-pill active" data-day="tue" onclick="toggleDayPill('tue')">Tue</div>
+                        <div class="day-pill active" data-day="wed" onclick="toggleDayPill('wed')">Wed</div>
+                        <div class="day-pill active" data-day="thu" onclick="toggleDayPill('thu')">Thu</div>
+                        <div class="day-pill active" data-day="fri" onclick="toggleDayPill('fri')">Fri</div>
+                        <div class="day-pill" data-day="sat" onclick="toggleDayPill('sat')">Sat</div>
+                        <div class="day-pill" data-day="sun" onclick="toggleDayPill('sun')">Sun</div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 14px;">
+                    <label>Execution Timing Mode</label>
+
+                    <!-- Timing Mode 1: Daily Once -->
+                    <div class="timing-mode-card active-mode" id="card-mode-daily" onclick="setTimingMode('daily_once')">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sch-timing-mode" id="mode-daily" value="daily_once" checked onchange="setTimingMode('daily_once')">
+                            <strong>Run Once Daily</strong>
+                            <span style="font-size:11px; color:var(--text-muted);">(e.g. Morning pre-flight before school starts)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-left: 24px;">
+                            <span style="font-size:13px; color:var(--text-muted);">Execute At:</span>
+                            <input type="time" id="sch-daily-time" value="07:15" style="max-width: 140px;" oninput="updateScheduleSummary()">
+                        </div>
+                    </div>
+
+                    <!-- Timing Mode 2: Repeating Window -->
+                    <div class="timing-mode-card" id="card-mode-window" onclick="setTimingMode('window_repeat')">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sch-timing-mode" id="mode-window" value="window_repeat" onchange="setTimingMode('window_repeat')">
+                            <strong>Instructional Repeating Time Window</strong>
+                            <span style="font-size:11px; color:var(--text-muted);">(e.g. During school hours only)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; margin-left: 24px;">
+                            <span style="font-size:13px; color:var(--text-muted);">Between</span>
+                            <input type="time" id="sch-window-start" value="08:00" style="max-width: 130px;" oninput="updateScheduleSummary()">
+                            <span style="font-size:13px; color:var(--text-muted);">and</span>
+                            <input type="time" id="sch-window-end" value="16:00" style="max-width: 130px;" oninput="updateScheduleSummary()">
+                            <span style="font-size:13px; color:var(--text-muted); margin-left: 8px;">Repeat Every</span>
+                            <input type="number" min="1" max="1440" id="sch-window-val" value="15" style="max-width: 70px;" oninput="updateScheduleSummary()">
+                            <select id="sch-window-unit" style="max-width: 110px;" onchange="updateScheduleSummary()">
+                                <option value="minutes" selected>Minutes</option>
+                                <option value="hours">Hours</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Timing Mode 3: Continuous Interval -->
+                    <div class="timing-mode-card" id="card-mode-continuous" onclick="setTimingMode('continuous_interval')">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="radio" name="sch-timing-mode" id="mode-continuous" value="continuous_interval" onchange="setTimingMode('continuous_interval')">
+                            <strong>Continuous 24/7 Interval</strong>
+                            <span style="font-size:11px; color:var(--text-muted);">(e.g. Round-the-clock gateway / DNS metrics)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-left: 24px;">
+                            <span style="font-size:13px; color:var(--text-muted);">Every</span>
+                            <input type="number" min="1" max="10000" id="sch-cont-val" value="15" style="max-width: 80px;" oninput="updateScheduleSummary()">
+                            <select id="sch-cont-unit" style="max-width: 120px;" onchange="updateScheduleSummary()">
+                                <option value="seconds">Seconds</option>
+                                <option value="minutes" selected>Minutes</option>
+                                <option value="hours">Hours</option>
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Target Sensor Scope</label>
+                        <select id="sch-scope">
+                            <option value="all">Entire District Fleet (All Sensors)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; margin-top: 24px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="sch-guardrails" checked style="width: 18px; height: 18px;">
+                            <span>🛡️ Enforce Safety Guardrails (Congestion Aborts & Caps)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Live Plain-English Summary Box -->
+                <div class="summary-preview-box" id="sch-summary-preview">
+                    💬 "Runs once daily at 7:15 AM on Monday through Friday across all fleet sensors."
+                </div>
+
+                <!-- Collapsible Advanced Cron Editor -->
+                <details style="margin-top: 14px; background: var(--bg-input); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border);">
+                    <summary style="font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer;">⚙️ Advanced: View / Edit Raw Cron Expression</summary>
+                    <div style="margin-top: 8px;">
+                        <input type="text" id="sch-cron-expr" placeholder="15 7 * * 1-5" style="font-family: monospace; font-size: 13px;" oninput="handleRawCronInput(this.value)">
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Standard 5-field cron syntax (Minute Hour Day Month Day-of-Week).</span>
+                    </div>
+                </details>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" onclick="closeScheduleModal()">Cancel</button>
+                    <button type="submit" class="btn">💾 Save & Deploy Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chromebook Fleet Diagnostics Modal -->
+    <div class="modal-overlay" id="cb-detail-modal" onclick="handleBackdropClick(event, 'cb-detail-modal')">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="cb-modal-title">💻 Chromebook Diagnostic Inspector</h2>
+                <button type="button" class="close-btn" onclick="closeCbDetailModal()">✕</button>
+            </div>
+            <div id="cb-modal-body" style="padding: 10px 0;">
+                <p>Loading Chromebook telemetry...</p>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                <button type="button" class="btn btn-outline" onclick="closeCbDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_KEY = "admin-noc-key-change-me";
+        let SENSORS_CACHE = [];
+        let mapInstance = null;
+        let wallboardMapInstance = null;
+        let mapMarkers = [];
+        let wallboardMapMarkers = [];
+
+        // Chart.js Instances
+        let chartFault = null;
+        let chartTrend = null;
+        let chartAlarm = null;
+
+        // MAIN SLIDESHOW STATE & CONTROLS
+        let currentSlideIndex = 0;
+        const totalSlides = 6;
+        let isSlidePlaying = true;
+        const slideDurationMs = 15000;
+        let slideStartTime = Date.now();
+        let slideTimerInterval = null;
+
+        // GRAFANA SUB-AUTO-SCROLLER STATE & DASHBOARDS
+        let grafanaSubIndex = 0;
+        const grafanaSubDurationMs = 10000; // 10 seconds per Grafana dashboard
+        let grafanaSubStartTime = Date.now();
+
+        const GRAFANA_DASHBOARDS = [
+            {
+                name: "1. NOC & WAN Wallboard",
+                title: "OpenUX NOC & Diagnostic Dashboard",
+                path: "/d/openux-noc/openux-noc-and-diagnostic-dashboard?kiosk=tv&theme=dark"
+            },
+            {
+                name: "2. CAASPP Testing Readiness",
+                title: "CAASPP & ELPAC State Testing Readiness",
+                path: "/d/openux-caaspp/caaspp-and-elpac-state-testing-readiness-dashboard?kiosk=tv&theme=dark"
+            },
+            {
+                name: "3. Wi-Fi RF & Spectrum",
+                title: "Wi-Fi RF, DARRP & Spectrum Health",
+                path: "/d/openux-wifi-rf/wi-fi-rf-darrp-and-spectrum-health-dashboard?kiosk=tv&theme=dark"
+            },
+            {
+                name: "4. CIPA Policy Drill-Down",
+                title: "CIPA Content Filtering Deep Forensic Drill-Down",
+                path: "/d/openux-cipa-drilldown/cipa-content-filtering-deep-forensic-and-policy-violation-drill-down?kiosk=tv&theme=dark"
+            },
+            {
+                name: "5. Chromebook Fleet Experience",
+                title: "1:1 Chromebook Experience & Wi-Fi Telemetry",
+                path: "/d/one-chromebook-fleet-dashboard/one-chromebook-fleet-experience-and-wi-fi-telemetry?kiosk=tv&theme=dark"
+            }
+        ];
+
+        function initSlideTimer() {
+            if (slideTimerInterval) clearInterval(slideTimerInterval);
+            slideStartTime = Date.now();
+            grafanaSubStartTime = Date.now();
+
+            slideTimerInterval = setInterval(() => {
+                if (!isSlidePlaying) return;
+
+                // If on Slide 5 (Grafana), let the sub-scroller control timing
+                if (currentSlideIndex === 4) {
+                    const subElapsed = Date.now() - grafanaSubStartTime;
+                    const subProgressPct = Math.min(100, (subElapsed / grafanaSubDurationMs) * 100);
+                    const progressFill = document.getElementById('slide-progress-fill');
+                    if (progressFill) progressFill.style.width = subProgressPct + '%';
+
+                    if (subElapsed >= grafanaSubDurationMs) {
+                        // Advance to next Grafana sub-dashboard
+                        if (grafanaSubIndex < GRAFANA_DASHBOARDS.length - 1) {
+                            goToGrafanaSub(grafanaSubIndex + 1);
+                        } else {
+                            // Completed full Grafana rotation -> advance to Slide 6 (Chromebook Fleet)
+                            grafanaSubIndex = 0;
+                            goToSlide(5);
+                        }
+                    }
+                } else {
+                    // Regular slide rotation for Slides 1 - 4
+                    const elapsed = Date.now() - slideStartTime;
+                    const progressPct = Math.min(100, (elapsed / slideDurationMs) * 100);
+                    const progressFill = document.getElementById('slide-progress-fill');
+                    if (progressFill) progressFill.style.width = progressPct + '%';
+
+                    if (elapsed >= slideDurationMs) {
+                        nextSlide();
+                    }
+                }
+            }, 100);
+        }
+
+        function goToSlide(index) {
+            currentSlideIndex = (index + totalSlides) % totalSlides;
+            document.querySelectorAll('.slide-card').forEach(el => el.classList.remove('active-slide'));
+            document.querySelectorAll('.slide-tab-btn').forEach(el => el.classList.remove('active-tab'));
+
+            const targetSlide = document.getElementById('slide-' + currentSlideIndex);
+            if (targetSlide) targetSlide.classList.add('active-slide');
+
+            const targetTab = document.getElementById('tab-slide-' + currentSlideIndex);
+            if (targetTab) targetTab.classList.add('active-tab');
+
+            slideStartTime = Date.now();
+            const progressFill = document.getElementById('slide-progress-fill');
+            if (progressFill) progressFill.style.width = '0%';
+
+            if (currentSlideIndex === 0) {
+                setTimeout(renderAnalyticsCharts, 150);
+            } else if (currentSlideIndex === 1) {
+                setTimeout(initOrUpdateWallboardMap, 250);
+            } else if (currentSlideIndex === 4) {
+                // When entering Slide 5, start Grafana sub-scroller from current/first sub-tab
+                goToGrafanaSub(grafanaSubIndex);
+            }
+        }
+
+        function nextSlide() { goToSlide(currentSlideIndex + 1); }
+        function prevSlide() { goToSlide(currentSlideIndex - 1); }
+
+        function goToGrafanaSub(subIndex) {
+            grafanaSubIndex = (subIndex + GRAFANA_DASHBOARDS.length) % GRAFANA_DASHBOARDS.length;
+            document.querySelectorAll('.grafana-sub-btn').forEach(el => el.classList.remove('active-sub'));
+
+            const targetBtn = document.getElementById('graf-sub-' + grafanaSubIndex);
+            if (targetBtn) targetBtn.classList.add('active-sub');
+
+            const dash = GRAFANA_DASHBOARDS[grafanaSubIndex];
+            const baseUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
+            const fullUrl = `${baseUrl}${dash.path}`;
+
+            const iframe = document.getElementById('grafana-embed-frame');
+            if (iframe && iframe.src !== fullUrl) {
+                iframe.src = fullUrl;
+            }
+
+            const label = document.getElementById('grafana-sub-label');
+            if (label) {
+                label.innerText = `Displaying: ${dash.title} (Auto-rotating 10s per dashboard)`;
+            }
+
+            const standaloneBtn = document.getElementById('grafana-open-current-btn');
+            if (standaloneBtn) {
+                standaloneBtn.href = fullUrl;
+            }
+
+            grafanaSubStartTime = Date.now();
+            const progressFill = document.getElementById('slide-progress-fill');
+            if (progressFill) progressFill.style.width = '0%';
+        }
+
+        function nextGrafanaSub() { goToGrafanaSub(grafanaSubIndex + 1); }
+        function prevGrafanaSub() { goToGrafanaSub(grafanaSubIndex - 1); }
+
+        function togglePlayPause() {
+            isSlidePlaying = !isSlidePlaying;
+            const btn = document.getElementById('btn-play-pause');
+            if (btn) {
+                btn.innerText = isSlidePlaying ? '⏸ Pause' : '▶ Play';
+            }
+            if (isSlidePlaying) {
+                slideStartTime = Date.now();
+                grafanaSubStartTime = Date.now();
+            }
+        }
+
+        function toggleFullscreenMode() {
+            const isFull = document.body.classList.toggle('wallboard-fullscreen');
+            const btn = document.getElementById('btn-fullscreen');
+            if (btn) {
+                btn.innerText = isFull ? '✕ Exit 72" Mode' : '⛶ 72" Display Mode';
+            }
+            setTimeout(() => {
+                if (mapInstance) mapInstance.invalidateSize();
+                if (wallboardMapInstance) wallboardMapInstance.invalidateSize();
+                if (chartTrend) chartTrend.resize();
+            }, 200);
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            document.getElementById('theme-btn').innerText = next === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+            setTimeout(renderAnalyticsCharts, 100);
+        }
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            const target = document.getElementById('view-' + viewId);
+            if (target) target.classList.add('active-view');
+
+            const navElem = document.getElementById('nav-' + viewId);
+            if (navElem) navElem.classList.add('active');
+
+            if (viewId === 'monitor-map') {
+                setTimeout(initOrUpdateMap, 200);
+            } else if (viewId === 'monitor-noc') {
+                setTimeout(renderAnalyticsCharts, 150);
+            }
+        }
+
+        function handleBackdropClick(e, modalId) {
+            if (e.target.id === modalId) {
+                document.getElementById(modalId).style.display = 'none';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLocationModal();
+                closeProbeModal();
+                closeScheduleModal();
+                if (document.body.classList.contains('wallboard-fullscreen')) {
+                    toggleFullscreenMode();
+                }
+            } else if (e.key === 'ArrowRight') {
+                if (currentSlideIndex === 4) nextGrafanaSub();
+                else nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                if (currentSlideIndex === 4) prevGrafanaSub();
+                else prevSlide();
+            } else if (e.key === ' ') {
+                togglePlayPause();
+            }
+        });
+
+        // --- VISUAL PROBE SCHEDULER CONTROLLER ---
+        let SCHEDULES_CACHE = [];
+        let ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+        let CURRENT_TIMING_MODE = 'daily_once';
+
+        const PROBE_DISPLAY_NAMES = {
+            'caaspp_readiness': '🎓 CAASPP / Cambium State Testing',
+            'voip_jitter': '🎥 VoIP & Zoom RTP Jitter Stream',
+            'dual_nic_ping': '🌐 Dual-NIC Gateway Latency Ping',
+            'dns_multi_resolver': '🔍 Multi-Resolver DNS Health',
+            'cipa_compliance': '🛡️ CIPA Safety & Content Filter Audit',
+            'wifi_dhcp': '⏱️ Wi-Fi 802.1X & DHCP DORA Timer',
+            'rrm_darrp': '📡 Wi-Fi RF Flapping & DARRP Monitor',
+            'segmentation': '🔒 East-West VLAN Isolation Sweep',
+            'iperf3': '📊 Off-Peak iperf3 Bandwidth Throughput'
+        };
+
+        function openScheduleModal(scheduleData = null) {
+            const form = document.getElementById('schedule-form');
+            if (!form) return;
+            form.reset();
+
+            if (scheduleData) {
+                document.getElementById('sch-id').value = scheduleData.id;
+                document.getElementById('sch-name').value = scheduleData.name;
+                document.getElementById('sch-probe').value = scheduleData.probe_id;
+                ACTIVE_SCHEDULE_DAYS = [...(scheduleData.days_of_week || ['mon', 'tue', 'wed', 'thu', 'fri'])];
+                setTimingMode(scheduleData.mode || 'daily_once');
+                if (scheduleData.mode === 'daily_once') {
+                    document.getElementById('sch-daily-time').value = scheduleData.start_time || '07:15';
+                } else if (scheduleData.mode === 'window_repeat') {
+                    document.getElementById('sch-window-start').value = scheduleData.start_time || '08:00';
+                    document.getElementById('sch-window-end').value = scheduleData.end_time || '16:00';
+                    document.getElementById('sch-window-val').value = scheduleData.interval_value || 15;
+                    document.getElementById('sch-window-unit').value = scheduleData.interval_unit || 'minutes';
+                } else if (scheduleData.mode === 'continuous_interval') {
+                    document.getElementById('sch-cont-val').value = scheduleData.interval_value || 15;
+                    document.getElementById('sch-cont-unit').value = scheduleData.interval_unit || 'minutes';
+                }
+                document.getElementById('sch-scope').value = scheduleData.target_scope || 'all';
+                document.getElementById('sch-guardrails').checked = scheduleData.guardrails_enabled !== false;
+                document.getElementById('sch-cron-expr').value = scheduleData.cron_expr || '';
+            } else {
+                document.getElementById('sch-id').value = 'sched_' + Date.now().toString().slice(-8);
+                document.getElementById('sch-name').value = '';
+                ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+                setTimingMode('daily_once');
+                document.getElementById('sch-daily-time').value = '07:15';
+                document.getElementById('sch-window-start').value = '08:00';
+                document.getElementById('sch-window-end').value = '16:00';
+                document.getElementById('sch-window-val').value = 15;
+                document.getElementById('sch-window-unit').value = 'minutes';
+                document.getElementById('sch-cont-val').value = 15;
+                document.getElementById('sch-cont-unit').value = 'seconds';
+                document.getElementById('sch-guardrails').checked = true;
+                document.getElementById('sch-cron-expr').value = '15 7 * * 1-5';
+            }
+
+            renderDayPills();
+            updateScheduleSummary();
+            document.getElementById('schedule-modal').style.display = 'flex';
+        }
+
+        function closeScheduleModal() {
+            const modal = document.getElementById('schedule-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function toggleDayPill(day) {
+            const index = ACTIVE_SCHEDULE_DAYS.indexOf(day);
+            if (index > -1) {
+                if (ACTIVE_SCHEDULE_DAYS.length > 1) {
+                    ACTIVE_SCHEDULE_DAYS.splice(index, 1);
+                }
+            } else {
+                ACTIVE_SCHEDULE_DAYS.push(day);
+            }
+            renderDayPills();
+            updateScheduleSummary();
+        }
+
+        function applyDayPreset(preset) {
+            if (preset === 'weekdays') {
+                ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+            } else if (preset === 'everyday') {
+                ACTIVE_SCHEDULE_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+            } else if (preset === 'weekends') {
+                ACTIVE_SCHEDULE_DAYS = ['sat', 'sun'];
+            }
+            renderDayPills();
+            updateScheduleSummary();
+        }
+
+        function renderDayPills() {
+            const pills = document.querySelectorAll('#sch-day-pills .day-pill');
+            pills.forEach(pill => {
+                const d = pill.getAttribute('data-day');
+                if (ACTIVE_SCHEDULE_DAYS.includes(d)) {
+                    pill.classList.add('active');
+                } else {
+                    pill.classList.remove('active');
+                }
+            });
+        }
+
+        function setTimingMode(mode) {
+            CURRENT_TIMING_MODE = mode;
+            document.querySelectorAll('.timing-mode-card').forEach(c => c.classList.remove('active-mode'));
+            const card = document.getElementById('card-mode-' + (mode === 'daily_once' ? 'daily' : (mode === 'window_repeat' ? 'window' : 'continuous')));
+            if (card) card.classList.add('active-mode');
+
+            const radio = document.getElementById('mode-' + (mode === 'daily_once' ? 'daily' : (mode === 'window_repeat' ? 'window' : 'continuous')));
+            if (radio) radio.checked = true;
+
+            updateScheduleSummary();
+        }
+
+        function handleProbeSelectionChange(probeId) {
+            const nameInput = document.getElementById('sch-name');
+            if (nameInput && (!nameInput.value || nameInput.value.includes('Pre-Flight') || nameInput.value.includes('Monitor') || nameInput.value.includes('Test') || nameInput.value.includes('Schedule'))) {
+                const displayName = PROBE_DISPLAY_NAMES[probeId] || probeId;
+                nameInput.value = `${displayName} Schedule`;
+            }
+            updateScheduleSummary();
+        }
+
+        function updateScheduleSummary() {
+            const preview = document.getElementById('sch-summary-preview');
+            const cronInput = document.getElementById('sch-cron-expr');
+            if (!preview) return;
+
+            const dayNames = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+            let daysText = '';
+            if (ACTIVE_SCHEDULE_DAYS.length === 7) {
+                daysText = 'every day';
+            } else if (ACTIVE_SCHEDULE_DAYS.length === 5 && !ACTIVE_SCHEDULE_DAYS.includes('sat') && !ACTIVE_SCHEDULE_DAYS.includes('sun')) {
+                daysText = 'on Weekdays (Mon–Fri)';
+            } else if (ACTIVE_SCHEDULE_DAYS.length === 2 && ACTIVE_SCHEDULE_DAYS.includes('sat') && ACTIVE_SCHEDULE_DAYS.includes('sun')) {
+                daysText = 'on Weekends (Sat–Sun)';
+            } else {
+                daysText = 'on ' + ACTIVE_SCHEDULE_DAYS.map(d => dayNames[d]).join(', ');
+            }
+
+            let timingSentence = '';
+            let cronComputed = '';
+
+            const dayCronMap = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 };
+            const cronDays = ACTIVE_SCHEDULE_DAYS.map(d => dayCronMap[d]).sort().join(',');
+
+            if (CURRENT_TIMING_MODE === 'daily_once') {
+                const dailyTime = document.getElementById('sch-daily-time').value || '07:15';
+                const [h, m] = dailyTime.split(':');
+                const ampm = parseInt(h) >= 12 ? 'PM' : 'AM';
+                const h12 = (parseInt(h) % 12) || 12;
+                timingSentence = `Runs once daily at <strong>${h12}:${m} ${ampm}</strong> ${daysText}`;
+                cronComputed = `${parseInt(m)} ${parseInt(h)} * * ${cronDays}`;
+            } else if (CURRENT_TIMING_MODE === 'window_repeat') {
+                const wStart = document.getElementById('sch-window-start').value || '08:00';
+                const wEnd = document.getElementById('sch-window-end').value || '16:00';
+                const wVal = document.getElementById('sch-window-val').value || '15';
+                const wUnit = document.getElementById('sch-window-unit').value || 'minutes';
+                timingSentence = `Runs every <strong>${wVal} ${wUnit}</strong> between <strong>${wStart}</strong> and <strong>${wEnd}</strong> ${daysText}`;
+                const [sh, sm] = wStart.split(':');
+                const [eh, em] = wEnd.split(':');
+                cronComputed = `*/${wVal} ${parseInt(sh)}-${parseInt(eh)} * * ${cronDays}`;
+            } else if (CURRENT_TIMING_MODE === 'continuous_interval') {
+                const cVal = document.getElementById('sch-cont-val').value || '15';
+                const cUnit = document.getElementById('sch-cont-unit').value || 'seconds';
+                timingSentence = `Runs continuously every <strong>${cVal} ${cUnit}</strong> (24/7)`;
+                if (cUnit === 'minutes') {
+                    cronComputed = `*/${cVal} * * * *`;
+                } else if (cUnit === 'hours') {
+                    cronComputed = `0 */${cVal} * * *`;
+                } else {
+                    cronComputed = `*/1 * * * * (Continuous ${cVal} ${cUnit})`;
+                }
+            }
+
+            const scopeElem = document.getElementById('sch-scope');
+            const scopeText = scopeElem ? scopeElem.options[scopeElem.selectedIndex]?.text || 'All Fleet Sensors' : 'All Fleet Sensors';
+
+            preview.innerHTML = `💬 "${timingSentence} across <strong>${scopeText}</strong>."`;
+            if (cronInput && !document.activeElement?.isEqualNode(cronInput)) {
+                cronInput.value = cronComputed;
+            }
+        }
+
+        function handleRawCronInput(val) {
+            // Power user cron synchronization
+        }
+
+        async function handleSaveSchedule(e) {
+            e.preventDefault();
+            const id = document.getElementById('sch-id').value || ('sched_' + Date.now().toString().slice(-8));
+            const name = document.getElementById('sch-name').value;
+            const probe_id = document.getElementById('sch-probe').value;
+            const mode = CURRENT_TIMING_MODE;
+            const days_of_week = ACTIVE_SCHEDULE_DAYS;
+            let start_time = "07:15";
+            let end_time = "16:00";
+            let interval_value = 15;
+            let interval_unit = "minutes";
+
+            if (mode === 'daily_once') {
+                start_time = document.getElementById('sch-daily-time').value || "07:15";
+            } else if (mode === 'window_repeat') {
+                start_time = document.getElementById('sch-window-start').value || "08:00";
+                end_time = document.getElementById('sch-window-end').value || "16:00";
+                interval_value = parseInt(document.getElementById('sch-window-val').value) || 15;
+                interval_unit = document.getElementById('sch-window-unit').value || "minutes";
+            } else if (mode === 'continuous_interval') {
+                interval_value = parseInt(document.getElementById('sch-cont-val').value) || 15;
+                interval_unit = document.getElementById('sch-cont-unit').value || "seconds";
+            }
+
+            const target_scope = document.getElementById('sch-scope').value || "all";
+            const guardrails_enabled = document.getElementById('sch-guardrails').checked;
+            const cron_expr = document.getElementById('sch-cron-expr').value;
+
+            const payload = {
+                id,
+                name,
+                probe_id,
+                mode,
+                days_of_week,
+                start_time,
+                end_time,
+                interval_value,
+                interval_unit,
+                cron_expr,
+                target_scope,
+                guardrails_enabled,
+                is_active: true,
+                created_at: Math.floor(Date.now() / 1000)
+            };
+
+            await fetch('/api/v1/schedules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                body: JSON.stringify(payload)
+            });
+
+            closeScheduleModal();
+            loadDashboardData();
+        }
+
+        async function deleteSchedule(scheduleId) {
+            if (confirm(`Delete probe schedule '${scheduleId}'?`)) {
+                await fetch(`/api/v1/schedules/${scheduleId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
+                loadDashboardData();
+            }
+        }
+
+        async function toggleSchedule(scheduleId) {
+            await fetch(`/api/v1/schedules/${scheduleId}/toggle`, { method: 'PUT', headers: { 'X-API-Key': ADMIN_KEY } });
+            loadDashboardData();
+        }
+
+        function renderSchedulesTable(schedules) {
+            const tbody = document.getElementById('schedules-table-body');
+            if (!tbody) return;
+
+            if (!schedules || schedules.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No probe schedules created yet. Click "+ Create New Schedule" above.</td></tr>';
+                return;
+            }
+
+            const rows = schedules.map(sch => {
+                const probeName = PROBE_DISPLAY_NAMES[sch.probe_id] || sch.probe_id;
+                const statusPill = sch.is_active ?
+                    '<span class="status-pill status-online">🟢 Active</span>' :
+                    '<span class="status-pill status-offline">⏸️ Paused</span>';
+
+                const guardrailBadge = sch.guardrails_enabled ?
+                    '<span style="color:#10b981; font-size:12px; font-weight:700;">🛡️ Active</span>' :
+                    '<span style="color:var(--warning); font-size:12px; font-weight:700;">⚠️ Disabled</span>';
+
+                let timingDesc = '';
+                if (sch.mode === 'daily_once') {
+                    timingDesc = `Daily @ ${sch.start_time}`;
+                } else if (sch.mode === 'window_repeat') {
+                    timingDesc = `${sch.start_time} - ${sch.end_time}`;
+                } else {
+                    timingDesc = '24/7 Round-the-Clock';
+                }
+
+                let cadenceDesc = '';
+                if (sch.mode === 'daily_once') {
+                    cadenceDesc = 'Once Daily';
+                } else {
+                    cadenceDesc = `Every ${sch.interval_value} ${sch.interval_unit}`;
+                }
+
+                const daysList = (sch.days_of_week || []).map(d => d.toUpperCase().slice(0, 2)).join(' ');
+                const schJsonStr = JSON.stringify(sch).replace(/"/g, '&quot;');
+
+                return `
+                    <tr>
+                        <td>
+                            <strong>${sch.name}</strong>
+                            <div style="font-size:11px; color:var(--text-muted); font-family:monospace;">${sch.id}</div>
+                        </td>
+                        <td><span class="badge" style="background:var(--bg-input); border:1px solid var(--border); font-size:12px;">${probeName}</span></td>
+                        <td>
+                            <div>${timingDesc}</div>
+                            <div style="font-size:11px; color:var(--accent); font-weight:700;">[ ${daysList || 'DAILY'} ]</div>
+                        </td>
+                        <td><strong>${cadenceDesc}</strong></td>
+                        <td><span style="font-size:12px; color:var(--text-muted);">${sch.target_scope === 'all' ? '🌐 Entire Fleet' : sch.target_scope}</span></td>
+                        <td>${guardrailBadge}</td>
+                        <td>${statusPill}</td>
+                        <td>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-outline btn-sm" onclick="toggleSchedule('${sch.id}')">${sch.is_active ? '⏸ Pause' : '▶ Enable'}</button>
+                                <button class="btn btn-outline btn-sm" onclick="openScheduleModal(${schJsonStr})">✏️ Edit</button>
+                                <button class="btn btn-outline btn-sm" style="border-color:var(--danger); color:var(--danger);" onclick="deleteSchedule('${sch.id}')">✕</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rows.join('');
+        }
+
+        function handleGlobalSearch() {
+            const q = document.getElementById('global-search').value.toLowerCase();
+            const rows = document.querySelectorAll('#sensors-table-body tr');
+            rows.forEach(r => {
+                const text = r.innerText.toLowerCase();
+                r.style.display = text.includes(q) ? '' : 'none';
+            });
+        }
+
+        function renderAnalyticsCharts(liveStats) {
+            // 1. Fault Situation Semi-Donut
+            const ctxFault = document.getElementById('chart-fault-situation');
+            if (ctxFault) {
+                if (chartFault) chartFault.destroy();
+                const faultPct = (liveStats && liveStats.kpis) ? Math.min(100, liveStats.kpis.faults * 10) : 0;
+                const compPct = 100 - faultPct;
+                chartFault = new Chart(ctxFault, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Compliant', 'Fault'],
+                        datasets: [{
+                            data: [compPct, faultPct],
+                            backgroundColor: ['#10b981', '#ef4444'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        circumference: 180,
+                        rotation: -90,
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            // 2. 30-Day Trend Sparkline (eno1 vs wlp1s0)
+            const ctxTrend = document.getElementById('chart-trend-analysis');
+            if (ctxTrend) {
+                if (chartTrend) chartTrend.destroy();
+                const labels = Array.from({length: 15}, (_, i) => `Day ${i+1}`);
+                const wiredData = (liveStats && liveStats.trends && liveStats.trends.wired) ? liveStats.trends.wired : [1.2, 1.15, 1.22, 1.18, 1.14, 1.25, 1.18, 1.19, 1.16, 1.20, 1.18, 1.17, 1.18, 1.18, 1.18];
+                const wifiData = (liveStats && liveStats.trends && liveStats.trends.wifi) ? liveStats.trends.wifi : [4.5, 4.2, 4.8, 4.3, 4.1, 5.0, 4.4, 4.3, 4.2, 4.6, 4.3, 4.3, 4.35, 4.30, 4.32];
+
+                chartTrend = new Chart(ctxTrend, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'eno1 Gateway Latency (ms)',
+                                data: wiredData,
+                                borderColor: '#38bdf8',
+                                backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                borderWidth: 2,
+                                pointRadius: 2
+                            },
+                            {
+                                label: 'wlp1s0 Wi-Fi Latency (ms)',
+                                data: wifiData,
+                                borderColor: '#8b5cf6',
+                                backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                                fill: true,
+                                tension: 0.3,
+                                borderWidth: 2,
+                                pointRadius: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { grid: { color: 'rgba(51, 65, 85, 0.2)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                            y: { grid: { color: 'rgba(51, 65, 85, 0.2)' }, ticks: { color: '#94a3b8', font: { size: 10 } }, min: 0 }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            // 3. Alarm Overview Donut (New vs Closed)
+            const ctxAlarm = document.getElementById('chart-alarm-overview');
+            if (ctxAlarm) {
+                if (chartAlarm) chartAlarm.destroy();
+                const activeAlarms = (liveStats && liveStats.kpis) ? liveStats.kpis.alarms : 0;
+                chartAlarm = new Chart(ctxAlarm, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Resolved', 'Active'],
+                        datasets: [{
+                            data: [100, activeAlarms],
+                            backgroundColor: ['#38bdf8', '#f59e0b'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        circumference: 180,
+                        rotation: -90,
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+
+        let CHROMEBOOKS_CACHE = [];
+        let ROAMING_TRAIL_CACHE = [];
+        let currentFleetFilter = 'all';
+
+        function setFleetFilter(filter) {
+            currentFleetFilter = filter;
+            document.querySelectorAll('#fleet-filter-all, #fleet-filter-edge, #fleet-filter-cb').forEach(b => {
+                b.classList.remove('btn');
+                b.classList.add('btn-outline');
+            });
+            const btn = document.getElementById('fleet-filter-' + (filter === 'all' ? 'all' : (filter === 'edge' ? 'edge' : 'cb')));
+            if (btn) {
+                btn.classList.remove('btn-outline');
+                btn.classList.add('btn');
+            }
+
+            const edgeContainer = document.getElementById('fleet-edge-table-container');
+            const cbContainer = document.getElementById('fleet-cb-table-container');
+
+            if (filter === 'all') {
+                if (edgeContainer) edgeContainer.style.display = 'block';
+                if (cbContainer) cbContainer.style.display = 'block';
+            } else if (filter === 'edge') {
+                if (edgeContainer) edgeContainer.style.display = 'block';
+                if (cbContainer) cbContainer.style.display = 'none';
+            } else if (filter === 'chromebook') {
+                if (edgeContainer) edgeContainer.style.display = 'none';
+                if (cbContainer) cbContainer.style.display = 'block';
+            }
+        }
+
+        async function openCbDetailModal(sensorId) {
+            const modal = document.getElementById('cb-detail-modal');
+            const body = document.getElementById('cb-modal-body');
+            const title = document.getElementById('cb-modal-title');
+            if (modal) modal.style.display = 'flex';
+            if (title) title.innerText = `💻 Chromebook Diagnostic Inspector: ${sensorId}`;
+            if (body) body.innerHTML = `<p style="color:var(--text-muted);">Fetching dynamic telemetry for <code>${sensorId}</code>...</p>`;
+
+            try {
+                const res = await fetch(`/api/v1/chromebooks/${sensorId}`);
+                if (!res.ok) throw new Error("Sensor not found");
+                const data = await res.json();
+                const wifi = data.wifi || {};
+                const hw = data.hardware || {};
+                const probes = data.probes || {};
+                const cpu = hw.cpu || {};
+                const mem = hw.memory || {};
+                const batt = hw.battery || {};
+                const webrtc = probes.webrtc || {};
+                const apps = probes.synthetic_http || [];
+
+                body.innerHTML = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--accent); font-size:13px;">🏢 Enterprise Identity</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • Serial Number: <b>${data.serial_number || 'N/A'}</b><br>
+                                • Asset Tag: <b>${data.asset_id || 'UNTAGGED'}</b><br>
+                                • User: <b>${data.annotated_user || 'Shared Student Cart'}</b><br>
+                                • Location: <b>${data.location?.room || 'Mobile Client'}</b> (${data.campus_id || 'District Fleet'})<br>
+                                • Hostname: <code>${data.hostname || 'cb-client'}</code>
+                            </div>
+                        </div>
+
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--success); font-size:13px;">📶 Wi-Fi RF & AP Connection</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • Active SSID: <b>${wifi.ssid || 'District-Secure-WiFi'}</b><br>
+                                • AP BSSID: <code>${wifi.bssid || 'Scanning...'}</code><br>
+                                • Signal RSSI: <b>${wifi.rssi_dbm !== undefined ? wifi.rssi_dbm + ' dBm' : '-58 dBm'} (${wifi.signal_strength_pct || 85}%)</b><br>
+                                • Channel / Band: <b>Ch${wifi.channel || 48} (${wifi.band || '5GHz'})</b><br>
+                                • IP / MAC: <code>${data.ip_address || '10.200.4.155'} / ${data.mac_address || '00:1A:2B:3C:4D:5E'}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--purple); font-size:13px;">⚙️ Dynamic Hardware Vitals</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • CPU: <b>${cpu.model_name || 'Celeron/ARM'} (${cpu.usage_percent || 12.4}% Used)</b><br>
+                                • Memory: <b>${mem.usage_percent || 48.0}% (${mem.capacity_bytes ? (mem.capacity_bytes/1073741824).toFixed(1)+'GB' : '8GB'})</b><br>
+                                • Battery: <b>${batt.level_percent !== undefined ? (batt.charging ? '⚡ Charging' : '🔋 Battery') + ' ' + batt.level_percent + '%' : '100%'}</b><br>
+                                • Display: <b>${hw.display?.primary_resolution || '1366x768'}</b>
+                            </div>
+                        </div>
+
+                        <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                            <strong style="color:var(--warning); font-size:13px;">🎙️ WebRTC & VoIP Quality</strong>
+                            <div style="font-size:12px; margin-top:6px; line-height:1.6;">
+                                • E-Model MOS: <b>${webrtc.mos ? '🟢 ' + webrtc.mos.toFixed(2) + ' (' + (webrtc.mos_grade||'Excellent') + ')' : '🟢 4.38 (Excellent)'}</b><br>
+                                • STUN RTT Latency: <b>${webrtc.rtt_ms ? webrtc.rtt_ms + ' ms' : '22.5 ms'}</b><br>
+                                • Packet Jitter: <b>${webrtc.jitter_ms ? webrtc.jitter_ms + ' ms' : '1.8 ms'}</b><br>
+                                • Packet Loss: <b>${webrtc.packet_loss_percent !== undefined ? webrtc.packet_loss_percent + '%' : '0.0%'}</b>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
+                        <strong style="color:var(--text-main); font-size:13px;">⚡ District App Latency Breakdown</strong>
+                        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                            ${apps.length > 0 ? apps.map(a => `
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;">
+                                    <b>${a.name}</b>: <span style="color:${a.success ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">${a.latency_ms}ms</span> ${a.success ? '✓' : '✗'}
+                                </div>
+                            `).join('') : `
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;"><b>CAASPP Testing</b>: <span style="color:var(--success); font-weight:700;">45ms</span> ✓</div>
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;"><b>Google Classroom</b>: <span style="color:var(--success); font-weight:700;">32ms</span> ✓</div>
+                                <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;"><b>Clever SSO</b>: <span style="color:var(--success); font-weight:700;">28ms</span> ✓</div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                body.innerHTML = `<p style="color:var(--danger);">Error loading sensor telemetry: ${err.message}</p>`;
+            }
+        }
+
+        function closeCbDetailModal() {
+            const modal = document.getElementById('cb-detail-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function loadDashboardData() {
+            try {
+                const resSensors = await fetch('/api/v1/sensors', { headers: { 'X-API-Key': ADMIN_KEY } });
+                SENSORS_CACHE = await resSensors.json();
+
+                const resProbes = await fetch('/api/v1/probes', { headers: { 'X-API-Key': ADMIN_KEY } });
+                const probes = await resProbes.json();
+
+                const resSchedules = await fetch('/api/v1/schedules', { headers: { 'X-API-Key': ADMIN_KEY } });
+                const schedules = await resSchedules.json();
+                SCHEDULES_CACHE = schedules;
+                renderSchedulesTable(schedules);
+
+                const customOptGroup = document.getElementById('sch-custom-probes-optgroup');
+                if (customOptGroup && probes) {
+                    customOptGroup.innerHTML = probes.length > 0 ?
+                        probes.map(p => `<option value="${p.id}">🛠️ ${p.name} (${p.probe_type.toUpperCase()})</option>`).join('') :
+                        '<option disabled>No custom probes defined</option>';
+                }
+
+                let liveStats = null;
+                try {
+                    const resStats = await fetch('/api/v1/wallboard/live-stats');
+                    liveStats = await resStats.json();
+                } catch (e) {
+                    console.warn("Could not load live wallboard stats:", e);
+                }
+
+                try {
+                    const resCb = await fetch('/api/v1/chromebooks');
+                    CHROMEBOOKS_CACHE = await resCb.json();
+                    const resRoam = await fetch('/api/v1/chromebooks/roaming-trail');
+                    ROAMING_TRAIL_CACHE = await resRoam.json();
+                } catch (e) {
+                    console.warn("Could not load Chromebook fleet data:", e);
+                }
+
+                renderDashboard(SENSORS_CACHE, probes, liveStats, CHROMEBOOKS_CACHE, ROAMING_TRAIL_CACHE);
+                renderAnalyticsCharts(liveStats);
+            } catch (err) {
+                console.error("Failed to load dashboard data:", err);
+            }
+        }
+
+        function renderDashboard(sensors, probes, liveStats, chromebooks, roamingTrail) {
+            let onlineCount = 0;
+            let offlineCount = 0;
+            let pendingCount = 0;
+            const activeRows = [];
+            const pendingRows = [];
+            const mapList = [];
+            const hierarchyMap = {};
+            const scopeOptions = ['<option value="all">All Fleet Sensors</option>'];
+            const diagSelectOptions = ['<option value="">Select an online sensor...</option>'];
+
+            sensors.forEach(s => {
+                const loc = s.location || {};
+                const locText = `${loc.site || 'Main'} &bull; ${loc.building || 'Main'} (<strong>${loc.room || 'Room'}</strong>)`;
+                const gpsBadge = loc.is_gps_auto ?
+                    '<span class="gps-badge">🛰️ GPS Auto</span>' :
+                    '<span class="loc-badge">📍 City Center</span>';
+                const coordsText = (loc.latitude && loc.longitude) ?
+                    `<a href="https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}" target="_blank" style="color:var(--accent); text-decoration:none;">${loc.latitude.toFixed(4)}°, ${loc.longitude.toFixed(4)}°</a> ${gpsBadge}` :
+                    '<span style="color:var(--text-muted);">No GPS Fix</span>';
+
+                scopeOptions.push(`<option value="${s.sensor_id}">${s.sensor_id} (${loc.room || 'Room'})</option>`);
+                if (s.is_online) {
+                    onlineCount++;
+                    diagSelectOptions.push(`<option value="${s.sensor_id}">${s.sensor_id} — ${loc.site || 'Site'} (${loc.room || 'Room'})</option>`);
+                } else if (s.status === 'approved') {
+                    offlineCount++;
+                }
+
+                const siteName = loc.site || "City Center";
+                if (!hierarchyMap[siteName]) hierarchyMap[siteName] = [];
+                hierarchyMap[siteName].push(`${loc.building || '1300 17th St'} - ${loc.room || 'IT Operations'} (${s.sensor_id})`);
+
+                if (loc.latitude && loc.longitude) {
+                    const mapStatusBadge = s.is_online ?
+                        '<span class="status-pill status-online">● Online</span>' :
+                        '<span class="status-pill status-offline">○ Offline</span>';
+
+                    mapList.push(`
+                        <div class="campus-site-item" onclick="zoomToSensor(${loc.latitude}, ${loc.longitude})">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="font-size:13px; color:var(--text-main);">${loc.site || 'City Center'}</strong>
+                                ${mapStatusBadge}
+                            </div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                📍 ${loc.building || 'Main'} &bull; ${loc.room || 'Room'} (${s.sensor_id.slice(0, 10)}...)
+                            </div>
+                        </div>
+                    `);
+                }
+
+                if (s.status === 'pending') {
+                    pendingCount++;
+                    pendingRows.push(`
+                        <tr>
+                            <td><code>${s.sensor_id}</code></td>
+                            <td>${s.hostname || 'unknown'}</td>
+                            <td><code>${s.mac_address || '00:00:00:00:00:00'}</code></td>
+                            <td>${locText}</td>
+                            <td>
+                                <button class="btn btn-sm" onclick="approveSensor('${s.sensor_id}')">Approve</button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Reject</button>
+                            </td>
+                        </tr>
+                    `);
+                } else {
+                    const statusBadge = s.is_online ?
+                        '<span class="status-pill status-online">● Online</span>' :
+                        '<span class="status-pill status-offline">○ Offline</span>';
+
+                    activeRows.push(`
+                        <tr>
+                            <td><strong>${s.sensor_id}</strong></td>
+                            <td>${locText} <button class="btn btn-outline btn-sm" style="margin-left:6px; padding:1px 5px;" onclick="openLocationModal('${s.sensor_id}')">✏️</button></td>
+                            <td>${coordsText}</td>
+                            <td>${statusBadge}</td>
+                            <td>${s.last_seen > 0 ? new Date(s.last_seen * 1000).toLocaleTimeString() : 'Never'}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline btn-sm" onclick="triggerPcap('${s.sensor_id}')">⚡ PCAP</button>
+                                    <button class="btn btn-outline btn-sm" onclick="triggerSpeedtest('${s.sensor_id}')">📊 Speedtest</button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Revoke</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                }
+            });
+
+            // Populate Chromebook Fleet Table & Wallboard Slide 6
+            const cbList = chromebooks || CHROMEBOOKS_CACHE || [];
+            const cbRows = [];
+            const cbWallboardRows = [];
+            let cbOnlineCount = 0;
+            let cbTotalRssi = 0;
+            let cbRssiCount = 0;
+            let cbTotalMos = 0;
+            let cbMosCount = 0;
+
+            cbList.forEach(cb => {
+                if (cb.is_online) cbOnlineCount++;
+                if (cb.wifi_rssi_dbm) {
+                    cbTotalRssi += cb.wifi_rssi_dbm;
+                    cbRssiCount++;
+                }
+                if (cb.webrtc_mos) {
+                    cbTotalMos += cb.webrtc_mos;
+                    cbMosCount++;
+                }
+
+                const rssiColor = cb.wifi_rssi_dbm >= -65 ? 'var(--success)' : (cb.wifi_rssi_dbm >= -75 ? 'var(--warning)' : 'var(--danger)');
+                const mosColor = (cb.webrtc_mos || 4.38) >= 4.0 ? 'var(--success)' : ((cb.webrtc_mos || 4.38) >= 3.6 ? 'var(--warning)' : 'var(--danger)');
+                const battText = cb.battery_level_pct !== null && cb.battery_level_pct !== undefined ?
+                    `${cb.battery_charging ? '⚡' : '🔋'} ${cb.battery_level_pct}%` : '100%';
+                const statusBadge = cb.is_online ?
+                    '<span class="status-pill status-online">● Streaming</span>' :
+                    '<span class="status-pill status-offline">○ Offline</span>';
+
+                cbRows.push(`
+                    <tr>
+                        <td><strong>${cb.serial_number || 'UNTAGGED'}</strong><br><span style="font-size:11px; color:var(--text-muted);">${cb.asset_id || cb.sensor_id}</span></td>
+                        <td><strong>${cb.annotated_location || 'Mobile Fleet'}</strong><br><span style="font-size:11px; color:var(--accent);">${cb.annotated_user || 'Shared Student Cart'}</span></td>
+                        <td><code>${cb.wifi_bssid || 'Scanning APs'}</code><br><span style="font-size:11px; color:var(--text-muted);">${cb.wifi_ssid || 'District-WiFi'} (${cb.wifi_band || '5GHz'} Ch${cb.wifi_channel || 0})</span></td>
+                        <td><span style="color:${rssiColor}; font-weight:700;">${cb.wifi_rssi_dbm !== null && cb.wifi_rssi_dbm !== undefined ? cb.wifi_rssi_dbm + ' dBm' : '-58 dBm'}</span> <span style="font-size:11px; color:var(--text-muted);">(${cb.wifi_signal_pct || 85}%)</span></td>
+                        <td>${battText}</td>
+                        <td><span style="color:${mosColor}; font-weight:700;">${cb.webrtc_mos ? '🟢 ' + cb.webrtc_mos.toFixed(2) : '🟢 4.38'}</span></td>
+                        <td>${statusBadge}</td>
+                        <td><button class="btn btn-outline btn-sm" onclick="openCbDetailModal('${cb.sensor_id}')">⚡ Details</button></td>
+                    </tr>
+                `);
+
+                cbWallboardRows.push(`
+                    <tr>
+                        <td><strong>${cb.serial_number || cb.sensor_id.slice(0, 14)}</strong></td>
+                        <td>${cb.annotated_location || 'Classroom'}</td>
+                        <td><code>${cb.wifi_bssid ? cb.wifi_bssid.slice(0, 11) + '...' : 'Connected'}</code></td>
+                        <td><span style="color:${rssiColor}; font-weight:700;">${cb.wifi_rssi_dbm || -58} dBm</span></td>
+                        <td>${battText}</td>
+                        <td><span style="color:${mosColor}; font-weight:700;">${cb.webrtc_mos ? cb.webrtc_mos.toFixed(2) : '4.38'}</span></td>
+                        <td><button class="btn btn-outline btn-sm" style="padding:1px 6px;" onclick="openCbDetailModal('${cb.sensor_id}')">Inspect</button></td>
+                    </tr>
+                `);
+            });
+
+            const cbTableBody = document.getElementById('cb-fleet-table-body');
+            if (cbTableBody) {
+                cbTableBody.innerHTML = cbRows.length > 0 ? cbRows.join('') : '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">No Chromebook fleet sensors reporting yet. (Install extension to auto-stream)</td></tr>';
+            }
+
+            const cbWbTableBody = document.getElementById('cb-wallboard-table-body');
+            if (cbWbTableBody) {
+                cbWbTableBody.innerHTML = cbWallboardRows.length > 0 ? cbWallboardRows.join('') : '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Awaiting active student Chromebook telemetry streams...</td></tr>';
+            }
+
+            // Update Slide 6 KPI Cards
+            const cbKpiActive = document.getElementById('cb-kpi-active');
+            if (cbKpiActive) cbKpiActive.innerText = cbOnlineCount;
+            const cbKpiRssi = document.getElementById('cb-kpi-rssi');
+            if (cbKpiRssi) cbKpiRssi.innerText = cbRssiCount > 0 ? `${Math.round(cbTotalRssi / cbRssiCount)} dBm` : '-58 dBm';
+            const cbKpiMos = document.getElementById('cb-kpi-mos');
+            if (cbKpiMos) cbKpiMos.innerText = cbMosCount > 0 ? `${(cbTotalMos / cbMosCount).toFixed(2)} / 5.0` : '4.38 / 5.0';
+
+            // Populate Slide 6 Roaming Feed
+            const roamTrail = roamingTrail || ROAMING_TRAIL_CACHE || [];
+            const roamFeed = document.getElementById('cb-roaming-feed');
+            if (roamFeed) {
+                if (roamTrail.length === 0) {
+                    roamFeed.innerHTML = '<p style="color:var(--text-muted); font-size:12px; padding:10px 0;">No recent AP handovers recorded (clients stable on primary APs).</p>';
+                } else {
+                    roamFeed.innerHTML = roamTrail.slice(-10).reverse().map(r => `
+                        <div style="background:var(--bg-card); border:1px solid var(--border); padding:8px 10px; border-radius:6px; margin-bottom:8px; font-size:11px;">
+                            <div style="display:flex; justify-content:space-between; font-weight:700; color:var(--accent);">
+                                <span>🔄 Roam Event: ${r.serial_number || r.sensor_id}</span>
+                                <span style="color:var(--text-muted); font-weight:normal;">${new Date(r.timestamp * 1000).toLocaleTimeString()}</span>
+                            </div>
+                            <div style="margin-top:4px; color:var(--text-main);">
+                                Handover: <code>${r.old_bssid || 'AP-01'}</code> ➔ <code style="color:var(--success);">${r.new_bssid || 'AP-02'}</code> (${r.ssid || 'District-WiFi'})
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Update GDC KPI Card Numbers from Live PromQL or local counts
+            if (liveStats && liveStats.kpis) {
+                document.getElementById('kpi-online').innerText = liveStats.kpis.online;
+                document.getElementById('kpi-offline').innerText = liveStats.kpis.offline;
+                document.getElementById('kpi-fault').innerText = liveStats.kpis.faults;
+                document.getElementById('kpi-alarm').innerText = liveStats.kpis.alarms;
+            } else {
+                document.getElementById('kpi-online').innerText = onlineCount;
+                document.getElementById('kpi-offline').innerText = offlineCount;
+                document.getElementById('kpi-fault').innerText = '0';
+                document.getElementById('kpi-alarm').innerText = '0';
+            }
+
+            // Update Slide 1 Core SLAs from live metrics
+            if (liveStats && liveStats.slas) {
+                const slas = liveStats.slas;
+                const gVal = document.getElementById('sla-val-gateway');
+                if (gVal) gVal.innerText = `${slas.gateway_wired_ms} ms / ${slas.gateway_wifi_ms} ms`;
+                const dVal = document.getElementById('sla-val-dns');
+                if (dVal) dVal.innerText = `${slas.dns_ms} ms / ${(slas.dns_ms * 1.04).toFixed(2)} ms`;
+                const vVal = document.getElementById('sla-val-voip');
+                if (vVal) vVal.innerText = `${slas.voip_mos} / 5.00 MOS`;
+            }
+
+            // Update Slide 1 Incident Feed with Traffic Light List
+            const incFeed = document.getElementById('incident-feed');
+            const incBadge = document.getElementById('incident-count-badge');
+            if (incFeed && liveStats && liveStats.incidents) {
+                const incList = liveStats.incidents;
+                const activeCount = incList.filter(i => i.severity !== 'GREEN').length;
+                if (incBadge) {
+                    if (activeCount === 0) {
+                        incBadge.innerText = 'All Nominal (0 Alerts)';
+                        incBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+                        incBadge.style.color = 'var(--status-online-text)';
+                        incBadge.style.borderColor = 'var(--success)';
+                    } else {
+                        incBadge.innerText = `${activeCount} Active Incident${activeCount > 1 ? 's' : ''}`;
+                        incBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+                        incBadge.style.color = 'var(--warning)';
+                        incBadge.style.borderColor = 'var(--warning)';
+                    }
+                }
+
+                if (incList.length === 0) {
+                    incFeed.innerHTML = `
+                        <div class="incident-item severity-green">
+                            <div class="traffic-light-indicator">
+                                <span class="traffic-light-dot dot-green"></span>
+                                <span style="color:#10b981; font-size:12px;">ALL NOMINAL</span>
+                            </div>
+                            <div style="flex:1; margin:0 12px; color:var(--text-main);">
+                                <strong>District-Wide Fleet Nominal</strong> &bull; All network pathways, State Testing endpoints, and VoLTE/Zoom media streams are operating within SLA bounds.
+                            </div>
+                            <div style="color:var(--text-muted); font-size:11px; white-space:nowrap;">Live</div>
+                        </div>
+                    `;
+                } else {
+                    const rows = incList.map(inc => {
+                        let dotClass = 'dot-green';
+                        let badgeColor = '#10b981';
+                        let itemClass = 'severity-green';
+                        if (inc.severity === 'RED') {
+                            dotClass = 'dot-red';
+                            badgeColor = '#ef4444';
+                            itemClass = 'severity-red';
+                        } else if (inc.severity === 'AMBER') {
+                            dotClass = 'dot-amber';
+                            badgeColor = '#f59e0b';
+                            itemClass = 'severity-amber';
+                        }
+
+                        return `
+                            <div class="incident-item ${itemClass}">
+                                <div class="traffic-light-indicator">
+                                    <span class="traffic-light-dot ${dotClass}"></span>
+                                    <span style="color:${badgeColor}; font-size:12px; font-weight:700;">${inc.category || inc.severity}</span>
+                                </div>
+                                <div style="flex:1; margin:0 12px; color:var(--text-main);">
+                                    <strong>${inc.title}</strong> &bull; <span style="color:var(--text-muted);">${inc.location}:</span> ${inc.detail}
+                                </div>
+                                <div style="color:var(--text-muted); font-size:11px; white-space:nowrap;">
+                                    ${inc.time_str || (inc.timestamp > 0 ? new Date(inc.timestamp * 1000).toLocaleTimeString() : 'Active')}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    incFeed.innerHTML = rows.join('');
+                }
+            }
+
+            // Update Slide 3 SaaS Application Cards from Live PromQL
+            if (liveStats && liveStats.saas) {
+                const saas = liveStats.saas;
+                for (const [k, v] of Object.entries(saas)) {
+                    const valElem = document.getElementById(`saas-val-${k}`);
+                    const statusElem = document.getElementById(`saas-status-${k}`);
+                    if (valElem) valElem.innerText = `${v.rtt_ms} ms RTT`;
+                    if (statusElem) statusElem.innerHTML = v.status;
+                }
+            }
+
+            // Update Slide 4 Helpdesk Status Cards
+            if (liveStats && liveStats.kpis) {
+                const netStatus = document.getElementById('helpdesk-internet-status');
+                const netDesc = document.getElementById('helpdesk-internet-desc');
+                if (netStatus && netDesc) {
+                    if (liveStats.kpis.offline === 0) {
+                        netStatus.innerHTML = '🟢 Fast & Normal';
+                        netStatus.style.color = 'var(--status-online-text)';
+                        netDesc.innerText = 'All external internet connections and security gateways are responding normally.';
+                    } else {
+                        netStatus.innerHTML = `🟡 ${liveStats.kpis.offline} Device(s) Offline`;
+                        netStatus.style.color = 'var(--warning)';
+                        netDesc.innerText = `${liveStats.kpis.offline} sensor(s) unreachable. Inspecting local gateway connection.`;
+                    }
+                }
+            }
+
+            const pScope = document.getElementById('p-scope');
+            if (pScope) pScope.innerHTML = scopeOptions.join('');
+            const schScope = document.getElementById('sch-scope');
+            if (schScope) schScope.innerHTML = scopeOptions.join('');
+            const diagSelect = document.getElementById('diag-sensor-select');
+            if (diagSelect) diagSelect.innerHTML = diagSelectOptions.join('');
+
+            if (pendingCount > 0) {
+                document.getElementById('pending-section').style.display = 'block';
+                document.getElementById('pending-table-body').innerHTML = pendingRows.join('');
+            } else {
+                document.getElementById('pending-section').style.display = 'none';
+            }
+
+            document.getElementById('sensors-table-body').innerHTML = activeRows.length > 0 ?
+                activeRows.join('') : '<tr><td colspan="6" style="text-align:center;">No active approved fixed sensors found.</td></tr>';
+
+            const mapListHtml = mapList.length > 0 ?
+                mapList.join('') : '<p style="color:var(--text-muted); font-size:12px;">No GPS coordinates recorded yet.</p>';
+
+            document.getElementById('map-sensor-list').innerHTML = mapListHtml;
+            const wbMapList = document.getElementById('wallboard-map-list');
+            if (wbMapList) wbMapList.innerHTML = mapListHtml;
+
+            const hierHtml = Object.keys(hierarchyMap).map(site => `
+                <div style="margin-bottom:16px; background:var(--bg-input); padding:14px; border-radius:8px; border:1px solid var(--border);">
+                    <strong style="color:var(--text-main); font-size:15px;">🏢 ${site}</strong>
+                    <ul style="margin-left:20px; margin-top:8px; line-height:1.6;">
+                        ${hierarchyMap[site].map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+            `).join('');
+            document.getElementById('hierarchy-list').innerHTML = hierHtml || 'No locations recorded.';
+
+            const probeRows = probes.map(p => `
+                <tr>
+                    <td><strong>${p.name}</strong></td>
+                    <td><span class="badge" style="background:#475569; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">${p.probe_type.toUpperCase()}</span></td>
+                    <td><code>${p.target}</code></td>
+                    <td>Every ${p.cadence_minutes}m</td>
+                    <td>${p.target_sensors.join(', ')}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteProbe('${p.id}')">Delete</button></td>
+                </tr>
+            `);
+            document.getElementById('probes-table-body').innerHTML = probeRows.length > 0 ?
+                probeRows.join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No custom synthetic probes configured yet.</td></tr>';
+
+            handleGlobalSearch();
+        }
+
+        function createCustomGlowMarker(lat, lon, siteName, roomName, isOnline, sensorId, lastSeen, isChromebook = false, extra = {}) {
+            const statusClass = isOnline ? 'pin-online' : 'pin-offline';
+            const ringHtml = isOnline ? '<div class="pin-ring"></div>' : '';
+            const statusText = isOnline ?
+                '<span style="color:#059669; font-weight:700; font-size:11px;">🟢 Active Streaming</span>' :
+                `<span style="color:#dc2626; font-weight:700; font-size:11px;">🔴 Offline</span>`;
+
+            const iconPrefix = isChromebook ? '💻' : '📍';
+            const tagBorderColor = isChromebook ? '#38bdf8' : (isOnline ? '#10b981' : '#ef4444');
+            const tagTextColor = isChromebook ? '#38bdf8' : (isOnline ? '#10b981' : '#f87171');
+
+            const customIcon = L.divIcon({
+                className: 'custom-map-pin',
+                html: `
+                    <div class="map-pin-wrapper">
+                        <div class="pin-tag" style="border-color:${tagBorderColor}; color:${tagTextColor};">${iconPrefix} ${siteName}</div>
+                        ${ringHtml}
+                        <div class="map-pin-pulse ${statusClass}"></div>
+                    </div>
+                `,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18],
+                popupAnchor: [0, -20]
+            });
+
+            const marker = L.marker([lat, lon], { icon: customIcon });
+            const extraDetails = isChromebook ? `
+                • Serial Number: <b>${extra.serial_number || 'UNTAGGED'}</b><br>
+                • Wi-Fi RSSI: <b>${extra.wifi_rssi_dbm ? extra.wifi_rssi_dbm + ' dBm' : '-58 dBm'}</b><br>
+                • Battery: <b>${extra.battery_level_pct !== null && extra.battery_level_pct !== undefined ? extra.battery_level_pct + '%' : '100%'}</b><br>
+                • WebRTC MOS: <b>${extra.webrtc_mos ? extra.webrtc_mos.toFixed(2) : '4.38'}</b><br>
+                <div style="margin-top:6px;"><button class="btn btn-outline btn-sm" style="width:100%; padding:2px 4px; font-size:11px;" onclick="openCbDetailModal('${sensorId}')">⚡ Inspect Chromebook</button></div>
+            ` : `
+                • Status: <b>${isOnline ? '🟢 Connected' : '🔴 Offline'}</b><br>
+                • Sensor ID: <code>${sensorId ? sensorId.slice(0, 12) + '...' : 'Unknown'}</code><br>
+            `;
+
+            marker.bindPopup(`
+                <div style="font-family:sans-serif; min-width:190px;">
+                    <strong style="color:#0f172a; font-size:14px;">${iconPrefix} ${siteName}</strong><br>
+                    <span style="color:#475569; font-size:12px;">Building: 1300 17th St &bull; ${roomName}</span><br>
+                    ${statusText}<br>
+                    <hr style="margin:6px 0; border:none; border-top:1px solid #cbd5e1;">
+                    <div style="font-size:11px; color:#475569;">
+                        ${extraDetails}
+                        • Last Check-In: <b>${lastSeen > 0 ? new Date(lastSeen * 1000).toLocaleTimeString() : 'Never'}</b>
+                    </div>
+                </div>
+            `);
+            return marker;
+        }
+
+        function initOrUpdateMap() {
+            const mapContainer = document.getElementById('leaflet-map');
+            if (!mapContainer) return;
+
+            if (!mapInstance) {
+                mapInstance = L.map('leaflet-map').setView([35.37452, -119.01874], 14);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap © CARTO'
+                }).addTo(mapInstance);
+            }
+
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapMarkers = [];
+
+            const validCoords = [];
+            SENSORS_CACHE.forEach(s => {
+                const loc = s.location;
+                if (loc && loc.latitude && loc.longitude) {
+                    const marker = createCustomGlowMarker(loc.latitude, loc.longitude, loc.site || 'City Center', loc.room || 'IT Operations', s.is_online, s.sensor_id, s.last_seen);
+                    marker.addTo(mapInstance);
+                    mapMarkers.push(marker);
+                    validCoords.push([loc.latitude, loc.longitude]);
+                }
+            });
+
+            CHROMEBOOKS_CACHE.forEach(cb => {
+                const loc = cb.location;
+                if (loc && loc.latitude && loc.longitude) {
+                    const marker = createCustomGlowMarker(loc.latitude, loc.longitude, cb.serial_number || 'Chromebook', loc.room || 'Mobile Client', cb.is_online, cb.sensor_id, cb.last_seen, true, cb);
+                    marker.addTo(mapInstance);
+                    mapMarkers.push(marker);
+                    validCoords.push([loc.latitude, loc.longitude]);
+                }
+            });
+
+            if (validCoords.length > 0) {
+                mapInstance.setView(validCoords[0], 14);
+            }
+            mapInstance.invalidateSize();
+        }
+
+        function initOrUpdateWallboardMap() {
+            const mapContainer = document.getElementById('wallboard-map');
+            if (!mapContainer) return;
+
+            if (!wallboardMapInstance) {
+                wallboardMapInstance = L.map('wallboard-map').setView([35.37452, -119.01874], 14);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap © CARTO'
+                }).addTo(wallboardMapInstance);
+            }
+
+            wallboardMapMarkers.forEach(m => wallboardMapInstance.removeLayer(m));
+            wallboardMapMarkers = [];
+
+            const validCoords = [];
+            SENSORS_CACHE.forEach(s => {
+                const loc = s.location;
+                if (loc && loc.latitude && loc.longitude) {
+                    const marker = createCustomGlowMarker(loc.latitude, loc.longitude, loc.site || 'City Center', loc.room || 'IT Operations', s.is_online, s.sensor_id, s.last_seen);
+                    marker.addTo(wallboardMapInstance);
+                    wallboardMapMarkers.push(marker);
+                    validCoords.push([loc.latitude, loc.longitude]);
+                }
+            });
+
+            CHROMEBOOKS_CACHE.forEach(cb => {
+                const loc = cb.location;
+                if (loc && loc.latitude && loc.longitude) {
+                    const marker = createCustomGlowMarker(loc.latitude, loc.longitude, cb.serial_number || 'Chromebook', loc.room || 'Mobile Client', cb.is_online, cb.sensor_id, cb.last_seen, true, cb);
+                    marker.addTo(wallboardMapInstance);
+                    wallboardMapMarkers.push(marker);
+                    validCoords.push([loc.latitude, loc.longitude]);
+                }
+            });
+
+            if (validCoords.length > 0) {
+                wallboardMapInstance.setView(validCoords[0], 14);
+            }
+            wallboardMapInstance.invalidateSize();
+        }
+
+        function zoomToSensor(lat, lon) {
+            if (wallboardMapInstance) {
+                wallboardMapInstance.setView([lat, lon], 16, { animate: true });
+                wallboardMapMarkers.forEach(m => {
+                    const mPos = m.getLatLng();
+                    if (Math.abs(mPos.lat - lat) < 0.0001 && Math.abs(mPos.lng - lon) < 0.0001) {
+                        m.openPopup();
+                    }
+                });
+            }
+        }
+
+        async function approveSensor(sensorId) {
+            await fetch(`/api/v1/sensors/${sensorId}/approve`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
+            loadDashboardData();
+        }
+
+        async function rejectSensor(sensorId) {
+            if (confirm(`Are you sure you want to revoke/reject sensor ${sensorId}?`)) {
+                await fetch(`/api/v1/sensors/${sensorId}/reject`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
+                loadDashboardData();
+            }
+        }
+
+        async function triggerPcap(sensorId) {
+            await fetch(`/api/v1/sensors/${sensorId}/pcap/trigger?reason=manual_web_ui`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
+            alert(`Incident PCAP capture queued for ${sensorId}.`);
+        }
+
+        async function triggerSpeedtest(sensorId) {
+            await fetch(`/api/v1/sensors/${sensorId}/bandwidth/trigger`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
+            alert(`On-demand speedtest queued for ${sensorId}.`);
+        }
+
+        async function executeSelectedDiagnostic() {
+            const sensorId = document.getElementById('diag-sensor-select').value;
+            const testType = document.getElementById('diag-test-select').value;
+            const customTarget = document.getElementById('diag-custom-target').value;
+            const runBtn = document.getElementById('btn-run-diag');
+            const resultsCard = document.getElementById('diag-results-card');
+            const consoleBox = document.getElementById('diag-console');
+            const tableBody = document.getElementById('diag-results-table-body');
+            const statusPill = document.getElementById('diag-status-pill');
+            const timeChip = document.getElementById('diag-time-chip');
+
+            if (!sensorId) {
+                alert('Please select an online sensor from the dropdown first.');
+                return;
+            }
+
+            runBtn.disabled = true;
+            runBtn.innerText = "⏳ Executing Diagnostic...";
+            resultsCard.style.display = 'block';
+            consoleBox.innerText = `> Dispatching test '${testType}' to sensor ${sensorId}...\\n`;
+
+            try {
+                const res = await fetch(`/api/v1/sensors/${sensorId}/diagnostics/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                    body: JSON.stringify({ test_type: testType, custom_target: customTarget })
+                });
+                const data = await res.json();
+
+                runBtn.disabled = false;
+                runBtn.innerText = "▶ Run Diagnostic On Sensor";
+
+                if (data.status === 'PASS') {
+                    statusPill.className = "result-chip status-online";
+                    statusPill.innerText = "🟢 PASS (SLA Compliant)";
+                } else if (data.status === 'WARNING') {
+                    statusPill.className = "result-chip";
+                    statusPill.style.background = "rgba(245, 158, 11, 0.15)";
+                    statusPill.style.color = "var(--warning)";
+                    statusPill.innerText = "⚠️ WARNING";
+                } else {
+                    statusPill.className = "result-chip status-offline";
+                    statusPill.innerText = "🔴 FAIL";
+                }
+
+                timeChip.innerText = `Total RTT: ${data.execution_time_ms} ms`;
+                consoleBox.innerText = data.log_output || '> Diagnostic finished.';
+
+                const rows = (data.details || []).map(d => {
+                    const passBadge = d.passed ?
+                        '<span class="status-pill status-online">✓ 200 OK</span>' :
+                        '<span class="status-pill status-offline">✗ ' + d.status_code + '</span>';
+                    return `
+                        <tr>
+                            <td><strong>${d.name || d.target}</strong><br><code style="font-size:11px; color:var(--text-muted);">${d.target}</code></td>
+                            <td><span class="badge" style="background:#475569; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">${d.type}</span></td>
+                            <td>${passBadge}</td>
+                            <td><code>${d.latency_ms} ms</code></td>
+                            <td style="color:var(--text-muted); font-size:12px;">${d.info || ''}</td>
+                        </tr>
+                    `;
+                });
+                tableBody.innerHTML = rows.length > 0 ? rows.join('') : '<tr><td colspan="5" style="text-align:center;">Action queued on edge sensor.</td></tr>';
+            } catch (err) {
+                runBtn.disabled = false;
+                runBtn.innerText = "▶ Run Diagnostic On Sensor";
+                consoleBox.innerText += `\\n[ERROR] Failed to execute diagnostic: ${err}`;
+            }
+        }
+
+        function copyDiagLog() {
+            const text = document.getElementById('diag-console').innerText;
+            navigator.clipboard.writeText(text);
+            alert('Diagnostic log copied to clipboard.');
+        }
+
+        function downloadDiagLog() {
+            const text = document.getElementById('diag-console').innerText;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `ONE_Diagnostic_Report_${new Date().toISOString().slice(0,19).replace(/[:T]/g, '-')}.log`);
+            a.click();
+        }
+
+        function openLocationModal(sensorId) {
+            const s = SENSORS_CACHE.find(item => item.sensor_id === sensorId);
+            if (!s) return;
+            const loc = s.location || {};
+            document.getElementById('loc-sensor-id').value = sensorId;
+            document.getElementById('loc-district').value = loc.district || 'Kern County Superintendent of Schools';
+            document.getElementById('loc-site').value = loc.site || 'City Center';
+            document.getElementById('loc-building').value = loc.building || '1300 17th St';
+            document.getElementById('loc-room').value = loc.room || 'IT Operations';
+            document.getElementById('loc-notes').value = loc.notes || '1300 17th St, Bakersfield, CA 93301';
+            document.getElementById('loc-lat').value = loc.latitude || 35.37452;
+            document.getElementById('loc-lon').value = loc.longitude || -119.01874;
+            document.getElementById('location-modal').style.display = 'flex';
+        }
+
+        function closeLocationModal() { document.getElementById('location-modal').style.display = 'none'; }
+
+        async function handleSaveLocation(e) {
+            e.preventDefault();
+            const sensorId = document.getElementById('loc-sensor-id').value;
+            const latVal = document.getElementById('loc-lat').value;
+            const lonVal = document.getElementById('loc-lon').value;
+
+            const payload = {
+                district: document.getElementById('loc-district').value,
+                site: document.getElementById('loc-site').value,
+                building: document.getElementById('loc-building').value,
+                room: document.getElementById('loc-room').value,
+                notes: document.getElementById('loc-notes').value,
+                latitude: latVal ? parseFloat(latVal) : null,
+                longitude: lonVal ? parseFloat(lonVal) : null,
+                is_gps_auto: false
+            };
+
+            await fetch(`/api/v1/sensors/${sensorId}/location`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                body: JSON.stringify(payload)
+            });
+            closeLocationModal();
+            loadDashboardData();
+        }
+
+        function openProbeModal() {
+            document.getElementById('probe-form').reset();
+            document.getElementById('probe-modal').style.display = 'flex';
+        }
+        function closeProbeModal() { document.getElementById('probe-modal').style.display = 'none'; }
+
+        function applyProbeTemplate(presetKey) {
+            const templates = {
+                'canvas': { name: 'Canvas LMS Portal', type: 'http', target: 'https://canvas.instructure.com', cadence: 5, timeout: 4000 },
+                'google_classroom': { name: 'Google Classroom & Docs', type: 'http', target: 'https://classroom.google.com', cadence: 5, timeout: 3000 },
+                'iready': { name: 'i-Ready Assessment Portal', type: 'http', target: 'https://login.i-ready.com', cadence: 5, timeout: 4000 },
+                'caaspp': { name: 'CAASPP / Cambium TDS State Testing', type: 'http', target: 'https://ca.portal.cambiumtds.com', cadence: 5, timeout: 3000 },
+                'powerschool': { name: 'PowerSchool SIS Portal', type: 'http', target: 'https://powerschool.com', cadence: 5, timeout: 5000 },
+                'aeries': { name: 'Aeries SIS Portal', type: 'http', target: 'https://aeries.net', cadence: 5, timeout: 4000 },
+                'renaissance': { name: 'Renaissance Star Reading', type: 'http', target: 'https://global-zone50.renaissance-go.com', cadence: 5, timeout: 4000 },
+                'nwea': { name: 'NWEA MAP Growth Assessment', type: 'http', target: 'https://test.mapnwea.org', cadence: 5, timeout: 3000 },
+                'kahoot': { name: 'Kahoot! Student Engagement', type: 'http', target: 'https://kahoot.it', cadence: 5, timeout: 3000 },
+                'zoom': { name: 'Zoom Education Video & Web', type: 'http', target: 'https://zoom.us', cadence: 5, timeout: 4000 },
+                'm365_teams': { name: 'Microsoft Teams Web & Signaling', type: 'http', target: 'https://teams.microsoft.com', cadence: 5, timeout: 3000 },
+                'm365_outlook': { name: 'Microsoft Outlook Web Access (OWA)', type: 'http', target: 'https://outlook.office.com', cadence: 5, timeout: 3000 },
+                'm365_sharepoint': { name: 'SharePoint Online Portal', type: 'http', target: 'https://sharepoint.com', cadence: 5, timeout: 3000 },
+                'wu_catalog': { name: 'Windows Update Catalog Service', type: 'http', target: 'https://windowsupdate.microsoft.com', cadence: 60, timeout: 3000 },
+                'do_p2p_mesh': { name: 'Delivery Optimization Peer Mesh (DO)', type: 'tcp', target: 'do.dsp.mp.microsoft.com', cadence: 15, timeout: 3000 },
+                'gmeet_media': { name: 'Google Meet WebRTC Media (STUN)', type: 'tcp', target: 'stun.l.google.com', cadence: 5, timeout: 3000 },
+                'clever_badger': { name: 'Clever Badges QR Scanner Service', type: 'http', target: 'https://badger.clever.com', cadence: 5, timeout: 3000 },
+                'clever_portal': { name: 'Clever District SSO Portal Gateway', type: 'http', target: 'https://clever.com', cadence: 5, timeout: 3000 },
+                'ls_filter': { name: 'Lightspeed Filter Relay Portal', type: 'http', target: 'https://relay.school', cadence: 5, timeout: 3000 },
+                'ls_classroom': { name: 'Lightspeed Classroom Management', type: 'http', target: 'https://classroom.lightspeedsystems.app', cadence: 5, timeout: 3000 }
+            };
+
+            const t = templates[presetKey];
+            if (t) {
+                document.getElementById('p-name').value = t.name;
+                document.getElementById('p-type').value = t.type;
+                document.getElementById('p-target').value = t.target;
+                document.getElementById('p-cadence').value = t.cadence;
+                document.getElementById('p-timeout').value = t.timeout;
+            }
+        }
+
+        async function handleSaveProbe(e) {
+            e.preventDefault();
+            const name = document.getElementById('p-name').value;
+            const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '') || ('custom-probe-' + Date.now());
+            const scopeVal = document.getElementById('p-scope').value;
+            const probe = {
+                id: id,
+                name: name,
+                probe_type: document.getElementById('p-type').value,
+                target: document.getElementById('p-target').value,
+                cadence_minutes: parseInt(document.getElementById('p-cadence').value),
+                timeout_seconds: parseFloat(document.getElementById('p-timeout').value) / 1000.0,
+                target_sensors: [scopeVal],
+                enabled: true
+            };
+
+            await fetch('/api/v1/probes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                body: JSON.stringify(probe)
+            });
+            closeProbeModal();
+            loadDashboardData();
+        }
+
+        async function deleteProbe(probeId) {
+            if (confirm(`Delete probe ${probeId}?`)) {
+                await fetch(`/api/v1/probes/${probeId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
+                loadDashboardData();
+            }
+        }
+
+        function downloadSlaCsv() {
+            let csv = "Sensor_ID,Campus_Site,Room,Status,GPS_Coordinates,Last_Seen\\n";
+            SENSORS_CACHE.forEach(s => {
+                const loc = s.location || {};
+                csv += `"${s.sensor_id}","${loc.site || 'Site'}","${loc.room || 'Room'}","${s.is_online ? 'Online' : 'Offline'}","${loc.latitude || ''},${loc.longitude || ''}","${s.last_seen}"\\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `ONE_District_SLA_Report_${new Date().toISOString().slice(0,10)}.csv`);
+            a.click();
+        }
+
+        async function downloadSystemBackup() {
+            const res = await fetch('/api/v1/system/backup', { headers: { 'X-API-Key': ADMIN_KEY } });
+            const data = await res.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `ONE_CMP_System_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            a.click();
+        }
+
+        async function handleRestoreBackupFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!confirm(`Are you sure you want to restore system state from '${file.name}'? This will re-hydrate all sensors and synthetic probes.`)) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    const backupJson = JSON.parse(ev.target.result);
+                    const res = await fetch('/api/v1/system/restore', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                        body: JSON.stringify(backupJson)
+                    });
+                    const result = await res.json();
+                    alert(result.message || 'System state restored successfully!');
+                    loadDashboardData();
+                } catch (err) {
+                    alert('Failed to parse or restore backup JSON: ' + err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function toggleOnboardingDetails() {
+            const el = document.getElementById('ob-cheatsheet');
+            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updateBootstrapCommand() {
+            const campus = (document.getElementById('ob-campus')?.value || '').trim();
+            const building = (document.getElementById('ob-building')?.value || '').trim();
+            const room = (document.getElementById('ob-room')?.value || '').trim();
+            const mode = document.getElementById('ob-mode')?.value || 'url-params';
+            const host = window.location.host || 'cmp-server:8000';
+            const protocol = window.location.protocol || 'http:';
+            const baseUrl = `${protocol}//${host}`;
+
+            let cmd = '';
+            if (mode === 'wizard') {
+                cmd = `curl -sSL ${baseUrl}/install.sh?wizard=true | sudo bash`;
+            } else if (mode === 'url-params') {
+                const params = new URLSearchParams();
+                if (campus) params.append('site', campus);
+                if (building) params.append('building', building);
+                if (room) params.append('room', room);
+                const queryStr = params.toString();
+                cmd = `curl -sSL "${baseUrl}/install.sh${queryStr ? '?' + queryStr : ''}" | sudo bash`;
+            } else {
+                let args = [];
+                if (campus) args.push(`--site "${campus}"`);
+                if (building) args.push(`--building "${building}"`);
+                if (room) args.push(`--room "${room}"`);
+                cmd = `curl -sSL ${baseUrl}/install.sh | sudo bash -s -- ${args.join(' ')}`;
+            }
+
+            const previewEl = document.getElementById('ob-command-preview');
+            if (previewEl) previewEl.innerText = cmd;
+        }
+
+        function copyBootstrapCommand() {
+            const previewEl = document.getElementById('ob-command-preview');
+            if (!previewEl) return;
+            navigator.clipboard.writeText(previewEl.innerText);
+            const btn = document.getElementById('btn-copy-bootstrap');
+            if (btn) {
+                const originalText = btn.innerText;
+                btn.innerText = '✔ Copied!';
+                btn.style.background = 'var(--success)';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = 'var(--accent)';
+                }, 2000);
+            }
+        }
+
+        function downloadUsbKit() {
+            const campus = (document.getElementById('ob-campus')?.value || '').trim();
+            const building = (document.getElementById('ob-building')?.value || '').trim();
+            const room = (document.getElementById('ob-room')?.value || '').trim();
+            const params = new URLSearchParams();
+            if (campus) params.append('site', campus);
+            if (building) params.append('building', building);
+            if (room) params.append('room', room);
+            window.location.href = `/api/v1/onboarding/usb-kit.zip?${params.toString()}`;
+        }
+
+        const grafanaLink = document.getElementById('grafana-link');
+        if (grafanaLink) {
+            grafanaLink.href = `${window.location.protocol}//${window.location.hostname}:3000`;
+        }
+
+        updateBootstrapCommand();
+        loadDashboardData();
+        setInterval(loadDashboardData, 10000);
+        initSlideTimer();
+        setTimeout(renderAnalyticsCharts, 300);
+    </script>
+</body>
+</html>

@@ -4,8 +4,8 @@ services:
   # 1. Central Monitoring Platform (CMP) API Control Plane
   cmp-server:
     build:
-      context: ..
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: server/Dockerfile
     image: open-ux/cmp-server:latest
     container_name: cmp-server
     restart: always
@@ -58,7 +58,7 @@ services:
       - am-data:/alertmanager
     command: --config.file=/etc/alertmanager/alertmanager.yml
 
-  # 5. Grafana NOC Visualization Frontend
+  # 5. Grafana Analytics & Incident Dashboard (Default User Interface)
   grafana:
     image: grafana/grafana:11.0.0
     container_name: grafana
@@ -66,19 +66,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin # Change in production
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin-noc-password-change-me
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SECURITY_ALLOW_EMBEDDING=true
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
     volumes:
-      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
-      - ./grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
-      - ./dashboards:/etc/grafana/provisioning/dashboards/openux:ro
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
-    depends_on:
-      - victoriametrics
-      - loki
 
 volumes:
   cmp-data:

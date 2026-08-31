@@ -34,7 +34,7 @@ def ensure_directories():
     os.makedirs(RAM_BUFFER_DIR, exist_ok=True)
     os.makedirs(SNAPSHOT_DIR, exist_ok=True)
 
-def start_rolling_capture(interface: str = "any", snaplen: int = 128) -> subprocess.Popen:
+def start_rolling_capture(interface: str = "any", snaplen: int = 128) -> Optional[subprocess.Popen]:
     """
     Spawns tcpdump to write rotating 10MB packet files in RAM (/dev/shm).
     Rotates across 5 files (total 50MB max in memory).

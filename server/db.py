@@ -10,14 +10,16 @@ import sqlite3
 import json
 import os
 import time
-from typing import Dict, List, Optional, Any
+from contextlib import contextmanager
+from typing import Dict, List, Optional, Any, Generator
 
 DEFAULT_DATA_DIR = "/app/data" if os.path.exists("/app") and os.access("/app", os.W_OK) else os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_PATH = os.environ.get("DB_PATH", os.path.join(DEFAULT_DATA_DIR, "cmp.db"))
 BACKUP_DIR = os.environ.get("BACKUP_DIR", os.path.join(DEFAULT_DATA_DIR, "backups"))
 
-def get_connection() -> sqlite3.Connection:
-    """Returns a SQLite connection with WAL mode enabled and parent directory created."""
+@contextmanager
+def get_connection() -> Generator[sqlite3.Connection, None, None]:
+    """Yields a SQLite connection with WAL mode and busy_timeout, guaranteed to close on exit."""
     try:
         os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
         os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -25,8 +27,12 @@ def get_connection() -> sqlite3.Connection:
         pass
     conn = sqlite3.connect(DB_PATH, timeout=15.0)
     conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 def init_db():
     """Initializes SQLite tables if they do not exist."""
@@ -272,8 +278,36 @@ def load_all_sensors() -> Dict[str, dict]:
             }
     return sensors
 
+def load_sensor(sensor_id: str) -> Optional[dict]:
+    """Loads a single sensor record directly from SQLite."""
+    with get_connection() as conn:
+        cursor = conn.execute("SELECT * FROM sensors WHERE sensor_id = ?;", (sensor_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "sensor_id": row["sensor_id"],
+            "status": row["status"],
+            "api_key": row["api_key"] or "",
+            "hostname": row["hostname"] or "unknown",
+            "mac_address": row["mac_address"] or "unknown",
+            "os": row["os"] or "unknown",
+            "last_seen": row["last_seen"] or 0,
+            "reset_flag": bool(row["reset_flag"]),
+            "campus_id": row["campus_id"] if "campus_id" in row.keys() else None,
+            "probing_state": row["probing_state"] if "probing_state" in row.keys() else "GREEN",
+            "location": json.loads(row["location_json"]) if row["location_json"] else None,
+            "target_config": json.loads(row["target_config_json"]) if row["target_config_json"] else {},
+            "reported_containers": json.loads(row["reported_containers_json"]) if row["reported_containers_json"] else {}
+        }
+
 def save_sensor(sensor: dict):
     """Saves or updates a single sensor record in SQLite."""
+    loc_val = sensor.get("location")
+    loc_json = json.dumps(loc_val.model_dump() if hasattr(loc_val, "model_dump") else loc_val) if loc_val is not None else None
+    target_cfg_val = sensor.get("target_config")
+    target_cfg_json = json.dumps(target_cfg_val.model_dump() if hasattr(target_cfg_val, "model_dump") else target_cfg_val) if target_cfg_val is not None else None
+
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO sensors (
@@ -306,8 +340,8 @@ def save_sensor(sensor: dict):
             1 if sensor.get("reset_flag") else 0,
             sensor.get("campus_id"),
             sensor.get("probing_state", "GREEN"),
-            json.dumps(sensor.get("location").model_dump() if hasattr(sensor.get("location"), "model_dump") else sensor.get("location")),
-            json.dumps(sensor.get("target_config").model_dump() if hasattr(sensor.get("target_config"), "model_dump") else sensor.get("target_config")),
+            loc_json,
+            target_cfg_json,
             json.dumps(sensor.get("reported_containers", {})),
             int(time.time())
         ))
@@ -477,7 +511,7 @@ def toggle_schedule(schedule_id: str) -> bool:
 
 def load_all_evidence() -> Dict[str, List[dict]]:
     """Loads all evidence records grouped by sensor_id."""
-    evidence_dict = {}
+    evidence_dict: Dict[str, List[dict]] = {}
     with get_connection() as conn:
         cursor = conn.execute("SELECT * FROM evidence ORDER BY timestamp DESC;")
         for row in cursor.fetchall():
@@ -518,9 +552,9 @@ def export_backup_json() -> dict:
 
     # Save a nightly rotation file on disk
     backup_payload = {
-        "platform": "Open Network Experience (ONE)",
-        "version": "0.3.0",
-        "export_timestamp": int(time.time()),
+        "platform": "Open Network Experience",
+        "version": "0.4.0",
+        "exported_at": int(time.time()),
         "export_date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "sensors": sensors,
         "probes": probes,

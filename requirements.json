@@ -1,0 +1,146 @@
+[
+  {
+    "id": "REQ-SEC-001",
+    "title": "Administrative API Key Constant-Time Verification & Production Fail-Fast",
+    "safety_level": "CRITICAL",
+    "description": "The CMP control plane must reject default credentials in production mode and enforce constant-time comparison on admin keys."
+  },
+  {
+    "id": "REQ-SEC-002",
+    "title": "HMAC-SHA256 Signed Session Token & Cookie Isolation",
+    "safety_level": "HIGH",
+    "description": "Dashboard authentication must issue tamper-proof HMAC-SHA256 signed session tokens with HttpOnly, SameSite cookie attributes."
+  },
+  {
+    "id": "REQ-PRB-001",
+    "title": "Wi-Fi 802.11 Association & DHCP Timing Exporter",
+    "safety_level": "HIGH",
+    "description": "The edge sensor must measure L2 association, 802.1X/WPA authentication, and DHCP lease duration from journal logs."
+  },
+  {
+    "id": "REQ-PRB-002",
+    "title": "Incident-Triggered RAM Ring Buffer PCAP Capture",
+    "safety_level": "HIGH",
+    "description": "The edge sensor must maintain a rolling RAM ring buffer and slice bounded 128-byte packet captures on diagnostic incident triggers."
+  },
+  {
+    "id": "REQ-PRB-003",
+    "title": "Forensic Diagnostic Evidence Bundle Packaging",
+    "safety_level": "HIGH",
+    "description": "The system must bundle system logs, routing tables, link metrics, and human-readable HTML/Text summaries into a compressed archive."
+  },
+  {
+    "id": "REQ-PRB-004",
+    "title": "Wi-Fi Radio Resource Management & Dynamic Channel Flap Detection",
+    "safety_level": "HIGH",
+    "description": "The system must track dynamic channel changes, co-channel interference (CCI), and alert if APs flap >3 times per hour."
+  },
+  {
+    "id": "REQ-PRB-005",
+    "title": "Lateral East-West Subnet Segmentation Compliance",
+    "safety_level": "CRITICAL",
+    "description": "The edge sensor must perform TCP probes against internal management infrastructure to verify isolation of client VLANs."
+  },
+  {
+    "id": "REQ-PRB-006",
+    "title": "Synthetic Browser & API Transaction Waterfalls",
+    "safety_level": "HIGH",
+    "description": "The system must execute headless browser synthetic transactions and capture timing metrics for key educational applications."
+  },
+  {
+    "id": "REQ-PRB-007",
+    "title": "GPS Precision Geolocation & Fallback Profile Resolution",
+    "safety_level": "STANDARD",
+    "description": "The edge sensor must parse NMEA-0183 serial streams from hardware GNSS receivers and fall back to static campus room profiles when indoor."
+  },
+  {
+    "id": "REQ-PRB-008",
+    "title": "CIPA Internet Safety & Content Filter Policy Compliance",
+    "safety_level": "CRITICAL",
+    "description": "The prober must verify whether restricted adult and high-risk threat categories are blocked by the firewall and web proxy."
+  },
+  {
+    "id": "REQ-PRB-009",
+    "title": "Real-Time UDP Voice & Video Jitter (MOS) Estimation",
+    "safety_level": "HIGH",
+    "description": "The sensor must compute RFC 3550 interarrival jitter, UDP packet loss, and ITU-T G.107 Mean Opinion Scores for real-time media."
+  },
+  {
+    "id": "REQ-PRB-010",
+    "title": "Multi-Resolver DNS Benchmark & Failure Detection",
+    "safety_level": "HIGH",
+    "description": "The sensor must benchmark local DHCP nameservers against public recursive resolvers to detect query latency anomalies and RCODE failures."
+  },
+  {
+    "id": "REQ-PRB-011",
+    "title": "Scheduled & Throttled iPerf3 Bandwidth Benchmarking",
+    "safety_level": "MEDIUM",
+    "description": "The system must execute scheduled throughput benchmarks with bandwidth caps and strict off-peak time window enforcement."
+  },
+  {
+    "id": "REQ-PRB-012",
+    "title": "WYSIWYG Dynamic Custom Synthetic Probe Execution",
+    "safety_level": "HIGH",
+    "description": "The sensor must execute dynamically distributed HTTP, TCP, and DNS synthetic test probes with regex payload validation."
+  },
+  {
+    "id": "REQ-ONB-001",
+    "title": "Interactive & Automated TUI Onboarding Wizard",
+    "safety_level": "HIGH",
+    "description": "The sensor wizard must execute site surveys, configure Wi-Fi credentials, discover CMP via DHCP Option 43/DNS/mDNS, and register."
+  },
+  {
+    "id": "REQ-ONB-002",
+    "title": "FAT32 USB Flash Drive Assembly-Line Staging Kit",
+    "safety_level": "HIGH",
+    "description": "The CMP must generate an in-memory zip archive with bootstrap manifests to support offline mass staging of sensors via USB."
+  },
+  {
+    "id": "REQ-ONB-003",
+    "title": "Subnet-Based Zero-Touch Provisioning (ZTP) Auto-Approval",
+    "safety_level": "HIGH",
+    "description": "The CMP must automatically approve and assign pending sensors based on matched client subnet CIDR ranges."
+  },
+  {
+    "id": "REQ-CMP-001",
+    "title": "Multi-Campus Hierarchy & District SLA Rollup",
+    "safety_level": "STANDARD",
+    "description": "The CMP must organize sensors into campus hierarchies and compute aggregated SLA and health statistics."
+  },
+  {
+    "id": "REQ-SCH-001",
+    "title": "Unified Visual Probe Scheduler & Off-Peak Windows",
+    "safety_level": "HIGH",
+    "description": "The CMP must deliver centralized visual schedules with calendar timing, intervals, and pause/resume toggles to sensors."
+  },
+  {
+    "id": "REQ-SCH-002",
+    "title": "Instructional Hours Safety Guardrails & Emergency Override",
+    "safety_level": "CRITICAL",
+    "description": "The edge reconciler must block active intrusive bandwidth and RF scans during instructional hours unless emergency override is active."
+  },
+  {
+    "id": "REQ-TEL-001",
+    "title": "Chromebook Fleet Telemetry Ingestion & AP Roaming Trail",
+    "safety_level": "HIGH",
+    "description": "The CMP must ingest extension telemetry from Chromebooks, track AP roaming transitions, and forward PromQL metrics to TSDB."
+  },
+  {
+    "id": "REQ-TEL-002",
+    "title": "NOC Wallboard Real-Time Metrics & SaaS Health Feed",
+    "safety_level": "STANDARD",
+    "description": "The CMP must aggregate instant PromQL metrics and SLA statuses for real-time presentation on NOC displays."
+  },
+  {
+    "id": "REQ-DB-001",
+    "title": "Database Persistence & Scoped Resource Management",
+    "safety_level": "HIGH",
+    "description": "The CMP must manage SQLite connections using deterministic context managers with WAL mode and busy timeouts."
+  },
+  {
+    "id": "REQ-SNMP-001",
+    "title": "SNMP Infrastructure & Switch Interface Poller",
+    "safety_level": "HIGH",
+    "description": "The platform must poll core switches and firewalls via SNMP v2c/v3 to detect bandwidth saturation, memory conserve mode, and interface drops."
+  }
+]

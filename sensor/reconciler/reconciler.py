@@ -19,6 +19,7 @@ import time
 import subprocess
 import urllib.request
 import urllib.error
+from typing import Optional, Dict, Any, List, Tuple
 
 # Default Paths & Configuration
 CONFIG_PATH = "/etc/sensor/reconciler.json"
@@ -480,7 +481,7 @@ class AdaptiveResolutionEngine:
         self.consecutive_failures = 0
         self.consecutive_successes = 0
         self.last_state_change = time.time()
-        self.on_demand_until = 0
+        self.on_demand_until: float = 0.0
         self.config = config
         self.gateway_ip = self.detect_default_gateway()
 

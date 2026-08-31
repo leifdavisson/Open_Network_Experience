@@ -20,12 +20,12 @@ import socket
 import urllib.request
 import urllib.error
 import argparse
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 DEFAULT_PROBES_FILE = "/etc/sensor/custom_probes.json"
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/custom_probes.prom"
 
-def execute_http_probe(target: str, timeout: float = 5.0, expected_status: int = 200, match_regex: str = None) -> Tuple[int, float, int]:
+def execute_http_probe(target: str, timeout: float = 5.0, expected_status: int = 200, match_regex: Optional[str] = None) -> Tuple[int, float, int]:
     """Executes HTTP/HTTPS probe and measures latency."""
     start = time.time()
     req = urllib.request.Request(

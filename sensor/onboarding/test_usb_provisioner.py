@@ -8,6 +8,13 @@
 
 import os
 import sys
+
+def verifies(req_id: str):
+    def decorator(fn):
+        fn.__verifies__ = req_id
+        return fn
+    return decorator
+
 import json
 import pytest
 from unittest.mock import patch, MagicMock
@@ -18,6 +25,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 import usb_provisioner
 
+@verifies("REQ-ONB-002")
 def test_find_usb_bootstrap_config(tmp_path):
     """Validates locating one-bootstrap.json in a directory."""
     usb_dir = tmp_path / "fake_usb"

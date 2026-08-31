@@ -8,6 +8,13 @@ modal form inputs, and backend REST bindings for the Open Network Experience (ON
 import unittest
 import urllib.request
 import urllib.error
+
+def verifies(req_id: str):
+    def decorator(fn):
+        fn.__verifies__ = req_id
+        return fn
+    return decorator
+
 import json
 import re
 import time
@@ -68,6 +75,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
         cls.parser = DOMStructureParser()
         cls.parser.feed(cls.html_content)
 
+    @verifies("REQ-TEL-002")
     def test_01_page_header_and_brand_rendering(self):
         """Validates that brand headers, page title, and meta tags render cleanly."""
         self.assertIn("<title>Open Network Experience (ONE)", self.html_content)
@@ -128,6 +136,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
         for inp in expected_sch_inputs:
             self.assertTrue(any(i[0] == inp for i in self.parser.inputs), f"Input field '{inp}' missing in Schedule modal form.")
 
+    @verifies("REQ-SEC-002")
     def test_04_global_controls_and_buttons(self):
         """Validates that sidebar toggle, dark/light theme button, global search, and dynamic Grafana link are present."""
         self.assertTrue(any(b[0] == "btn-toggle-sidebar" and "toggleSidebar()" in str(b[1]) for b in self.parser.buttons))
@@ -291,6 +300,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
         with urllib.request.urlopen(req, timeout=5) as resp:
             self.assertEqual(resp.status, 200)
 
+    @verifies("REQ-TEL-001")
     def test_07_chromebook_fleet_view_and_modal_elements(self):
         """Validates that Chromebook fleet view, Wallboard Slide 6, and diagnostic modal exist."""
         # 1. Slide 6 and nav button

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Dedicated Unit Test Suite for the Unified Visual Probe Scheduler.
 Tests:
@@ -16,6 +15,12 @@ import time
 import json
 import pytest
 from fastapi.testclient import TestClient
+
+def verifies(req_id: str):
+    def decorator(fn):
+        fn.__verifies__ = req_id
+        return fn
+    return decorator
 
 # Ensure server path is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -178,6 +183,8 @@ def test_07_api_unauthorized_access():
     res_post = client.post("/api/v1/schedules", json={}, headers={"X-API-Key": "wrong-key"})
     assert res_post.status_code == 401
 
+@verifies("REQ-SCH-001")
+@verifies("REQ-SCH-001")
 def test_08_api_schedule_creation_and_listing():
     """Validates creating and listing schedules via authenticated REST endpoints."""
     payload = {
