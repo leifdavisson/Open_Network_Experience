@@ -22,7 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r server/requirements.txt
-          pip install mypy pylint pytest pytest-cov hypothesis
+          pip install mypy pylint pytest pytest-cov hypothesis bandit
 
       - name: Compile all Python files (syntax check)
         run: |
@@ -31,6 +31,10 @@ jobs:
       - name: Static Type Checking with Mypy
         run: |
           mypy server sensor --exclude 'sensor/playwright-runner' --explicit-package-bases --ignore-missing-imports
+
+      - name: Security SAST Scan with Bandit
+        run: |
+          bandit -r server/ sensor/ -ll
 
       - name: Validate shell scripts
         run: |
