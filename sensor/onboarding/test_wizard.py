@@ -434,7 +434,7 @@ def test_run_interactive_wizard_full_flow(tmp_path, capsys):
         "cmp_url": "http://192.0.2.100:8000/api/v1",
         "api_key": "existing_key_abc",
         "initial_location": {
-            "district": "Kern High School District",
+            "district": "Metro Unified School District",
             "site": "Bakersfield High",
             "building": "Science Wing",
             "room": "Room 101",
@@ -462,7 +462,7 @@ def test_run_interactive_wizard_full_flow(tmp_path, capsys):
     prompt_answers = [
         "http://bad-cmp.local:8000",
         "n",
-        "Kern High School District",
+        "Metro Unified School District",
         "Bakersfield High",
         "Science Wing",
         "Room 101",

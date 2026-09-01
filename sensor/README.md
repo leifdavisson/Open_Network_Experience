@@ -130,7 +130,7 @@ You can provision a fresh sensor over SSH with a **single command**. The install
 ```bash
 curl -sSL http://192.0.2.10:8000/install.sh | sudo bash -s -- \
   --cmp http://192.0.2.10:8000/api/v1 \
-  --district "Kern High School District" \
+  --district "Metro Unified School District" \
   --site "West High School" \
   --building "Science Wing" \
   --room "Room 102"
@@ -173,7 +173,7 @@ The installer generates `/etc/sensor/reconciler.json`:
     "wifi_interface": "wlan0",
     "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf",
     "initial_location": {
-        "district": "Kern County Superintendent of Schools",
+        "district": "Unified School District",
         "site": "City Center",
         "building": "1300 17th St",
         "room": "IT Operations"

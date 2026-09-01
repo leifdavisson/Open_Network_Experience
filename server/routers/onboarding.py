@@ -49,7 +49,7 @@ async def get_install_script(
                 content = content.replace('ROOM_NAME="Room 101"', f'ROOM_NAME="{room}"')
                 content = content.replace('EXPLICIT_ARGS=0', 'EXPLICIT_ARGS=1')
             if district:
-                content = content.replace('DISTRICT_NAME="Kern County Superintendent of Schools"', f'DISTRICT_NAME="{district}"')
+                content = content.replace('DISTRICT_NAME="Unified School District"', f'DISTRICT_NAME="{district}"')
             if notes:
                 content = content.replace('LOCATION_NOTES="Ceiling AP Drop"', f'LOCATION_NOTES="{notes}"')
             if token:
@@ -120,7 +120,7 @@ async def download_usb_staging_kit(
         "enrollment_token": token or "",
         "check_interval_seconds": 15,
         "location": {
-            "district": district or "Kern County Superintendent of Schools",
+            "district": district or "Unified School District",
             "site": target_site,
             "building": target_building,
             "room": target_room,

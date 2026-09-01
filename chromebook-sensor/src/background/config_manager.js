@@ -45,7 +45,9 @@ export const DEFAULT_CONFIG = {
   ],
   enable_webrtc_probing: true,
   enable_offline_buffer: true,
-  max_offline_records: 1000
+  max_offline_records: 1000,
+  settings_locked: true,
+  helpdesk_pin: "4357"
 };
 
 class ConfigManager {

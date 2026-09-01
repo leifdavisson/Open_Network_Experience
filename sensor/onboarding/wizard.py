@@ -608,7 +608,7 @@ def run_interactive_wizard():
     print_step(3, "Campus Location & Asset Tagging")
     ex_loc = existing_config.get("initial_location") or existing_config.get("location") or {}
 
-    district_name = prompt_user("School District / Organization", ex_loc.get("district", "Kern County Superintendent of Schools"))
+    district_name = prompt_user("School District / Organization", ex_loc.get("district", "Unified School District"))
     site_name = prompt_user("Campus / School Name", ex_loc.get("site", "West High School"))
     building_name = prompt_user("Building / Wing", ex_loc.get("building", "Science Building"))
     room_name = prompt_user("Room / Location Identifier", ex_loc.get("room", "Room 204"))
@@ -735,7 +735,7 @@ def run_non_interactive(args):
         cmp_url = f"{cmp_url.rstrip('/')}/api/v1"
 
     location_spec = {
-        "district": args.district or "Kern County Superintendent of Schools",
+        "district": args.district or "Unified School District",
         "site": args.site or "Main Campus",
         "building": args.building or "Main Building",
         "room": args.room or "Room 101",

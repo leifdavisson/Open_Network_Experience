@@ -19,7 +19,6 @@ import os
 import sys
 import time
 import json
-import tempfile
 import pytest
 from fastapi.testclient import TestClient
 
@@ -53,7 +52,7 @@ def test_campus_hierarchy_crud():
         "campus_id": "CAMPUS-WEST-HIGH",
         "name": "West High School",
         "category": "High School",
-        "district": "Kern High School District",
+        "district": "Metro Unified School District",
         "latitude": 35.3582,
         "longitude": -119.0471,
         "address": "1200 New St, Bakersfield, CA",
@@ -329,7 +328,7 @@ def test_edge_reconciliation_unified_schedules():
         "timestamp": int(time.time()),
         "location": {"site": "Bakersfield High", "room": "Room 101"}
     }
-    reg_res = client.post("/api/v1/sensors/register", json=reg_payload)
+    _reg_res = client.post("/api/v1/sensors/register", json=reg_payload)
     client.post("/api/v1/sensors/sensor-sched-test-01/approve", headers={"X-API-Key": ADMIN_KEY})
     re_reg = client.post("/api/v1/sensors/register", json=reg_payload)
     api_key = re_reg.json()["api_key"]

@@ -387,7 +387,7 @@ class TestCMPFlow(unittest.TestCase):
             "mac_address": "CC:DD:EE:11:22:33",
             "timestamp": int(time.time()),
             "location": {
-                "district": "Kern County Superintendent of Schools",
+                "district": "Unified School District",
                 "site": "North High Campus",
                 "building": "Quad Area",
                 "room": "Courtyard Pole 4",
@@ -405,7 +405,7 @@ class TestCMPFlow(unittest.TestCase):
 
         # 3. Update location via administrative location API
         new_loc = {
-            "district": "Kern County Superintendent of Schools",
+            "district": "Unified School District",
             "site": "North High Campus",
             "building": "Library Wing",
             "room": "Room 204",
@@ -454,7 +454,7 @@ class TestCMPFlow(unittest.TestCase):
             "mac_address": "00:11:22:33:44:55",
             "timestamp": int(time.time()),
             "location": {
-                "district": "Kern County Superintendent of Schools",
+                "district": "Unified School District",
                 "site": "City Center",
                 "building": "1300 17th St",
                 "room": "IT Operations"
@@ -575,6 +575,17 @@ class TestCMPFlow(unittest.TestCase):
         self.assertEqual(code6, 200)
         self.assertTrue(len(roam_trail) > 0)
         self.assertEqual(roam_trail[-1]["new_bssid"], "00:1A:2B:99:88:77")
+
+        # 7. Verify /chromebooks/{sensor_id}/lock endpoint
+        code7, lock_res = self.make_request(
+            f"/chromebooks/{cb_id}/lock",
+            method="POST",
+            body={"locked": True, "helpdesk_pin": "9988"},
+            headers={"X-API-Key": ADMIN_KEY}
+        )
+        self.assertEqual(code7, 200)
+        self.assertEqual(lock_res["status"], "success")
+        self.assertEqual(lock_res["settings_locked"], True)
 
 if __name__ == "__main__":
     unittest.main()

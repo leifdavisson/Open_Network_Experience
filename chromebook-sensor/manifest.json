@@ -46,5 +46,9 @@
   "storage": {
     "managed_schema": "schema.json"
   },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
   "minimum_chrome_version": "116"
 }

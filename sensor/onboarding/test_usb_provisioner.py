@@ -56,7 +56,7 @@ def test_parse_bootstrap_file(tmp_path):
     assert parsed["cmp_url"] == "http://cmp.school.edu:8000/api/v1"
     assert parsed["location"]["site"] == "East High"
     assert parsed["location"]["room"] == "Room 301"
-    assert parsed["location"]["district"] == "Kern County Superintendent of Schools"
+    assert parsed["location"]["district"] == "Unified School District"
     assert parsed["wifi"]["ssid"] == "School-Staff-IoT"
 
 def test_pop_next_room_from_pool(tmp_path):

@@ -184,7 +184,7 @@ class TestGPSLocationCollector(unittest.TestCase):
         gps_result = {"has_gps": False, "error": "No device"}
         location = gps_location_collector.load_or_update_location(gps_result, "/nonexistent/path/location.json")
 
-        self.assertEqual(location["district"], "Kern County Superintendent of Schools")
+        self.assertEqual(location["district"], "Unified School District")
         self.assertEqual(location["site"], "Main Campus")
         self.assertEqual(location["building"], "North Wing")
         self.assertEqual(location["room"], "Room 101")
@@ -280,7 +280,7 @@ class TestGPSLocationCollector(unittest.TestCase):
     def test_write_metrics_to_file(self):
         """Verifies atomic Prometheus metric generation with full location labels."""
         location = {
-            "district": "Kern County Supt",
+            "district": "District Office",
             "site": "Tech Center",
             "building": "Bldg 4",
             "room": "Server Rm 104",
@@ -302,7 +302,7 @@ class TestGPSLocationCollector(unittest.TestCase):
             content = f.read()
 
         self.assertIn("openux_sensor_gps_fix_status", content)
-        self.assertIn('district="Kern County Supt"', content)
+        self.assertIn('district="District Office"', content)
         self.assertIn('site="Tech Center"', content)
         self.assertIn('room="Server Rm 104"', content)
         self.assertIn("openux_sensor_gps_fix_status{", content)
@@ -320,7 +320,7 @@ class TestGPSLocationCollector(unittest.TestCase):
     def test_write_metrics_stdout(self):
         """Verifies metrics output formatting when output_path is None or empty."""
         location = {
-            "district": "Kern Supt",
+            "district": "District Office",
             "site": "Main",
             "building": "North",
             "room": "Rm 1",

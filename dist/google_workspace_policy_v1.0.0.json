@@ -1,0 +1,29 @@
+{
+  "cmp_server_url": {
+    "Value": "http://10.98.2.125:8000"
+  },
+  "api_key": {
+    "Value": "TestAPIKEYCHROMEBOOK"
+  },
+  "campus_id": {
+    "Value": "CAMPUS-CHROMEBOOK-FLEET"
+  },
+  "probe_interval_seconds": {
+    "Value": 60
+  },
+  "settings_locked": {
+    "Value": true
+  },
+  "helpdesk_pin": {
+    "Value": "4357"
+  },
+  "enable_webrtc_probing": {
+    "Value": true
+  },
+  "enable_offline_buffer": {
+    "Value": true
+  },
+  "max_offline_records": {
+    "Value": 1000
+  }
+}

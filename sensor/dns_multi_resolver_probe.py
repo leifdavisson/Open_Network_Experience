@@ -198,10 +198,39 @@ def main():
     parser = argparse.ArgumentParser(description="OpenUX Multi-Resolver DNS Health Prober")
     parser.add_argument("--interface", default=None, help="Bind query to network interface (e.g. eth0 or wlan0)")
     parser.add_argument("--output", default=DEFAULT_PROM_FILE, help="Prometheus metric output path")
+    parser.add_argument("--json", action="store_true", dest="json_output", help="Output results as JSON to stdout (for CMP remote delegation)")
 
     args = parser.parse_args()
-    results = run_multi_resolver_probes(interface=args.interface)
-    write_metrics(results, args.output)
+
+    if args.json_output:
+        import json
+        # Suppress print output from run_multi_resolver_probes by redirecting stdout temporarily
+        import io
+        old_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+        try:
+            results = run_multi_resolver_probes(interface=args.interface)
+        finally:
+            sys.stdout = old_stdout
+
+        # Aggregate: one entry per resolver (take best domain result)
+        seen = {}
+        for r in results:
+            key = r["resolver_ip"]
+            lat_ms = r["latency_seconds"] * 1000
+            if key not in seen or (r["status"] == 1 and seen[key]["status"] != "ok"):
+                seen[key] = {
+                    "name": r["resolver_name"],
+                    "ip": r["resolver_ip"],
+                    "is_public": bool(r["is_public"]),
+                    "status": "ok" if r["status"] == 1 else ("timeout" if r["rcode_str"] == "TIMEOUT" else "error"),
+                    "latency_ms": round(lat_ms, 2),
+                    "rcode": r["rcode_str"]
+                }
+        print(json.dumps({"resolvers": list(seen.values()), "status": "ok"}))
+    else:
+        results = run_multi_resolver_probes(interface=args.interface)
+        write_metrics(results, args.output)
 
 if __name__ == "__main__":
     main()

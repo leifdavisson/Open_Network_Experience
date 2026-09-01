@@ -4,6 +4,11 @@
     "title": "Administrative API Key Constant-Time Verification & Production Fail-Fast",
     "safety_level": "CRITICAL",
     "verifying_tests": [
+      "test_gateway_reachability_pass",
+      "test_lateral_peers_isolated_nominal",
+      "test_lateral_peers_breach_detected",
+      "test_full_client_isolation_run_pass",
+      "test_full_client_isolation_run_breach",
       "test_01_unauthorized_endpoints"
     ],
     "status": "VERIFIED"
@@ -293,7 +298,8 @@
     "title": "Chromebook Fleet Telemetry Ingestion & AP Roaming Trail",
     "safety_level": "HIGH",
     "verifying_tests": [
-      "test_07_chromebook_fleet_view_and_modal_elements"
+      "test_07_chromebook_fleet_view_and_modal_elements",
+      "test_08_edge_sensor_detail_modal_and_backend_endpoint"
     ],
     "status": "VERIFIED"
   },

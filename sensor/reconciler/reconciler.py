@@ -32,7 +32,9 @@ DEFAULT_CONFIG = {
     "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf"
 }
 
-GLOBAL_DISCOVERY_URL = "https://discovery.openux.org/api/v1"
+# Global Discovery Cloud Fallback (Disabled: domain not owned)
+# GLOBAL_DISCOVERY_URL = "https://discovery.openux.org/api/v1"
+GLOBAL_DISCOVERY_URL = ""
 
 def parse_option43_tlv_or_string(raw_val: str) -> Optional[dict]:
     """
@@ -188,10 +190,10 @@ def get_cmp_url(config):
             print(f"Discovered CMP via DNS: {discovered}")
             return discovered
 
-        # Step 3: Fallback to public global discovery url if local discovery fails
-        if not url:
-            print(f"No local discovery. Fallback to global portal: {GLOBAL_DISCOVERY_URL}")
-            return GLOBAL_DISCOVERY_URL
+        # Step 3: Fallback to public global discovery url if local discovery fails (disabled: domain not owned)
+        # if not url and GLOBAL_DISCOVERY_URL:
+        #     print(f"No local discovery. Fallback to global portal: {GLOBAL_DISCOVERY_URL}")
+        #     return GLOBAL_DISCOVERY_URL
     return url
 
 def load_config():
@@ -665,6 +667,35 @@ def reconcile_schedules(schedules: dict, config: dict):
                 subprocess.Popen(["python3"] + cmd)
         except Exception as e:
             print(f"Failed to spawn bandwidth test: {e}")
+
+    # Continuously refresh local CIPA, CAASPP, and Wi-Fi RF probe metrics with concurrency protection
+    now = time.time()
+    last_probe_time = getattr(reconcile_schedules, "_last_probe_time", 0)
+    active_procs = getattr(reconcile_schedules, "_active_procs", {})
+
+    # Clean finished processes from active registry
+    for name in list(active_procs.keys()):
+        proc = active_procs[name]
+        if proc.poll() is not None:
+            del active_procs[name]
+
+    if now - last_probe_time >= 30:
+        setattr(reconcile_schedules, "_last_probe_time", now)
+        for script_name in ["cipa_compliance.py", "caaspp_readiness.py", "rrm_darrp_monitor.py", "wifi_dhcp_exporter.py"]:
+            # Skip spawning if an instance is already actively executing
+            if script_name in active_procs and active_procs[script_name].poll() is None:
+                continue
+
+            script_path = f"/usr/local/bin/{script_name}"
+            if not os.path.exists(script_path):
+                script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", script_name))
+            if os.path.exists(script_path):
+                try:
+                    p = subprocess.Popen(["python3", script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    active_procs[script_name] = p
+                except Exception:
+                    pass
+        setattr(reconcile_schedules, "_active_procs", active_procs)
 
 def reconcile_pcap_trigger(pcap_spec: dict, config: dict):
     """Checks for on-demand incident PCAP snapshot triggers from CMP."""

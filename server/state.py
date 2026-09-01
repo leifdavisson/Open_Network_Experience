@@ -5,6 +5,7 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 """
 
 import copy
+import time
 from typing import Dict, List
 from server.schemas import (
     WifiSpec,
@@ -31,10 +32,12 @@ DEFAULT_TARGET_CONTAINERS = {
         image="prom/node-exporter:v1.8.2",
         ports=["9100:9100"],
         volumes=[
-            "/:/host:ro,rslave",
-            "/var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector:ro"
+            "/:/host:ro,rslave"
         ],
-        command=None
+        command=[
+            "--path.rootfs=/host",
+            "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+        ]
     ),
     "browser-transaction-tester": TargetContainerSpec(
         image="open-ux/playwright-runner:latest",
@@ -66,14 +69,14 @@ def get_or_create_sensor(sensor_id: str) -> dict:
         if loc_val:
             if isinstance(loc_val, dict):
                 if loc_val.get("latitude") is None:
-                    loc_val["latitude"] = 35.37452
-                    loc_val["longitude"] = -119.01874
+                    loc_val["latitude"] = 0.0
+                    loc_val["longitude"] = 0.0
                 if not loc_val.get("site"):
-                    loc_val["site"] = "City Center"
+                    loc_val["site"] = "Unknown Site"
                 if not loc_val.get("building"):
-                    loc_val["building"] = "1300 17th St"
+                    loc_val["building"] = "Unknown Building"
                 if not loc_val.get("room"):
-                    loc_val["room"] = "IT Operations"
+                    loc_val["room"] = "Unknown Room"
             db_sensor["location"] = LocationSpec(**loc_val) if isinstance(loc_val, dict) else loc_val
         if isinstance(db_sensor.get("target_config"), dict):
             db_sensor["target_config"] = SensorReconcileResponse(**db_sensor["target_config"])
@@ -83,22 +86,23 @@ def get_or_create_sensor(sensor_id: str) -> dict:
     if sensor_id not in SENSORS_DB:
         SENSORS_DB[sensor_id] = {
             "sensor_id": sensor_id,
-            "last_seen": 0,
+            "last_seen": int(time.time()),
             "os": "unknown",
             "hostname": "unknown",
+            "ip_address": None,
             "mac_address": "unknown",
             "status": "pending",
             "api_key": "",
             "reset_flag": False,
             "probing_state": "GREEN",
             "location": LocationSpec(
-                district="Kern County Superintendent of Schools",
-                site="City Center",
-                building="1300 17th St",
-                room="IT Operations",
-                notes="1300 17th St, Bakersfield, CA 93301",
-                latitude=35.37452,
-                longitude=-119.01874,
+                district="Unknown District",
+                site="Unknown Site",
+                building="Unknown Building",
+                room="Unknown Room",
+                notes="",
+                latitude=0.0,
+                longitude=0.0,
                 is_gps_auto=False
             ),
             "reported_containers": {},

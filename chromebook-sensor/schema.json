@@ -100,6 +100,18 @@
       "default": 1000,
       "minimum": 50,
       "maximum": 10000
+    },
+    "settings_locked": {
+      "type": "boolean",
+      "title": "Lock Local Settings Panel (Student Protection)",
+      "description": "Lock extension options panel to prevent students from tampering with CMP endpoint or sensor credentials",
+      "default": true
+    },
+    "helpdesk_pin": {
+      "type": "string",
+      "title": "Helpdesk Unlock PIN",
+      "description": "PIN required for local IT helpdesk technicians to unlock and edit settings on physical device",
+      "default": "4357"
     }
   }
 }

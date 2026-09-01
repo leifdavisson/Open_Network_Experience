@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/background/service_worker.js",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "package": "python3 ../scripts/package_chromebook_sensor.py"
   },
   "keywords": [
     "chromeos",
