@@ -12,13 +12,12 @@ California Assessment of Student Performance and Progress (CAASPP) requirements:
 """
 
 import os
-import sys
 import time
 import socket
 import ssl
 import urllib.request
 import urllib.error
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/caaspp.prom"
 
@@ -97,7 +96,7 @@ KNOWN_MITM_ISSUERS = [
     "lightspeed", "securly", "smoothwall", "untangle", "checkpoint"
 ]
 
-def check_ssl_inspection_bypass(host: str, port: int = 443) -> Tuple[bool, str]:
+def check_ssl_inspection_bypass(host: str, port: int = 443, ca_bundle: Optional[str] = None) -> Tuple[bool, str]:
     """
     Connects via TLS and checks certificate issuer.
     Returns: (is_bypassed, issuer_summary)
@@ -105,6 +104,12 @@ def check_ssl_inspection_bypass(host: str, port: int = 443) -> Tuple[bool, str]:
     False = Firewall inspection certificate detected (Will cause Secure Browser to throw error)
     """
     ctx = ssl.create_default_context()
+    custom_ca = ca_bundle or os.environ.get("SSL_CERT_FILE") or os.environ.get("REQUESTS_CA_BUNDLE")
+    if custom_ca and os.path.exists(custom_ca):
+        try:
+            ctx.load_verify_locations(cafile=custom_ca)
+        except Exception:
+            pass
     try:
         with socket.create_connection((host, port), timeout=5) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as ssock:
@@ -178,7 +183,14 @@ def write_metrics(prom_lines: List[str], output_file: str):
         print(prom_content)
 
 def main():
-    output_file = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PROM_FILE
+    import argparse
+    parser = argparse.ArgumentParser(description="OpenUX CAASPP & ELPAC State Testing Readiness Validator")
+    parser.add_argument("output", nargs="?", default=DEFAULT_PROM_FILE, help="Prometheus metric output path")
+    parser.add_argument("--output", dest="output_flag", default=None, help="Prometheus metric output path (alternate flag)")
+    parser.add_argument("--json", action="store_true", dest="json_output", help="Output results as JSON to stdout (for CMP remote delegation)")
+
+    args = parser.parse_args()
+    output_file = args.output_flag or args.output
 
     prom_lines = [
         "# HELP caaspp_endpoint_status CAASPP/ELPAC testing endpoint reachability. 1=Reachable/OK, 0=Failed",
@@ -191,17 +203,16 @@ def main():
         "# TYPE caaspp_readiness_overall gauge"
     ]
 
-    print("Running CAASPP & ELPAC State Testing Readiness Validation...")
+    if not args.json_output:
+        print("Running CAASPP & ELPAC State Testing Readiness Validation...")
+
     all_critical_ok = True
+    json_checks = []
 
     for target in CAASPP_ENDPOINTS:
-        # 1. Check HTTP reachability
         is_ok, latency, status_code, reason = check_http_endpoint(target)
-
-        # 2. Check SSL Inspection Bypass (only need to check each distinct host once)
         is_bypassed, issuer_info = check_ssl_inspection_bypass(target["host"], target["port"])
 
-        # Determine pass/fail
         if target["critical"] and (not is_ok or not is_bypassed):
             all_critical_ok = False
 
@@ -218,16 +229,32 @@ def main():
             f'caaspp_ssl_inspection_bypassed{{id="{target["id"]}",host="{target["host"]}"}} {ssl_val}'
         )
 
-        status_color = "\033[92mPASS\033[0m" if (is_ok and is_bypassed) else "\033[91mFAIL\033[0m"
-        ssl_color = "\033[92mBYPASSED\033[0m" if is_bypassed else "\033[91mINSPECTED (MITM)\033[0m"
-        print(f" - [{target['name']}]: {status_color} ({latency*1000:.1f}ms) | SSL Inspection: {ssl_color} | {issuer_info}")
+        json_checks.append({
+            "name": target["name"],
+            "url": f"https://{target['host']}",
+            "passed": bool(is_ok and is_bypassed),
+            "status": f"{status_code} {reason}".strip() if status_code else "ERROR",
+            "latency_ms": round(latency * 1000, 2),
+            "ssl_inspection": "BYPASSED" if is_bypassed else "INTERCEPTED (MITM)",
+            "ca": issuer_info
+        })
+
+        if not args.json_output:
+            status_color = "\033[92mPASS\033[0m" if (is_ok and is_bypassed) else "\033[91mFAIL\033[0m"
+            ssl_color = "\033[92mBYPASSED\033[0m" if is_bypassed else "\033[91mINSPECTED (MITM)\033[0m"
+            print(f" - [{target['name']}]: {status_color} ({latency*1000:.1f}ms) | SSL Inspection: {ssl_color} | {issuer_info}")
 
     overall_val = 1 if all_critical_ok else 0
     prom_lines.append(f'caaspp_readiness_overall {overall_val}')
+
+    if args.json_output:
+        import json
+        print(json.dumps({"checks": json_checks, "overall_ready": all_critical_ok, "status": "ok"}))
+        return
+
     overall_str = "\033[92mREADY FOR CAASPP TESTING\033[0m" if all_critical_ok else "\033[91mNOT READY — CRITICAL TEST ENDPOINTS DEGRADED\033[0m"
     print(f"\nOverall Site Status: {overall_str}\n")
 
-    # If critical testing endpoints failed, automatically slice and preserve an incident PCAP snapshot
     if overall_val == 0:
         print("[AUTO-TRIGGER] Critical state testing degradation detected. Slicing incident PCAP snapshot...")
         try:

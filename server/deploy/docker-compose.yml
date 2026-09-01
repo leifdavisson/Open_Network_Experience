@@ -15,8 +15,20 @@ services:
       - PYTHONUNBUFFERED=1
       - DB_PATH=/app/data/cmp.db
       - BACKUP_DIR=/app/data/backups
+      # CMP identity (used for gateway/bandwidth probe self-reference)
+      - CMP_HOST=${CMP_HOST:-localhost}
+      - CMP_PORT=${CMP_PORT:-8000}
+      # Admin API key — set a strong value in your .env file
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-admin-noc-key-change-me}
+      # Edge sensor SSH delegation credentials (leave SSH_PASS empty to disable)
+      - SSH_USER=${SSH_USER:-sensor}
+      - SSH_PASS=${SSH_PASS:-}
     volumes:
       - cmp-data:/app/data
+      - ../../server:/app/server
+      - ../../sensor:/app/sensor
+      - ../../chromebook-sensor:/app/chromebook-sensor
+    command: ["python", "-m", "uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   # 2. VictoriaMetrics (Prometheus-compatible Time-Series Database)
   victoriametrics:

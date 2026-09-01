@@ -18,4 +18,8 @@ templates = Jinja2Templates(directory=template_dir)
 @router.get("/ui", response_class=HTMLResponse, summary="Sensor Administration Dashboard")
 async def serve_admin_ui(request: Request) -> HTMLResponse:
     """Serves modern, responsive single-pane-of-glass administration dashboard via Jinja2."""
-    return templates.TemplateResponse(request=request, name="dashboard.html", context={})
+    response = templates.TemplateResponse(request=request, name="dashboard.html", context={})
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response

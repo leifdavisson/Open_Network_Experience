@@ -6,7 +6,7 @@ and safe administrative responses that redact sensitive credentials.
 """
 
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 
 # --- Sensor Reports (Incoming from Edge) ---
 
@@ -97,7 +97,7 @@ class TargetContainerSpec(BaseModel):
     ports: List[str] = Field(default_factory=list, description="Port forward mappings, e.g. ['80:80']")
     volumes: List[str] = Field(default_factory=list, description="Volume mappings, e.g. ['/data:/data']")
     env: Dict[str, str] = Field(default_factory=dict, description="Environment variables passed to container")
-    command: Optional[str] = Field(None, description="Command overrides run on execution")
+    command: Optional[Union[str, List[str]]] = Field(None, description="Command overrides run on execution")
 
 # --- Adaptive Probing & Dynamic Resolution Schemas ---
 
@@ -207,6 +207,9 @@ class SensorIngestResponse(BaseModel):
     sensor_id: str
     timestamp: int
     probing_state: str = "GREEN"
+    settings_locked: bool = Field(True, description="Whether local extension settings UI is locked against student modification")
+    helpdesk_pin_required: bool = Field(True, description="Whether PIN is required to unlock settings locally")
+    helpdesk_pin: Optional[str] = Field(None, description="Active helpdesk unlock PIN if updated centrally")
     custom_probes: List[CustomProbeSpec] = Field(default_factory=list, description="WYSIWYG custom synthetic probes configured in CMP")
 
 # --- Unified Visual Probe Scheduler Schemas ---
@@ -291,6 +294,14 @@ class ChromebookFleetItemResponse(BaseModel):
     app_sla_pct: Optional[float] = None
     roamed_recently: bool = False
     location: Optional[LocationSpec] = None
+    settings_locked: bool = True
+    version: Optional[str] = "1.0.0"
+    is_latest_version: bool = True
+    target_version: Optional[str] = "1.0.0"
+
+class ChromebookLockUpdateRequest(BaseModel):
+    locked: bool = Field(True, description="Set whether Chromebook sensor settings panel is locked")
+    helpdesk_pin: Optional[str] = Field(None, description="Optional custom helpdesk unlock PIN")
 
 class RoamingEventResponse(BaseModel):
     sensor_id: str

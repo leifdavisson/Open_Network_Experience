@@ -20,7 +20,7 @@ import re
 import json
 import time
 import subprocess
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Tuple
 
 STATE_FILE = "/var/lib/sensor/rrm_state.json"
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/wifi_rrm.prom"
@@ -52,11 +52,34 @@ def save_state(state: Dict[str, Any]):
     except Exception as e:
         print(f"Warning: Could not save RRM state: {e}", file=sys.stderr)
 
+def detect_wifi_interface(preferred: str = "wlan0") -> str:
+    """Auto-detects active wireless interface (e.g. wlp1s0, wlan0)."""
+    if os.path.exists(f"/sys/class/net/{preferred}"):
+        return preferred
+    if os.path.exists("/proc/net/wireless"):
+        try:
+            with open("/proc/net/wireless", "r") as f:
+                lines = f.readlines()
+                for line in lines[2:]:
+                    parts = line.split(":")
+                    if parts:
+                        iface = parts[0].strip()
+                        if os.path.exists(f"/sys/class/net/{iface}"):
+                            return iface
+        except Exception:
+            pass
+    import glob
+    candidates = glob.glob("/sys/class/net/*/wireless")
+    if candidates:
+        return os.path.basename(os.path.dirname(candidates[0]))
+    return preferred
+
 def get_connected_wifi_info(interface: str = "wlan0") -> Dict[str, Any]:
     """
-    Parses 'iw dev <interface> link' and 'iw dev <interface> info' to get
-    connected BSSID, SSID, frequency, channel, RSSI, and TX/RX bitrates.
+    Parses 'iw dev <interface> link', 'wpa_cli status', and 'wpa_cli signal_poll'
+    to get connected BSSID, SSID, frequency, channel, RSSI, and TX/RX bitrates.
     """
+    interface = detect_wifi_interface(interface)
     info = {
         "connected": False,
         "ssid": "",
@@ -124,6 +147,53 @@ def get_connected_wifi_info(interface: str = "wlan0") -> Dict[str, Any]:
                 info["channel_width_mhz"] = 20
     except Exception:
         pass
+
+    # Fallback: query wpa_cli status and signal_poll
+    if not info["connected"]:
+        try:
+            wpa_out = subprocess.check_output(
+                ["wpa_cli", "-i", interface, "status"],
+                stderr=subprocess.DEVNULL,
+                text=True
+            )
+            if "wpa_state=COMPLETED" in wpa_out or "bssid=" in wpa_out:
+                info["connected"] = True
+                for line in wpa_out.splitlines():
+                    if line.startswith("bssid="):
+                        info["bssid"] = line.split("=", 1)[1].strip().lower()
+                    elif line.startswith("ssid="):
+                        info["ssid"] = line.split("=", 1)[1].strip()
+                    elif line.startswith("freq="):
+                        try:
+                            freq = int(line.split("=", 1)[1].strip())
+                            info["freq_mhz"] = freq
+                            info["channel"] = freq_to_channel(freq)
+                        except ValueError:
+                            pass
+
+            poll_out = subprocess.check_output(
+                ["wpa_cli", "-i", interface, "signal_poll"],
+                stderr=subprocess.DEVNULL,
+                text=True
+            )
+            for line in poll_out.splitlines():
+                if line.startswith("RSSI="):
+                    try:
+                        info["rssi_dbm"] = int(line.split("=", 1)[1].strip())
+                    except ValueError:
+                        pass
+                elif line.startswith("LINKSPEED="):
+                    try:
+                        info["tx_rate_mbps"] = float(line.split("=", 1)[1].strip())
+                    except ValueError:
+                        pass
+                elif line.startswith("WIDTH="):
+                    w_str = line.split("=", 1)[1].strip()
+                    digits = re.findall(r"\d+", w_str)
+                    if digits:
+                        info["channel_width_mhz"] = int(digits[0])
+        except Exception:
+            pass
 
     return info
 

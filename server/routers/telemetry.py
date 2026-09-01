@@ -45,7 +45,7 @@ async def health_check():
         "version": "0.4.0",
         "timestamp": int(time.time()),
         "active_sensors": len(SENSORS_DB),
-        "district": "Kern County Superintendent of Schools"
+        "district": "Unified School District"
     }
 
 @router.get("/api/v1/wallboard/live-stats", summary="Live Wallboard Telemetry & PromQL Aggregation")

@@ -11,12 +11,10 @@ Atomically outputs Prometheus metrics for Grafana mapping and updates local loca
 """
 
 import os
-import sys
 import time
 import json
-import glob
 import argparse
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 
 DEFAULT_LOCATION_FILE = "/etc/sensor/location.json"
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/location.prom"
@@ -98,7 +96,7 @@ def read_hardware_gps(timeout_sec: float = 3.0) -> Dict[str, Any]:
 def load_or_update_location(gps_result: Dict[str, Any], config_path: str) -> Dict[str, Any]:
     """Loads location config and merges live GPS data if available."""
     location = {
-        "district": "Kern County Superintendent of Schools",
+        "district": "Unified School District",
         "site": "Main Campus",
         "building": "North Wing",
         "room": "Room 101",
@@ -149,28 +147,28 @@ def write_metrics(location: Dict[str, Any], gps_result: Dict[str, Any], output_p
     labels = f'district="{location["district"]}",site="{location["site"]}",building="{location["building"]}",room="{location["room"]}"'
 
     prom_lines = [
-        f'# HELP openux_sensor_gps_fix_status Whether the onboard GPS has an active 3D satellite fix (1=Fix, 0=No Fix)',
-        f'# TYPE openux_sensor_gps_fix_status gauge',
+        '# HELP openux_sensor_gps_fix_status Whether the onboard GPS has an active 3D satellite fix (1=Fix, 0=No Fix)',
+        '# TYPE openux_sensor_gps_fix_status gauge',
         f'openux_sensor_gps_fix_status{{{labels}}} {is_fixed}',
 
-        f'# HELP openux_sensor_gps_satellites_locked Number of GPS/GNSS satellites in lock',
-        f'# TYPE openux_sensor_gps_satellites_locked gauge',
+        '# HELP openux_sensor_gps_satellites_locked Number of GPS/GNSS satellites in lock',
+        '# TYPE openux_sensor_gps_satellites_locked gauge',
         f'openux_sensor_gps_satellites_locked{{{labels}}} {satellites}',
 
-        f'# HELP openux_sensor_location_is_gps_auto Whether location is dynamically updated by GPS (1=GPS Auto, 0=Static)',
-        f'# TYPE openux_sensor_location_is_gps_auto gauge',
+        '# HELP openux_sensor_location_is_gps_auto Whether location is dynamically updated by GPS (1=GPS Auto, 0=Static)',
+        '# TYPE openux_sensor_location_is_gps_auto gauge',
         f'openux_sensor_location_is_gps_auto{{{labels}}} {is_auto}',
 
-        f'# HELP openux_sensor_gps_latitude Current GPS latitude in decimal degrees',
-        f'# TYPE openux_sensor_gps_latitude gauge',
+        '# HELP openux_sensor_gps_latitude Current GPS latitude in decimal degrees',
+        '# TYPE openux_sensor_gps_latitude gauge',
         f'openux_sensor_gps_latitude{{{labels}}} {lat:.6f}',
 
-        f'# HELP openux_sensor_gps_longitude Current GPS longitude in decimal degrees',
-        f'# TYPE openux_sensor_gps_longitude gauge',
+        '# HELP openux_sensor_gps_longitude Current GPS longitude in decimal degrees',
+        '# TYPE openux_sensor_gps_longitude gauge',
         f'openux_sensor_gps_longitude{{{labels}}} {lon:.6f}',
 
-        f'# HELP openux_sensor_gps_altitude_meters Current GPS altitude in meters',
-        f'# TYPE openux_sensor_gps_altitude_meters gauge',
+        '# HELP openux_sensor_gps_altitude_meters Current GPS altitude in meters',
+        '# TYPE openux_sensor_gps_altitude_meters gauge',
         f'openux_sensor_gps_altitude_meters{{{labels}}} {alt:.1f}'
     ]
 

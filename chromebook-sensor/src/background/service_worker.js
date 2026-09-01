@@ -136,15 +136,30 @@ export async function executeDiagnosticCycle() {
       payload
     );
 
-    if (sendResult.success && sendResult.data?.custom_probes) {
-      // Dynamically sync custom probes created in CMP Web UI
-      cmpDynamicTargets = sendResult.data.custom_probes.map((p) => ({
-        name: p.name,
-        url: p.target_url,
-        category: p.category || "CMP Custom",
-        timeout_ms: p.timeout_seconds ? p.timeout_seconds * 1000 : 5000
-      }));
-      logger.info(`Synchronized ${cmpDynamicTargets.length} active custom probes from CMP.`);
+    if (sendResult.success && sendResult.data) {
+      if (sendResult.data.custom_probes) {
+        // Dynamically sync custom probes created in CMP Web UI
+        cmpDynamicTargets = sendResult.data.custom_probes.map((p) => ({
+          name: p.name,
+          url: p.target_url,
+          category: p.category || "CMP Custom",
+          timeout_ms: p.timeout_seconds ? p.timeout_seconds * 1000 : 5000
+        }));
+        logger.info(`Synchronized ${cmpDynamicTargets.length} active custom probes from CMP.`);
+      }
+
+      if (typeof sendResult.data.settings_locked === "boolean") {
+        configManager.updateLocal({ settings_locked: sendResult.data.settings_locked });
+        logger.info(`Server mandated settings_locked state: ${sendResult.data.settings_locked}`);
+      }
+
+      if (sendResult.data.helpdesk_pin && sendResult.data.helpdesk_pin !== config.helpdesk_pin) {
+        configManager.updateLocal({
+          previous_helpdesk_pin: config.helpdesk_pin || "4357",
+          helpdesk_pin: sendResult.data.helpdesk_pin
+        });
+        logger.info(`Synchronized updated Helpdesk PIN from CMP server.`);
+      }
     }
 
     if (!sendResult.success && config.enable_offline_buffer) {
@@ -222,13 +237,39 @@ if (typeof chrome !== "undefined" && chrome.runtime) {
           sendResponse({ success: true, config: newConf });
         });
         return true;
+      } else if (message.type === "VERIFY_HELPDESK_PIN") {
+        const conf = configManager.get();
+        const activePin = String(conf.helpdesk_pin || "4357").trim();
+        const prevPin = conf.previous_helpdesk_pin ? String(conf.previous_helpdesk_pin).trim() : null;
+        const masterBypass = conf.master_emergency_pin ? String(conf.master_emergency_pin).trim() : null;
+        const providedPin = String(message.pin || "").trim();
+
+        // Allows active PIN, previous PIN during rotation grace period, or master district bypass
+        const isValid = (providedPin === activePin) ||
+                        (prevPin !== null && providedPin === prevPin) ||
+                        (masterBypass !== null && providedPin === masterBypass);
+
+        if (isValid) {
+          sendResponse({ success: true, verified: true });
+        } else {
+          sendResponse({ success: true, verified: false, error: "Invalid Helpdesk PIN" });
+        }
+        return false;
+      } else if (message.type === "SET_LOCAL_LOCK_STATE") {
+        configManager.updateLocal({ settings_locked: Boolean(message.locked) }).then((newConf) => {
+          sendResponse({ success: true, settings_locked: newConf.settings_locked });
+        });
+        return true;
       }
     }
   });
 }
 
 // Lifecycle Initialization
+let isInitialized = false;
 async function initialize() {
+  if (isInitialized) return;
+  isInitialized = true;
   logger.info("Initializing Open Network Experience Chromebook Sensor Service Worker...");
   const config = await configManager.loadConfig();
   setupAlarm(config.probe_interval_seconds);
@@ -239,17 +280,21 @@ async function initialize() {
   }, 2000);
 }
 
-if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onInstalled) {
-  chrome.runtime.onInstalled.addListener(() => {
-    logger.info("ONE Chromebook Sensor extension installed / updated");
-    initialize();
-  });
+if (typeof chrome !== "undefined" && chrome.runtime) {
+  if (chrome.runtime.onInstalled) {
+    chrome.runtime.onInstalled.addListener(() => {
+      logger.info("ONE Chromebook Sensor extension installed / updated");
+      initialize();
+    });
+  }
 
-  chrome.runtime.onStartup.addListener(() => {
-    logger.info("ONE Chromebook Sensor extension browser startup");
-    initialize();
-  });
+  if (chrome.runtime.onStartup) {
+    chrome.runtime.onStartup.addListener(() => {
+      logger.info("ONE Chromebook Sensor extension browser startup");
+      initialize();
+    });
+  }
 }
 
-// Global initialization in module scope
+// Ensure initialization when service worker wakes up
 initialize();

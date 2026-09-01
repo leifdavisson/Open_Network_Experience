@@ -126,12 +126,11 @@ graph TD
 * **Cons**:
   - Requires access to internal DNS zones; all sensors must have L3 IP routing to the CMP server IP.
 
-#### Method 6: Global Public Cloud Portal (`discovery.openux.org`)
-* **How it Works**: If all local DHCP and DNS discovery mechanisms return empty, the sensor phones home to the global discovery cloud portal to resolve its assigned CMP tenant.
-* **Pros**:
-  - Zero configuration; works when shipping sensors directly from factory to remote sites.
-* **Cons**:
-  - Requires outbound internet connectivity over port 443 during boot.
+#### Method 6: Global Public Cloud Portal (Disabled / Reserved)
+* **Status**: *Disabled in v1.0.0-GA (domain not currently registered).*
+* **How it Works**: If enabled, the sensor would phone home to a central cloud portal to resolve its assigned tenant.
+* **Pros**: Zero configuration; works when shipping sensors directly from factory to remote sites.
+* **Cons**: Requires dedicated public cloud portal hosting and outbound internet connectivity over port 443 during boot.
 
 ---
 
@@ -507,7 +506,7 @@ Confirm that adjacent Cisco/Mitel phones or Wi-Fi APs maintain active registrati
 | Symptom | Probable Cause | Immediate Remediation |
 | :--- | :--- | :--- |
 | **Mitel / Cisco phone reboots continuously** | Option 43 was applied globally without Option 60 scoping. | **Rollback immediately**: Remove Option 43 from default scope. Switch to **Path 2 (Option 60)** or **Path 4 (DNS)**. |
-| **Sensor falls back to `discovery.openux.org`** | Option 43 missing from DHCP ACK or lease file directory permissions issue. | Verify Option 55 in client request; check `cat /run/systemd/netif/leases/*`. |
+| **Sensor fails to discover CMP** | Option 43 missing from DHCP ACK, DNS search domain unresolvable, or lease file directory permissions issue. | Verify Option 55 in client request; check `cat /run/systemd/netif/leases/*` or configure static `cmp_url` in `/etc/sensor/reconciler.json`. |
 | **`HTTP 404` or connection refused** | Port `8000` or `/api/v1` omitted from URL string. | Ensure Option 43 contains full URL (e.g. `http://<ip>:8000/api/v1`). |
 | **DHCP server rejects Option 43 as ASCII** | Server requires Hex format (e.g. Cisco IOS / MikroTik). | Convert URL to hex: `python3 -c "print(''.join(hex(ord(c))[2:] for c in 'http://...'))"`. |
 

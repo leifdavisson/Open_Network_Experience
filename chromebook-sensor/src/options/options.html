@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ONE Sensor Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-main">
+        <div>
+          <h1>📡 ONE Chromebook Sensor Settings</h1>
+          <p>Configure telemetry ingestion and diagnostic behaviors.</p>
+        </div>
+        <div id="lock-badge-container">
+          <span id="badge-lock" class="badge badge-locked">🔒 Locked</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Lock Status Banner -->
+      <div id="lock-banner" class="banner banner-locked">
+        <div class="banner-content">
+          <strong id="lock-banner-title">🔒 Student Protection Active: Settings Locked</strong>
+          <span id="lock-banner-desc">Local modifications are restricted. IT technicians can enter the Helpdesk PIN to make manual adjustments.</span>
+        </div>
+        <button id="btn-toggle-lock" class="btn btn-secondary">🔑 Unlock for Helpdesk</button>
+      </div>
+
+      <div id="managed-warning" class="warning hidden">
+        <strong>Note:</strong> Some settings are enforced centrally via Google Workspace Admin Console and cannot be edited.
+      </div>
+
+      <form id="settings-form">
+        <fieldset id="fs-connection">
+          <legend>Connection Settings</legend>
+
+          <div class="form-group">
+            <label for="cmp_server_url">CMP Server URL</label>
+            <input type="url" id="cmp_server_url" name="cmp_server_url" placeholder="http://10.98.2.125:8000">
+          </div>
+
+          <div class="form-group">
+            <label for="api_key">Sensor Fleet API Key</label>
+            <input type="password" id="api_key" name="api_key" placeholder="••••••••••••">
+          </div>
+
+          <div class="form-group">
+            <label for="campus_id">Campus Identifier / Site Tag</label>
+            <input type="text" id="campus_id" name="campus_id" placeholder="CAMPUS-CHROMEBOOK-FLEET">
+          </div>
+        </fieldset>
+
+        <fieldset id="fs-telemetry">
+          <legend>Telemetry & Probing</legend>
+
+          <div class="form-group">
+            <label for="probe_interval_seconds">Probe Interval (seconds)</label>
+            <input type="number" id="probe_interval_seconds" name="probe_interval_seconds" min="15" max="3600">
+          </div>
+
+          <div class="form-group checkbox">
+            <input type="checkbox" id="enable_webrtc_probing" name="enable_webrtc_probing">
+            <label for="enable_webrtc_probing">Enable WebRTC Quality & MOS Diagnostic</label>
+          </div>
+        </fieldset>
+
+        <fieldset id="fs-buffer">
+          <legend>Offline Buffer</legend>
+
+          <div class="form-group checkbox">
+            <input type="checkbox" id="enable_offline_buffer" name="enable_offline_buffer">
+            <label for="enable_offline_buffer">Enable Offline IndexedDB Buffer (Roaming Resync)</label>
+          </div>
+
+          <div class="form-group">
+            <label for="max_offline_records">Max Offline Buffer Records</label>
+            <input type="number" id="max_offline_records" name="max_offline_records" min="50" max="10000">
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit" id="save-btn" class="btn btn-primary">Save Settings</button>
+          <span id="status-message" class="status"></span>
+        </div>
+      </form>
+    </main>
+
+    <!-- Helpdesk PIN Unlock Modal -->
+    <div id="pin-modal" class="modal-backdrop hidden">
+      <div class="modal-box">
+        <h3>🔑 Enter Helpdesk PIN</h3>
+        <p>Please enter the IT Helpdesk PIN to unlock this Chromebook sensor for editing.</p>
+        <div class="form-group">
+          <input type="password" id="input-pin" maxlength="12" placeholder="PIN" autofocus>
+          <span id="pin-error" class="error-text hidden">Invalid Helpdesk PIN</span>
+        </div>
+        <div class="modal-actions">
+          <button id="btn-cancel-pin" class="btn btn-outline">Cancel</button>
+          <button id="btn-submit-pin" class="btn btn-primary">Unlock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

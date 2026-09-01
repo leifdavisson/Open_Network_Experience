@@ -64,13 +64,16 @@ class DOMStructureParser(HTMLParser):
 class TestComprehensiveWebUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """Fetch the live HTML dashboard from CMP server."""
-        req = urllib.request.Request(f"{BASE_URL}/")
-        try:
+        """Fetch the live HTML dashboard from disk template or CMP server."""
+        from pathlib import Path
+        template_path = Path(__file__).resolve().parent / "templates" / "dashboard.html"
+        if template_path.exists():
+            with open(template_path, "r", encoding="utf-8") as f:
+                cls.html_content = f.read()
+        else:
+            req = urllib.request.Request(f"{BASE_URL}/")
             with urllib.request.urlopen(req, timeout=5) as resp:
                 cls.html_content = resp.read().decode('utf-8')
-        except Exception as e:
-            raise RuntimeError(f"Failed to connect to CMP server at {BASE_URL}: {e}")
 
         cls.parser = DOMStructureParser()
         cls.parser.feed(cls.html_content)
@@ -213,7 +216,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             "mac_address": "DD:EE:FF:00:11:22",
             "timestamp": int(time.time()),
             "location": {
-                "district": "Kern County Superintendent of Schools",
+                "district": "Unified School District",
                 "site": "Bakersfield High",
                 "building": "Science Wing",
                 "room": "Room 101"
@@ -241,7 +244,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
 
         # 2. Simulate Save Location Button
         loc_update = {
-            "district": "Kern County Superintendent of Schools",
+            "district": "Unified School District",
             "site": "Bakersfield High",
             "building": "Library Wing",
             "room": "Room 204",
@@ -309,13 +312,36 @@ class TestComprehensiveWebUI(unittest.TestCase):
         self.assertIn('id="cb-wallboard-table-body"', self.html_content)
         self.assertIn('id="cb-roaming-feed"', self.html_content)
 
-        # 2. Fleet sub-filters and Chromebook table
-        self.assertIn('id="fleet-filter-all"', self.html_content)
-        self.assertIn('id="fleet-filter-cb"', self.html_content)
-        self.assertIn('id="cb-fleet-table-body"', self.html_content)
+        # 2. Chromebook dedicated view and table
+        self.assertIn('id="view-manage-chromebooks"', self.html_content)
+        self.assertIn('id="cb-dedicated-fleet-table-body"', self.html_content)
 
         # 3. Diagnostic modal
         self.assertIn('id="cb-detail-modal"', self.html_content)
+
+    @verifies("REQ-TEL-001")
+    def test_08_edge_sensor_detail_modal_and_backend_endpoint(self):
+        """Validates that Edge Sensor detail modal, Details button, and backend GET endpoint exist."""
+        # 1. Edge sensor detail modal and controller
+        self.assertIn('id="sensor-detail-modal"', self.html_content)
+        self.assertIn('openSensorDetailModal', self.html_content)
+        self.assertIn('closeSensorDetailModal', self.html_content)
+        self.assertIn('id="sensor-modal-body"', self.html_content)
+
+        # 2. Test backend GET /api/v1/sensors/{sensor_id} endpoint via TestClient
+        from fastapi.testclient import TestClient
+        from server.main import app
+        client = TestClient(app)
+        s_id = "test-sensor-detail-inspect"
+        resp = client.get(f"/api/v1/sensors/{s_id}", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["sensor_id"], s_id)
+        self.assertIn("hardware", data)
+        self.assertIn("interfaces", data)
+        self.assertIn("live_metrics", data)
+        self.assertIn("eno1", data["interfaces"])
+        self.assertIn("wlp1s0", data["interfaces"])
 
 if __name__ == "__main__":
     unittest.main()

@@ -116,7 +116,7 @@ def reset_db(db_path: str):
         "CAMPUS-WEST-HIGH",
         "West High School",
         "High School",
-        "Kern High School District",
+        "Metro Unified School District",
         35.3582,
         -119.0471,
         "1200 New St, Bakersfield, CA 93309",
@@ -138,7 +138,7 @@ def reset_db(db_path: str):
 
     # 3. Seed Clean Probers
     loc1 = {
-        "district": "Kern High School District",
+        "district": "Metro Unified School District",
         "site": "West High School",
         "building": "Building A",
         "room": "Library Media Center",
@@ -171,7 +171,7 @@ def reset_db(db_path: str):
     ))
 
     loc2 = {
-        "district": "Kern High School District",
+        "district": "Metro Unified School District",
         "site": "West High School",
         "building": "Science Wing",
         "room": "STEM Robotics Lab 204",

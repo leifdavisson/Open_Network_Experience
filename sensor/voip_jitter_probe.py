@@ -12,10 +12,8 @@ dropouts, and SIP phone quality issues directly from student/classroom vantage p
 """
 
 import os
-import sys
 import time
 import socket
-import struct
 import argparse
 from typing import Dict, Any, List, Optional
 
@@ -195,32 +193,52 @@ def main():
     parser = argparse.ArgumentParser(description="OpenUX Real-Time Voice/Video UDP Jitter Prober")
     parser.add_argument("--interface", default=None, help="Bind probe to network interface (e.g. eth0 or wlan0)")
     parser.add_argument("--output", default=DEFAULT_PROM_FILE, help="Prometheus metric file output path")
+    parser.add_argument("--stun-server", default=os.environ.get("STUN_SERVER"), help="Custom STUN / TURN server hostname (overrides default)")
+    parser.add_argument("--stun-port", type=int, default=int(os.environ.get("STUN_PORT", 19302)), help="Custom STUN / TURN port (default: 19302)")
+    parser.add_argument("--count", type=int, default=20, help="Number of STUN packets to send per target (default: 20; use 8 for fast on-demand delegation)")
+    parser.add_argument("--json", action="store_true", dest="json_output", help="Output results as JSON to stdout (for CMP remote delegation)")
 
     args = parser.parse_args()
 
-    print("Running OpenUX Real-Time Voice/Video (UDP/RTP) Media Stream Probes...")
-    results = []
+    targets = DEFAULT_TARGETS
+    if args.stun_server:
+        targets = [{"name": "Custom-District-STUN", "host": args.stun_server, "port": args.stun_port}]
 
-    for t in DEFAULT_TARGETS:
+    results = []
+    for t in targets:
         t_name = t["name"]
         host = t["host"]
         port = t["port"]
 
-        probe = probe_udp_jitter(host, port, packet_count=20, interface=args.interface)
-        status_color = "\033[92mEXCELLENT\033[0m" if probe["mos_score"] >= 4.0 else ("\033[93mFAIR\033[0m" if probe["mos_score"] >= 3.5 else "\033[91mPOOR\033[0m")
-        print(f" - [{t_name}]: {status_color} (MOS: {probe['mos_score']}/4.5 | RTT: {probe['rtt_ms']}ms | Jitter: {probe['jitter_ms']}ms | Loss: {probe['loss_percent']}%)")
-
+        probe = probe_udp_jitter(host, port, packet_count=args.count, interface=args.interface)
         results.append({
             "target_name": t_name,
             "host": host,
             "status": probe["status"],
             "rtt_ms": probe["rtt_ms"],
             "jitter_ms": probe["jitter_ms"],
+            "packet_loss_pct": probe["loss_percent"],
             "loss_percent": probe["loss_percent"],
             "mos_score": probe["mos_score"]
         })
 
-    write_metrics(results, args.output)
+    if args.json_output:
+        import json
+        print(json.dumps({"probes": results, "status": "ok"}))
+    else:
+        print("Running OpenUX Real-Time Voice/Video (UDP/RTP) Media Stream Probes...")
+        for r in results:
+            status_color = "\033[92mEXCELLENT\033[0m" if r["mos_score"] >= 4.0 else ("\033[93mFAIR\033[0m" if r["mos_score"] >= 3.5 else "\033[91mPOOR\033[0m")
+            print(f" - [{r['target_name']}]: {status_color} (MOS: {r['mos_score']}/4.5 | RTT: {r['rtt_ms']}ms | Jitter: {r['jitter_ms']}ms | Loss: {r['loss_percent']}%)")
+        write_metrics([{
+            "target_name": r["target_name"],
+            "host": r["host"],
+            "status": r["status"],
+            "rtt_ms": r["rtt_ms"],
+            "jitter_ms": r["jitter_ms"],
+            "loss_percent": r["loss_percent"],
+            "mos_score": r["mos_score"]
+        } for r in results], args.output)
 
 if __name__ == "__main__":
     main()

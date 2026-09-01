@@ -9,7 +9,6 @@ Emits Prometheus metrics alerting if restricted management ports are accessible.
 """
 
 import os
-import sys
 import time
 import socket
 import argparse
@@ -132,31 +131,35 @@ def main():
     parser = argparse.ArgumentParser(description="OpenUX Lateral East-West Segmentation Validator")
     parser.add_argument("--interface", default=None, help="Bind probe to specific network interface (e.g., wlan0)")
     parser.add_argument("--output", default=DEFAULT_PROM_FILE, help="Prometheus metric file output path")
+    parser.add_argument("--json", action="store_true", dest="json_output", help="Output results as JSON to stdout (for CMP remote delegation)")
 
     args = parser.parse_args()
 
-    print("Running OpenUX Lateral Segmentation Validation Probes...")
     results = []
-
     for target in DEFAULT_PROBE_TARGETS:
         reachable, latency, compliant = probe_target(target, interface=args.interface)
-        t_name = target["name"]
         expected = target["expected_state"]
-
-        status_str = "\033[92mCOMPLIANT\033[0m" if compliant else "\033[91mPOLICY BREACH / NON-COMPLIANT\033[0m"
-        state_str = "REACHABLE" if reachable else "BLOCKED/TIMEOUT"
-        print(f" - [{t_name}]: {status_str} (Observed: {state_str}, Expected: {expected.upper()}, Latency: {latency*1000:.1f}ms)")
-
         results.append({
             "id": target["id"],
             "name": target["name"],
+            "target": f"{target.get('host', '')}:{target.get('port', '')}",
             "expected_state": expected,
             "reachable": reachable,
             "latency": latency,
-            "compliant": compliant
+            "latency_ms": round(latency * 1000, 2),
+            "compliant": compliant,
+            "observed": "REACHABLE" if reachable else "BLOCKED/TIMEOUT"
         })
 
-    write_metrics(results, args.output)
+    if args.json_output:
+        import json
+        print(json.dumps({"probes": results, "status": "ok"}))
+    else:
+        print("Running OpenUX Lateral Segmentation Validation Probes...")
+        for r in results:
+            status_str = "\033[92mCOMPLIANT\033[0m" if r["compliant"] else "\033[91mPOLICY BREACH / NON-COMPLIANT\033[0m"
+            print(f" - [{r['name']}]: {status_str} (Observed: {r['observed']}, Expected: {r['expected_state'].upper()}, Latency: {r['latency_ms']}ms)")
+        write_metrics(results, args.output)
 
 if __name__ == "__main__":
     main()

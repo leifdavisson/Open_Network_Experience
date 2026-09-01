@@ -62,6 +62,12 @@ function updateUI(snapshot, config) {
 
   if (config) {
     document.getElementById("val-cmp").textContent = config.cmp_server_url || "Configured";
+    const isLocked = config.settings_locked !== false;
+    const lockEl = document.getElementById("badge-lock-status");
+    if (lockEl) {
+      lockEl.textContent = isLocked ? "🔒" : "🔓";
+      lockEl.title = isLocked ? "Settings Locked (Student Protection Active)" : "Settings Unlocked";
+    }
   }
 
   if (snapshot.last_run_timestamp) {
@@ -81,6 +87,17 @@ function refreshSnapshot() {
 
 document.addEventListener("DOMContentLoaded", () => {
   refreshSnapshot();
+
+  const settingsBtn = document.getElementById("btn-open-settings");
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", () => {
+      if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.openOptionsPage) {
+        chrome.runtime.openOptionsPage();
+      } else {
+        window.open("../options/options.html");
+      }
+    });
+  }
 
   const btn = document.getElementById("btn-run-probe");
   if (btn) {

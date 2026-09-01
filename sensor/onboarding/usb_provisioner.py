@@ -34,7 +34,7 @@ import argparse
 import subprocess
 import urllib.request
 import urllib.error
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, Any
 
 # ANSI Color Codes
 COLOR_HEADER = '\033[95m'
@@ -197,7 +197,7 @@ def parse_bootstrap_file(file_path: str) -> Dict[str, Any]:
     if not isinstance(loc, dict):
         loc = {}
     config["location"] = {
-        "district": loc.get("district", "Kern County Superintendent of Schools"),
+        "district": loc.get("district", "Unified School District"),
         "site": loc.get("site", "Main Campus"),
         "building": loc.get("building", "Main Building"),
         "room": loc.get("room", "Room 101"),
