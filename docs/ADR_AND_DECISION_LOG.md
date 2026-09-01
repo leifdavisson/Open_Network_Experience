@@ -239,3 +239,22 @@ Adopt a TOFU (Trust On First Use) registration model. Sensors initially register
 **Key Trade-offs / Consequences:**
 - **Pros:** Balances strong security with operational simplicity; prevents rogue sensors from polluting the database.
 - **Cons:** Requires a manual approval step in the UI for every new sensor deployed.
+
+---
+
+## 12. Lessons Learned
+
+### 12.1 Probe Truthfulness & Architectural Perspective
+During the development of on-demand diagnostic probes, a fundamental architecture flaw was identified: the Central Monitoring Platform (CMP) was executing network tests (like VLAN isolation and VoIP jitter) from within its own Docker container, rather than delegating them to the physical edge sensors.
+- **Lesson:** Network telemetry is highly dependent on the physical and logical network vantage point. A VLAN isolation check run from the CMP (which sits on a management/control VLAN) will incorrectly report that isolation is working, because it isn't testing from the student/guest VLAN where the physical sensor resides.
+- **Resolution:** All on-demand probe handlers were rewritten to use SSH delegation (`_run_remote_sensor_probe()`) to execute scripts directly on the physical sensor, parsing the JSON stdout. This restored architectural truthfulness to the diagnostic data.
+
+### 12.2 Hardcoded Credentials & Lab Bench Artifacts
+During rapid prototyping, lab bench IP addresses (`10.98.2.125`, `10.98.2.105`) and credentials (`SSH_USER=kern`, `SSH_PASS=Kern1234`) were inadvertently hardcoded into core routing logic, state initializers, and fallbacks.
+- **Lesson:** Hardcoded environment-specific variables create technical debt, security vulnerabilities, and brittle systems that fail when deployed to production or new environments.
+- **Resolution:** A comprehensive credential scrub was performed. All hardcoded IPs were replaced with environment variables (`CMP_HOST`, `CMP_PORT`) injected via `docker-compose.yml`. Passwords were removed from default arguments, and fallback IPs in responses were replaced with `null` or `"unknown"`. The `deploy_bench.sh` script was updated to handle dynamic environment injection without polluting the codebase.
+
+### 12.3 High-Assurance CI/CD Validation
+The implementation of a rigorous 359-test suite that included unit testing, integration testing, static type checking (`mypy`), linting (`ruff`), and security scanning (`bandit`) proved invaluable during the v0.5.0 production hardening phase.
+- **Lesson:** Deep architectural refactors (like moving from local socket probes to SSH-delegated JSON probes across 12 different network protocols) can be executed rapidly and safely when backed by a comprehensive test suite.
+- **Resolution:** The tests immediately caught edge cases—such as missing imports, unused variables, and incongruous state transitions—that would have otherwise caused production outages, proving that the upfront cost of writing tests pays off during major refactors.
