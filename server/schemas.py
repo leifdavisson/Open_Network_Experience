@@ -271,6 +271,9 @@ class ChromebookFleetItemResponse(BaseModel):
     sensor_id: str
     serial_number: Optional[str] = "UNTAGGED"
     asset_id: Optional[str] = "UNTAGGED"
+    directory_device_id: Optional[str] = None
+    is_managed: bool = False
+    user_agent: Optional[str] = None
     annotated_location: Optional[str] = "Mobile Fleet"
     annotated_user: Optional[str] = None
     hostname: Optional[str] = None
@@ -328,6 +331,10 @@ class SensorStatusResponse(BaseModel):
     hostname: Optional[str] = None
     ip_address: Optional[str] = None
     mac_address: Optional[str] = None
+    serial_number: Optional[str] = None
+    asset_id: Optional[str] = None
+    annotated_user: Optional[str] = None
+    directory_device_id: Optional[str] = None
     last_seen: int
     os: str
     is_online: bool
@@ -380,6 +387,10 @@ class SensorStatusResponseSafe(BaseModel):
     hostname: Optional[str] = None
     ip_address: Optional[str] = None
     mac_address: Optional[str] = None
+    serial_number: Optional[str] = None
+    asset_id: Optional[str] = None
+    annotated_user: Optional[str] = None
+    directory_device_id: Optional[str] = None
     last_seen: int
     os: str
     is_online: bool
@@ -391,7 +402,7 @@ class SensorStatusResponseSafe(BaseModel):
     target_config: SensorReconcileResponseSafe
 
     @classmethod
-    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config, location_val=None, probing_state="GREEN", hostname=None, ip_address=None, mac_address=None):
+    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config, location_val=None, probing_state="GREEN", hostname=None, ip_address=None, mac_address=None, serial_number=None, asset_id=None, annotated_user=None, directory_device_id=None):
         """
         Maps the internal DB state of a sensor to an admin-safe response payload,
         invoking from_wifi_spec to scrub credentials from the outgoing target configuration.
@@ -417,6 +428,10 @@ class SensorStatusResponseSafe(BaseModel):
             hostname=hostname,
             ip_address=ip_address,
             mac_address=mac_address,
+            serial_number=serial_number,
+            asset_id=asset_id,
+            annotated_user=annotated_user,
+            directory_device_id=directory_device_id,
             last_seen=last_seen,
             os=os_val,
             is_online=is_online,

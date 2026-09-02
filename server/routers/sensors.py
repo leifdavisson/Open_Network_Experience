@@ -273,7 +273,7 @@ async def ingest_sensor_report(
 
     device_info = report.get("device_info", {})
     if device_info:
-        for field in ["hostname", "serial_number", "asset_id", "annotated_user", "directory_device_id", "mac_address", "version"]:
+        for field in ["hostname", "serial_number", "asset_id", "annotated_user", "directory_device_id", "mac_address", "version", "is_managed", "user_agent"]:
             if device_info.get(field):
                 sensor[field] = device_info.get(field)
     if report.get("version"):
@@ -382,7 +382,11 @@ async def list_sensors():
                 probing_state=data.get("probing_state", "GREEN"),
                 hostname=data.get("hostname"),
                 ip_address=data.get("ip_address"),
-                mac_address=data.get("mac_address")
+                mac_address=data.get("mac_address"),
+                serial_number=data.get("serial_number"),
+                asset_id=data.get("asset_id"),
+                annotated_user=data.get("annotated_user"),
+                directory_device_id=data.get("directory_device_id")
             )
         )
     return response_list
@@ -955,6 +959,9 @@ async def list_chromebook_fleet(campus: Optional[str] = None):
                 sensor_id=s_id,
                 serial_number=s.get("serial_number") or "UNTAGGED",
                 asset_id=s.get("asset_id") or "UNTAGGED",
+                directory_device_id=s.get("directory_device_id"),
+                is_managed=s.get("is_managed", False),
+                user_agent=s.get("user_agent"),
                 annotated_location=str(getattr(s.get("location"), "room", "Mobile Fleet") or "Mobile Fleet"),
                 annotated_user=s.get("annotated_user"),
                 hostname=s.get("hostname"),
