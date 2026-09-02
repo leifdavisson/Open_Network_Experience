@@ -379,7 +379,10 @@ async def list_sensors():
                 reported_containers=data.get("reported_containers", {}),
                 target_config=data.get("target_config"),
                 location_val=data.get("location"),
-                probing_state=data.get("probing_state", "GREEN")
+                probing_state=data.get("probing_state", "GREEN"),
+                hostname=data.get("hostname"),
+                ip_address=data.get("ip_address"),
+                mac_address=data.get("mac_address")
             )
         )
     return response_list
