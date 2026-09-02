@@ -232,6 +232,7 @@ class UnifiedScheduleSpec(BaseModel):
 
 class SensorReconcileResponse(BaseModel):
     reset: bool = Field(False, description="Tells the sensor to perform a factory cleanup of all containers")
+    ota_upgrade: bool = Field(False, description="One-shot trigger instructing the edge sensor to perform an in-place python self-update")
     wifi: Optional[WifiSpec] = Field(None, description="Wi-Fi configuration profiles")
     containers: Dict[str, TargetContainerSpec] = Field(
         default_factory=dict,
@@ -372,6 +373,7 @@ class WifiSpecSafe(BaseModel):
 class SensorReconcileResponseSafe(BaseModel):
     """Safe target config with Wi-Fi credentials scrubbed for admin views."""
     reset: bool = False
+    ota_upgrade: bool = False
     wifi: Optional[WifiSpecSafe] = None
     containers: Dict[str, TargetContainerSpec] = Field(default_factory=dict)
     schedules: TestSchedulesSpec = Field(default_factory=lambda: TestSchedulesSpec())
@@ -414,6 +416,7 @@ class SensorStatusResponseSafe(BaseModel):
 
         safe_config = SensorReconcileResponseSafe(
             reset=getattr(target_config, "reset", False),
+            ota_upgrade=getattr(target_config, "ota_upgrade", False),
             wifi=WifiSpecSafe.from_wifi_spec(target_config.wifi) if getattr(target_config, "wifi", None) else WifiSpecSafe(ssid="none", security="open"),
             containers=getattr(target_config, "containers", {}),
             schedules=getattr(target_config, "schedules", TestSchedulesSpec()),

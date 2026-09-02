@@ -1072,18 +1072,56 @@ async def update_chromebook_fleet_settings(
     "/api/v1/chromebooks/download/extension.zip",
     summary="Download Packaged ChromeOS Extension (.zip)"
 )
-async def download_chromebook_extension_zip():
-    """Serves the zipped Chromebook sensor extension for manual or developer mode staging."""
-    candidate_paths = [
-        Path(__file__).resolve().parent.parent.parent / "chromebook-sensor" / "dist" / "one-chromebook-sensor-v1.0.0.zip",
-        Path("/app/chromebook-sensor/dist/one-chromebook-sensor-v1.0.0.zip"),
-        Path("/data/Open_Network_Experience/chromebook-sensor/dist/one-chromebook-sensor-v1.0.0.zip"),
-        Path("/home/kern/Open_Network_Experience/chromebook-sensor/dist/one-chromebook-sensor-v1.0.0.zip")
-    ]
-    for p in candidate_paths:
-        if p.exists():
-            return FileResponse(str(p), media_type="application/zip", filename="one-chromebook-sensor-v1.0.0.zip")
-    raise HTTPException(status_code=404, detail="Extension zip package not found.")
+async def download_chromebook_extension_zip(request: Request, cmp_url: Optional[str] = None):
+    """Serves the zipped Chromebook sensor extension with an auto-incremented version number and injected CMP URL."""
+    import io
+    import zipfile
+    from fastapi.responses import StreamingResponse
+
+    # Fallback to server's own base URL if not provided by query param
+    if not cmp_url:
+        cmp_url = str(request.base_url).rstrip("/")
+
+    cb_dir = Path(__file__).resolve().parent.parent.parent / "chromebook-sensor"
+    if not cb_dir.exists():
+        raise HTTPException(status_code=404, detail="Chromebook source not found on server.")
+
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(str(cb_dir)):
+            # Exclude dev artifacts and build directories
+            dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'test', '.coverage', 'dist']]
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, str(cb_dir))
+
+                # Intercept and modify manifest.json to auto-bump the version for OTA compliance
+                if arcname == "manifest.json":
+                    with open(file_path, 'r') as f:
+                        manifest = json.load(f)
+
+                    # Chrome limits version integers to 65535. We use 1.YYYY.MMDD.HHMM for monotonic uniqueness
+                    import datetime
+                    now = datetime.datetime.now()
+                    manifest["version"] = f"1.{now.year}.{now.month:02}{now.day:02}.{now.hour:02}{now.minute:02}"
+
+                    zf.writestr(arcname, json.dumps(manifest, indent=2))
+                # Intercept config_manager.js to dynamically inject the CMP URL so it works zero-config out of the box
+                elif arcname == "src/background/config_manager.js":
+                    with open(file_path, 'r') as f:
+                        content = f.read()
+                    content = content.replace('"http://localhost:8000"', f'"{cmp_url}"')
+                    zf.writestr(arcname, content)
+                else:
+                    zf.write(file_path, arcname)
+
+    memory_file.seek(0)
+
+    return StreamingResponse(
+        memory_file,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=one-chromebook-sensor-{int(time.time())}.zip"}
+    )
 
 @router.get(
     "/api/v1/chromebooks/download/policy.json",
@@ -1322,6 +1360,39 @@ async def trigger_sensor_reset(sensor_id: str):
     sensor["reset_flag"] = True
     db.save_sensor(sensor)
     return {"status": "success", "message": "Reset flag queued for next reconcile call."}
+
+@router.post(
+    "/api/v1/sensors/{sensor_id}/upgrade",
+    summary="Trigger Edge Sensor OTA Upgrade",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def trigger_sensor_upgrade(sensor_id: str):
+    sensor = get_or_create_sensor(sensor_id)
+    target = sensor.get("target_config", {})
+    if isinstance(target, dict):
+        target["ota_upgrade"] = True
+    else:
+        target.ota_upgrade = True
+    sensor["target_config"] = target
+    db.save_sensor(sensor)
+    return {"status": "success", "message": "OTA upgrade triggered"}
+
+@router.post(
+    "/api/v1/sensors/{sensor_id}/upgrade/clear",
+    summary="Clear Edge Sensor OTA Upgrade",
+    # Intentionally no admin dependency since edge sensor calls this via mTLS/registration
+)
+async def clear_sensor_upgrade(sensor_id: str):
+    if sensor_id in SENSORS_DB:
+        sensor = SENSORS_DB[sensor_id]
+        target = sensor.get("target_config", {})
+        if isinstance(target, dict):
+            target["ota_upgrade"] = False
+        else:
+            target.ota_upgrade = False
+        sensor["target_config"] = target
+        db.save_sensor(sensor)
+    return {"status": "success"}
 
 @router.post(
     "/api/v1/sensors/{sensor_id}/pcap/trigger",

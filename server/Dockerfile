@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server /app/server/
 COPY sensor /app/sensor/
+COPY chromebook-sensor /app/chromebook-sensor/
 
 ENV PYTHONPATH=/app
 
