@@ -4,6 +4,18 @@ All notable changes to the Open Network Experience (OpenUX) platform will be doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] — 2026-09-01
+
+### Added
+- **Helpdesk Installation Guide** (`docs/HELPDESK_INSTALL_GUIDE.md`): Added a comprehensive, first-principles installation guide intended for Helpdesk staff. Explains deployment using fundamental concepts: Access (SSH), Payload (SFTP), and Execution.
+- **Automated Deployment Script** (`deploy_tests.py`): Created a Paramiko-based Python script for automated, multi-host remote installation of the bench staging kit, reducing manual Helpdesk workload.
+- **V&V Feature Specifications** (`features/`): Merged strict BDD Gherkin specifications for CIPA Compliance, Safety Guardrails, Security Hardening, and Telemetry & Wallboard validation, moving the codebase toward formal high-assurance Verification and Validation.
+
+### Fixed
+- **PCAP Evidence Bundle Schema Validation** (`server/routers/alerts.py`, `server/routers/sensors.py`): Fixed a 500 Internal Server Error mismatch where locally generated PCAP incident bundles during on-demand triggers lacked `reason`, `filename`, and `size_bytes` keys required by the `EvidenceBundleInfo` Pydantic response model.
+- **Sensor Reconciler Command Execution Crash** (`sensor/reconciler/reconciler.py`): Resolved a critical bug causing the edge sensor daemon to crash with `AttributeError: 'list' object has no attribute 'split'` when processing Docker configurations that provided the container `command` as a JSON array instead of a string.
+- **Bench Staging Harness Configuration Leak** (`sensor/reconciler/reconciler.py`): Fixed a misconfiguration where local bench testing hardcoded the CMP target as `localhost:8000`, causing remote physical sensors to fail container reconciliation polling upon reboot.
+
 ## [0.5.0] — 2026-09-01
 
 ### Added
