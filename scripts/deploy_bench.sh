@@ -73,6 +73,12 @@ rsync -avz \
     -e "${RSYNC_RSH}" \
     "$(dirname "$0")/../server/" "${SSH_USER}@${CMP_HOST}:/home/${SSH_USER}/Open_Network_Experience/server/"
 
+rsync -avz \
+    --exclude='.git' \
+    --exclude='node_modules' \
+    -e "${RSYNC_RSH}" \
+    "$(dirname "$0")/../chromebook-sensor/" "${SSH_USER}@${CMP_HOST}:/home/${SSH_USER}/Open_Network_Experience/chromebook-sensor/"
+
 echo "=== 4. Recreating CMP Control Plane Container ==="
 # Ensure .env on CMP has correct values for SSH delegation and self-referencing probes
 ${SSH_CMD} "${SSH_USER}@${CMP_HOST}" \

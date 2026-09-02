@@ -767,6 +767,47 @@ def reconcile_unified_schedules(unified_schedules: list, config: dict):
     except Exception as e:
         print(f"Failed to write {schedules_file}: {e}")
 
+def reconcile_ota_upgrade(should_upgrade: bool, config: dict, cmp_url: str):
+    if not should_upgrade:
+        return
+
+    print("OTA Upgrade Commanded! Initiating in-place Python script update...")
+    import urllib.request
+    import shutil
+    import subprocess
+    import sys
+
+    tmp_path = "/tmp/reconciler_new.py"
+    target_path = "/usr/local/bin/reconciler.py"
+    script_url = f"{cmp_url}/sensor/scripts/reconciler.py"
+
+    try:
+        # 1. Download the latest reconciler
+        print(f"Downloading update from {script_url}...")
+        urllib.request.urlretrieve(script_url, tmp_path)
+
+        # 2. Integrity Check (Prevent Bricking)
+        print("Validating downloaded script syntax...")
+        if subprocess.call(["python3", "-m", "py_compile", tmp_path]) != 0:
+            print("OTA Upgrade Failed: Downloaded script has syntax errors! Aborting.")
+            return
+
+        # 3. Overwrite the active binary
+        shutil.copy(tmp_path, target_path)
+        print(f"Successfully updated {target_path}")
+
+        # 4. Acknowledge and clear the flag on the CMP so we don't boot loop
+        clear_url = f"{cmp_url}/sensors/{config['sensor_id']}/upgrade/clear"
+        req = urllib.request.Request(clear_url, method="POST", headers={"Content-Length": "0"})
+        urllib.request.urlopen(req, timeout=5)
+
+        # 5. Clean Exit (Systemd Restart=always will relaunch the new code)
+        print("OTA Upgrade complete. Exiting for systemd respawn...")
+        sys.exit(0)
+
+    except Exception as e:
+        print(f"Failed to initiate OTA upgrade: {e}")
+
 def main():
     print("Starting Sensor Reconciler service with Adaptive Multi-Resolution Probing & Unified Scheduler...")
     config = load_config()
@@ -803,6 +844,9 @@ def main():
             # Check for reset trigger
             if target_state.get("reset", False):
                 wipe_and_reset()
+
+            # Check for OTA Upgrade
+            reconcile_ota_upgrade(target_state.get("ota_upgrade", False), config, cmp_url)
 
             # Reconcile local networking, docker runtimes, test schedules, and PCAP triggers
             reconcile_wifi(target_state.get("wifi"), config["wifi_interface"], config["wifi_config_path"])

@@ -1311,7 +1311,7 @@
                             </div>
                         </div>
                         <div class="btn-group">
-                            <a href="/api/v1/chromebooks/download/extension.zip" class="btn btn-sm" style="background: var(--accent); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">📦 Download Extension (.zip)</a>
+                            <a href="#" onclick="promptDownloadChromebookZip(); return false;" class="btn btn-sm" style="background: var(--accent); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">📦 Download Extension (.zip)</a>
                             <a href="/api/v1/chromebooks/download/policy.json" class="btn btn-outline btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">📋 Download Policy (.json)</a>
                         </div>
                     </div>
@@ -5140,6 +5140,7 @@
                                     <button class="btn btn-outline btn-sm" onclick="openSensorDetailModal('${s.sensor_id}')">🔍 Details</button>
                                     <button class="btn btn-outline btn-sm" onclick="triggerPcap('${s.sensor_id}')">⚡ PCAP</button>
                                     <button class="btn btn-outline btn-sm" onclick="triggerSpeedtest('${s.sensor_id}')">📊 Speedtest</button>
+                                    <button class="btn btn-warning btn-sm" onclick="triggerOTAUpgrade('${s.sensor_id}')"><i class="fas fa-cloud-download-alt"></i> Upgrade</button>
                                     <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Revoke</button>
                                 </div>
                             </td>
@@ -5653,6 +5654,24 @@
             if (confirm(`Are you sure you want to revoke/reject sensor ${sensorId}?`)) {
                 await fetch(`/api/v1/sensors/${sensorId}/reject`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
                 loadDashboardData();
+            }
+        }
+
+        async function triggerOTAUpgrade(sensorId) {
+            if (!confirm(`Are you sure you want to trigger an OTA upgrade for sensor ${sensorId}? The sensor will download the latest codebase and restart.`)) return;
+            try {
+                const res = await fetch(`/api/v1/sensors/${sensorId}/upgrade`, {
+                    method: 'POST',
+                    headers: { 'X-API-Key': ADMIN_KEY }
+                });
+                if (res.ok) {
+                    alert('OTA Upgrade commanded. The sensor will download the update and restart shortly.');
+                    loadSensors();
+                } else {
+                    alert('Failed to trigger upgrade.');
+                }
+            } catch (err) {
+                console.error("OTA trigger error:", err);
             }
         }
 
@@ -6331,6 +6350,54 @@
         const grafanaLink = document.getElementById('grafana-link');
         if (grafanaLink) {
             grafanaLink.href = `${window.location.protocol}//${window.location.hostname}:3000`;
+        }
+
+        async function promptDownloadChromebookZip() {
+            const rawInput = prompt(
+                "Enter the IP address or hostname where the Chromebooks should connect to this CMP server:\n\n(We will automatically handle ports and formatting)",
+                window.location.hostname
+            );
+            if (!rawInput) return; // Cancelled
+
+            let normalizedUrl = rawInput.trim();
+            if (!/^https?:\/\//i.test(normalizedUrl)) {
+                normalizedUrl = "http://" + normalizedUrl;
+            }
+            try {
+                const parsed = new URL(normalizedUrl);
+                if (!parsed.port && window.location.port) {
+                    parsed.port = window.location.port;
+                }
+                normalizedUrl = parsed.toString().replace(/\/$/, "");
+            } catch (e) {
+                alert("Invalid URL or IP format.");
+                return;
+            }
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const res = await fetch(`${normalizedUrl}/api/v1/health`, {
+                    signal: controller.signal,
+                    headers: { 'Accept': 'application/json' }
+                });
+                clearTimeout(timeoutId);
+
+                if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`);
+
+            } catch (err) {
+                const proceedAnyway = confirm(
+                    `⚠️ CRITICAL WARNING ⚠️\n\n` +
+                    `We could not reach a ONE CMP Server at:\n${normalizedUrl}\n\n` +
+                    `Reason: ${err.message}\n\n` +
+                    `If you deploy this package, your entire Chromebook fleet may become stranded offline! ` +
+                    `Are you ABSOLUTELY SURE this is the correct public address?`
+                );
+                if (!proceedAnyway) return;
+            }
+
+            window.location.href = `/api/v1/chromebooks/download/extension.zip?cmp_url=${encodeURIComponent(normalizedUrl)}`;
         }
 
         updateBootstrapCommand();

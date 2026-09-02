@@ -1439,7 +1439,7 @@ def export_backup_json() -> dict:
     # Save a nightly rotation file on disk
     backup_payload = {
         "platform": "Open Network Experience",
-        "version": "0.4.0",
+        "version": "0.6.0",
         "exported_at": int(time.time()),
         "export_date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "sensors": sensors,

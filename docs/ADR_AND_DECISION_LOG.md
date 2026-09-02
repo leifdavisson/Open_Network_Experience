@@ -242,6 +242,42 @@ Adopt a TOFU (Trust On First Use) registration model. Sensors initially register
 
 ---
 
+## 12. Linux Edge Sensor Over-The-Air (OTA) Upgrades
+
+**Decision ID:** ADR-012
+**Title:** Pull-Based Zero-Downtime Linux Sensor OTA Upgrade Mechanism
+**Status:** Accepted
+
+**Context & Problem Statement:**
+Physical edge sensors deployed across campus networks require remote software upgrade capabilities without manual SSH intervention or destructive reinstallations. Running full `install.sh` scripts remotely wipes `/etc/sensor/reconciler.json`, destroys persistent sensor identity and API keys (forcing devices into an orphaned "Pending" state), and invoking `systemctl restart` from within a child process triggers systemd CGroup `SIGKILL` race conditions.
+
+**Decision Made:**
+Implement pull-based OTA update orchestration. The CMP flags `ota_upgrade: true` in polling reconciliation responses. The sensor's `reconciler.py` downloads the new binary, pre-compiles it via `py_compile` for syntax validation, clears the upgrade flag with the CMP, and exits gracefully (`sys.exit(0)`), allowing `systemd` (`Restart=always`) to immediately supervisor-respawn the updated daemon.
+
+**Key Trade-offs / Consequences:**
+- **Pros:** Zero-touch pull-based updates; guarantees syntax verification before replacement; preserves hardware credentials and identity tokens.
+- **Cons:** Requires sensors to have outbound HTTP/HTTPS access to the CMP port.
+
+---
+
+## 13. Dynamic Chromebook Extension Package Builder & Monotonic Versioning
+
+**Decision ID:** ADR-013
+**Title:** In-Memory Dynamic Chromebook Extension Packaging and Monotonic Versioning
+**Status:** Accepted
+
+**Context & Problem Statement:**
+ChromeOS enterprise force-installation via Google Workspace Admin Console requires packaged extension zip archives. Static pre-built zip files have hardcoded versions (e.g. `1.0.0`) and hardcoded fallback URLs (`localhost:8000`), preventing Google Admin from accepting subsequent update uploads (which mandate strict monotonic version increases) and burdening IT administrators with complex manual JSON policy configuration.
+
+**Decision Made:**
+Generate deployment zip packages on demand in memory (`io.BytesIO`). Intercept `manifest.json` on the fly to auto-increment extension versions with strictly monotonic timestamp semantics (`1.YYYY.MMDD.HHMM`) compliant with Chrome's 65535 integer limit per version segment. Surgically inject the verified CMP endpoint directly into `config_manager.js`'s default fallback configuration. Add client-side pre-flight connectivity verification in the UI to prevent fleet stranding.
+
+**Key Trade-offs / Consequences:**
+- **Pros:** Zero-touch deployment out of the box; eliminates version upload rejection in Google Admin Console; prevents fleet isolation due to configuration typos.
+- **Cons:** Small CPU/memory overhead during dynamic zip construction on download requests.
+
+---
+
 ## 12. Lessons Learned
 
 ### 12.1 Probe Truthfulness & Architectural Perspective
