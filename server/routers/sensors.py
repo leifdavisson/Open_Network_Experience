@@ -1120,8 +1120,11 @@ async def get_chromebook_detail(sensor_id: str):
     sensor = SENSORS_DB.get(sensor_id)
     if not sensor:
         raise HTTPException(status_code=404, detail="Chromebook sensor not found")
+    now = __import__('time').time()
+    is_online = (int(now) - sensor.get("last_seen", 0)) < 180 and sensor.get("last_seen", 0) > 0
     return {
         "sensor_id": sensor_id,
+        "is_online": is_online,
         "serial_number": sensor.get("serial_number"),
         "asset_id": sensor.get("asset_id"),
         "annotated_user": sensor.get("annotated_user"),
