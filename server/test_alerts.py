@@ -528,7 +528,7 @@ def test_10_pcap_evidence_automatic_freeze_and_endpoints():
     assert alert_updated["evidence_id"] == new_ev_id
 
     # 4. List all evidence bundles across the system
-    all_ev_res = client.get("/api/v1/evidence")
+    all_ev_res = client.get("/api/v1/evidence", headers={"X-API-Key": "admin-noc-key-change-me"})
     assert all_ev_res.status_code == 200
     all_ev_list = all_ev_res.json()
     assert len(all_ev_list) >= 1

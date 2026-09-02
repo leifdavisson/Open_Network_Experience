@@ -142,5 +142,29 @@
     "title": "SNMP Infrastructure & Switch Interface Poller",
     "safety_level": "HIGH",
     "description": "The platform must poll core switches and firewalls via SNMP v2c/v3 to detect bandwidth saturation, memory conserve mode, and interface drops."
+  },
+  {
+    "id": "REQ-SEC-003",
+    "title": "Install Script Shell Injection Prevention",
+    "safety_level": "CRITICAL",
+    "description": "The onboarding install script generator must sanitize all user-supplied query parameters (site, building, room, district, notes, token, wifi_ssid, wifi_psk) using shlex.quote() before injection into bash variable definitions. Unsanitized input must never appear in generated shell scripts. Validation must reject parameters containing shell metacharacters (;, |, &, $, `, \\n) when strict mode is enabled."
+  },
+  {
+    "id": "REQ-SEC-004",
+    "title": "CORS Origin Restriction & Credential Isolation",
+    "safety_level": "HIGH",
+    "description": "The CMP FastAPI application must not configure CORS with allow_origins=['*'] when allow_credentials=True. In production mode (ENV=production), CORS origins must be explicitly enumerated via the CORS_ORIGINS environment variable. Wildcard origins are only permitted when allow_credentials=False."
+  },
+  {
+    "id": "REQ-SEC-005",
+    "title": "Evidence Vault Authentication Enforcement",
+    "safety_level": "HIGH",
+    "description": "All evidence vault endpoints (GET /api/v1/evidence, GET /api/v1/evidence/{id}) must require administrative API key authentication via the verify_admin_key dependency. Unauthenticated requests must receive HTTP 401."
+  },
+  {
+    "id": "REQ-PRB-013",
+    "title": "CAASPP/ELPAC SSL Bypass & Endpoint Readiness Validation",
+    "safety_level": "CRITICAL",
+    "description": "The CAASPP readiness checker must validate that all Cambium TDS, TIDE, ETS TOMS, and SmarterBalanced SSO endpoints are reachable with TLS handshake latency <= 1500ms. SSL inspection bypass must be verified by confirming the presented certificate chain does not contain non-CA injected certificates. Each endpoint check must emit a pass/fail metric with latency_ms measurement. The overall readiness score must be computed as (passed_endpoints / total_endpoints) with a minimum threshold of 100% for CRITICAL endpoints."
   }
 ]

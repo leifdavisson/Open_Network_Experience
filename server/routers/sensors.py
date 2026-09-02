@@ -1326,9 +1326,13 @@ async def trigger_pcap_capture(sensor_id: str, reason: str = "manual_noc_trigger
     ev_id = f"ev-pcap-{sensor_id[:8]}-{now}"
     bundle_data = {
         "id": ev_id,
+        "bundle_id": ev_id,
         "sensor_id": sensor_id,
         "timestamp": now,
         "trigger_reason": reason,
+        "reason": reason,
+        "filename": f"incident_{sensor_id[:8]}_{now}.pcap",
+        "size_bytes": 15528960,
         "bundle": {
             "pcap_file": f"/var/lib/sensor/pcaps/incident_{sensor_id[:8]}_{now}.pcap",
             "pcap_size_bytes": 15528960,

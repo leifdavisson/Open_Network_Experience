@@ -304,9 +304,11 @@ class TestCMPFlow(unittest.TestCase):
         # 6. List evidence bundles
         code, data = self.make_request(f"/sensors/{s_id}/evidence", method="GET", headers={"X-API-Key": ADMIN_KEY})
         self.assertEqual(code, 200)
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["bundle_id"], "bundle-001")
-        self.assertEqual(data[0]["size_bytes"], 1048576)
+        self.assertEqual(len(data), 2)
+        bundle_ids = [d["bundle_id"] for d in data]
+        self.assertIn("bundle-001", bundle_ids)
+        b = next(d for d in data if d["bundle_id"] == "bundle-001")
+        self.assertEqual(b["size_bytes"], 1048576)
 
     def test_07_web_ui_and_easybuilder_studio(self):
         """Tests the Web UI dashboard, 1-click TOFU approval, and WYSIWYG EasyBuilder probes."""

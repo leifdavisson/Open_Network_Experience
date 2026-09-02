@@ -56,3 +56,5 @@ wpa_supplicant.conf
 .pytest_cache/
 .mypy_cache/
 htmlcov/
+*.zip
+coverage.json

@@ -9,7 +9,10 @@
       "test_lateral_peers_breach_detected",
       "test_full_client_isolation_run_pass",
       "test_full_client_isolation_run_breach",
-      "test_01_unauthorized_endpoints"
+      "test_01_unauthorized_endpoints",
+      "test_verify_api_key_constant_time",
+      "test_verify_dashboard_auth",
+      "test_production_fail_fast"
     ],
     "status": "VERIFIED"
   },
@@ -18,7 +21,11 @@
     "title": "HMAC-SHA256 Signed Session Token & Cookie Isolation",
     "safety_level": "HIGH",
     "verifying_tests": [
-      "test_04_global_controls_and_buttons"
+      "test_04_global_controls_and_buttons",
+      "test_create_session_token",
+      "test_verify_session_token",
+      "test_auth_login_sets_cookie",
+      "test_auth_logout_clears_cookie"
     ],
     "status": "VERIFIED"
   },
@@ -129,7 +136,8 @@
       "test_write_metrics_error_handling",
       "test_main_offline_fallback",
       "test_main_online_all_compliant",
-      "test_main_online_with_filter_breach"
+      "test_main_online_with_filter_breach",
+      "test_check_ssl_inspection_bypass_mitm_detected"
     ],
     "status": "VERIFIED"
   },
@@ -308,7 +316,13 @@
     "title": "NOC Wallboard Real-Time Metrics & SaaS Health Feed",
     "safety_level": "STANDARD",
     "verifying_tests": [
-      "test_01_page_header_and_brand_rendering"
+      "test_01_page_header_and_brand_rendering",
+      "test_query_vm_instant_success",
+      "test_query_vm_instant_fallback_and_failure",
+      "test_query_vm_instant_malformed_json",
+      "test_get_wallboard_live_stats_success",
+      "test_get_wallboard_live_stats_tsdb_unreachable",
+      "test_health_endpoint"
     ],
     "status": "VERIFIED"
   },
@@ -317,7 +331,9 @@
     "title": "Database Persistence & Scoped Resource Management",
     "safety_level": "HIGH",
     "verifying_tests": [
-      "test_02_sensor_registration_lifecycle"
+      "test_02_sensor_registration_lifecycle",
+      "test_forward_chromebook_metrics_enqueue_when_unreachable",
+      "test_forward_chromebook_metrics_dequeue_when_reachable"
     ],
     "status": "VERIFIED"
   },
@@ -327,6 +343,58 @@
     "safety_level": "HIGH",
     "verifying_tests": [
       "test_poll_firewall_fortigate_normal"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-SEC-003",
+    "title": "Install Script Shell Injection Prevention",
+    "safety_level": "CRITICAL",
+    "verifying_tests": [
+      "test_onboarding_shell_injection",
+      "test_usb_kit_zip_generation",
+      "test_install_script_404"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-SEC-004",
+    "title": "CORS Origin Restriction & Credential Isolation",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_cors_no_wildcard_with_credentials"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-SEC-005",
+    "title": "Evidence Vault Authentication Enforcement",
+    "safety_level": "HIGH",
+    "verifying_tests": [
+      "test_evidence_vault_no_auth"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-PRB-013",
+    "title": "CAASPP/ELPAC SSL Bypass & Endpoint Readiness Validation",
+    "safety_level": "CRITICAL",
+    "verifying_tests": [
+      "test_check_ssl_inspection_bypass_mitm_detected",
+      "test_check_ssl_inspection_bypass_genuine",
+      "test_check_ssl_inspection_bypass_ssl_error",
+      "test_check_ssl_inspection_bypass_connection_error",
+      "test_check_ssl_inspection_bypass_custom_ca",
+      "test_check_http_endpoint_success",
+      "test_check_http_endpoint_auth_error",
+      "test_check_http_endpoint_urlerror",
+      "test_check_http_endpoint_timeout",
+      "test_write_metrics_file",
+      "test_write_metrics_stdout",
+      "test_main_normal_all_ok",
+      "test_main_json_output",
+      "test_main_pcap_trigger",
+      "test_graceful_degradation_offline"
     ],
     "status": "VERIFIED"
   }

@@ -85,6 +85,18 @@ def run_mcdc_suite() -> bool:
             conditions=["is_target_restricted", "token_matched_in_body", "is_internet_online"],
             expression_fn=lambda restr, token, online: restr and token and online,
             formula_str="is_target_restricted AND token_matched_in_body AND is_internet_online"
+        ),
+        MCDCDecision(
+            name="CORS Security - Wildcard & Credential Isolation",
+            conditions=["allow_origins_wildcard", "allow_credentials"],
+            expression_fn=lambda wild, cred: not (wild and cred),
+            formula_str="NOT (allow_origins_wildcard AND allow_credentials)"
+        ),
+        MCDCDecision(
+            name="Evidence Vault - Authentication Enforcement",
+            conditions=["is_evidence_endpoint", "has_valid_token"],
+            expression_fn=lambda ev, token: not ev or token,
+            formula_str="NOT is_evidence_endpoint OR has_valid_token"
         )
     ]
 
@@ -100,7 +112,7 @@ def run_mcdc_suite() -> bool:
         print(f"  Formula:       {res['formula']}")
         print(f"  Conditions:    {res['conditions_count']} variables -> {res['test_vectors_count']} test vectors")
         print(f"  MC/DC Status:  {status_str}")
-        print(f"  Independence Pairs:")
+        print("  Independence Pairs:")
         for cond, (v1, v2) in res["independence_pairs"].items():
             print(f"    • {cond:25s}: V1={v1} vs V2={v2}")
         if not res["passed"]:
