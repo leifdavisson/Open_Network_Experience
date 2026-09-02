@@ -8,6 +8,11 @@ modal form inputs, and backend REST bindings for the Open Network Experience (ON
 import unittest
 import urllib.request
 import urllib.error
+import sys
+from pathlib import Path
+
+# Ensure root directory is on PYTHONPATH
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 def verifies(req_id: str):
     def decorator(fn):

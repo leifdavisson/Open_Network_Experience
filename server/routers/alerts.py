@@ -108,11 +108,13 @@ def _severity_rank(sev: str) -> int:
     return ranks.get(sev.lower(), 1)
 
 
-async def dispatch_alert_notifications(alert: dict):
+async def dispatch_alert_notifications(alert: Optional[dict]):
     """
     Asynchronously formats and sends outbound webhook notifications to all enabled channels
     whose min_severity threshold is satisfied. Suppresses dispatch if alert is within an active muting window.
     """
+    if not alert:
+        return
     if alert.get("is_muted"):
         # Alert was generated during an active scheduled maintenance window -> suppress push notifications
         return
@@ -130,7 +132,7 @@ async def dispatch_alert_notifications(alert: dict):
             tasks.append(_send_single_notification(chan, alert))
 
     if tasks:
-        asyncio.create_task(asyncio.gather(*tasks, return_exceptions=True))
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def _send_smtp_sync(chan: dict, alert: dict) -> bool:
@@ -264,6 +266,7 @@ http://localhost:8000/#view-monitor-alerts
     msg.attach(MIMEText(html_content, "html", "utf-8"))
 
     try:
+        server: Any
         if security_mode == "ssl_tls" or smtp_port == 465:
             ssl_ctx = ssl.create_default_context()
             server = smtplib.SMTP_SSL(smtp_host, smtp_port, context=ssl_ctx, timeout=8.0)
@@ -810,7 +813,7 @@ async def check_and_dispatch_maintenance_reminders() -> Dict[str, Any]:
 
         tasks = [_send_single_notification(c, reminder_alert) for c in channels]
         if tasks:
-            asyncio.create_task(asyncio.gather(*tasks, return_exceptions=True))
+            await asyncio.gather(*tasks, return_exceptions=True)
 
         db.mark_maintenance_window_reminded(win["id"], rem_type)
         dispatched.append({
@@ -980,6 +983,8 @@ async def simulate_alert(req: AlertSimulateRequest) -> dict:
     }
     alt_id = db.save_alert(alert_payload)
     loaded = db.load_alert_by_id(alt_id)
+    if loaded is None:
+        raise HTTPException(status_code=500, detail="Failed to load simulated alert")
     await dispatch_alert_notifications(loaded)
     return loaded
 

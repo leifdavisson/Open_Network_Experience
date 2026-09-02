@@ -453,13 +453,15 @@ def _live_probe_stun_jitter(host: str = "stun.l.google.com", port: int = 19302, 
     except Exception:
         return {"success": True, "rtt_ms": 16.4, "jitter_ms": 1.2, "mos_score": 4.41, "loss_pct": 0.0}
 
-def _run_remote_sensor_probe(sensor_ip: str, cmd: str, timeout_sec: float = 12.0) -> Optional[dict]:
+def _run_remote_sensor_probe(sensor_ip: Optional[str], cmd: str, timeout_sec: float = 12.0) -> Optional[dict]:
     """Executes a probe script directly on the physical edge sensor over SSH and parses JSON stdout.
 
     Credentials are sourced from environment variables:
       SSH_USER  — SSH username on the edge sensor (default: sensor)
       SSH_PASS  — SSH password; if empty, falls back to key-based auth
     """
+    if not sensor_ip:
+        return None
     ssh_user = os.environ.get("SSH_USER", "sensor")
     ssh_pass = os.environ.get("SSH_PASS", "")
     if not ssh_pass:
@@ -1196,22 +1198,24 @@ async def get_sensor_detail(sensor_id: str):
     now = int(time.time())
     is_online = (now - sensor.get("last_seen", 0)) < 120 and sensor.get("last_seen", 0) > 0
     target_cfg = sensor.get("target_config")
-    if hasattr(target_cfg, "containers"):
-        target_containers = target_cfg.containers
-    elif isinstance(target_cfg, dict):
-        target_containers = target_cfg.get("containers", {})
-    else:
-        target_containers = {}
+    target_containers = {}
+    if target_cfg is not None:
+        if hasattr(target_cfg, "containers"):
+            target_containers = target_cfg.containers
+        elif isinstance(target_cfg, dict):
+            target_containers = target_cfg.get("containers", {})
     reported = sensor.get("reported_containers") or {}
     reconciled_ok = is_online and (set(reported.keys()) == set(target_containers.keys()))
 
     loc = sensor.get("location")
-    if hasattr(loc, "model_dump"):
+    if loc is not None and hasattr(loc, "model_dump"):
         loc_dict = loc.model_dump()
     elif isinstance(loc, dict):
         loc_dict = loc
     else:
         loc_dict = {"campus_id": "CAMPUS-MAIN", "building": "Bldg 1", "room": "Room 101"}
+
+    target_cfg_serialized = target_cfg.model_dump() if (target_cfg is not None and hasattr(target_cfg, "model_dump")) else target_cfg
 
     return {
         "sensor_id": sensor_id,
@@ -1226,7 +1230,7 @@ async def get_sensor_detail(sensor_id: str):
         "reconciled_ok": reconciled_ok,
         "location": loc_dict,
         "campus_id": sensor.get("campus_id") or loc_dict.get("campus_id", "CAMPUS-MAIN"),
-        "target_config": target_cfg.model_dump() if hasattr(target_cfg, "model_dump") else target_cfg,
+        "target_config": target_cfg_serialized,
         "reported_containers": reported,
         "hardware": {
             "model": "Raspberry Pi 5 / Industrial Edge Appliance",
