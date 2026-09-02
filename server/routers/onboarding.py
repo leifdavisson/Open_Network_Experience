@@ -7,12 +7,25 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 import os
 import io
 import json
+import shlex
 import zipfile
 from typing import Optional
 from fastapi import APIRouter, Request, Query, HTTPException, Response
 from fastapi.responses import PlainTextResponse
 
 router = APIRouter(tags=["Onboarding & Provisioning"])
+
+
+def _sanitize_shell_param(value: Optional[str]) -> Optional[str]:
+    """Sanitize a user-supplied value for safe injection into bash variable definitions.
+
+    Uses shlex.quote() to prevent shell metacharacter injection (;, |, &, $, `, newlines).
+    Returns None if the input is None, preserving optional parameter semantics.
+    """
+    if value is None:
+        return None
+    # shlex.quote wraps the value in single quotes and escapes internal single quotes
+    return shlex.quote(value)
 
 @router.get("/install.sh", summary="1-Line Sensor SSH Installer Script")
 @router.get("/bootstrap.sh", summary="1-Line Sensor SSH Installer Script")
@@ -34,30 +47,32 @@ async def get_install_script(
     base_url = str(request.base_url).rstrip("/")
     sensor_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sensor"))
     install_file = os.path.join(sensor_root, "install.sh")
+    import shlex
+
     if os.path.exists(install_file):
         with open(install_file, "r") as f:
             content = f.read()
             content = content.replace("http://central-monitoring-platform.local/api/v1", f"{base_url}/api/v1")
             target_site = site or campus
             if target_site:
-                content = content.replace('SITE_NAME="Main Campus"', f'SITE_NAME="{target_site}"')
+                content = content.replace('SITE_NAME="Main Campus"', f'SITE_NAME={shlex.quote(target_site)}')
                 content = content.replace('EXPLICIT_ARGS=0', 'EXPLICIT_ARGS=1')
             if building:
-                content = content.replace('BUILDING_NAME="Main Building"', f'BUILDING_NAME="{building}"')
+                content = content.replace('BUILDING_NAME="Main Building"', f'BUILDING_NAME={shlex.quote(building)}')
                 content = content.replace('EXPLICIT_ARGS=0', 'EXPLICIT_ARGS=1')
             if room:
-                content = content.replace('ROOM_NAME="Room 101"', f'ROOM_NAME="{room}"')
+                content = content.replace('ROOM_NAME="Room 101"', f'ROOM_NAME={shlex.quote(room)}')
                 content = content.replace('EXPLICIT_ARGS=0', 'EXPLICIT_ARGS=1')
             if district:
-                content = content.replace('DISTRICT_NAME="Unified School District"', f'DISTRICT_NAME="{district}"')
+                content = content.replace('DISTRICT_NAME="Unified School District"', f'DISTRICT_NAME={shlex.quote(district)}')
             if notes:
-                content = content.replace('LOCATION_NOTES="Ceiling AP Drop"', f'LOCATION_NOTES="{notes}"')
+                content = content.replace('LOCATION_NOTES="Ceiling AP Drop"', f'LOCATION_NOTES={shlex.quote(notes)}')
             if token:
-                content = content.replace('ENROLL_TOKEN=""', f'ENROLL_TOKEN="{token}"')
+                content = content.replace('ENROLL_TOKEN=""', f'ENROLL_TOKEN={shlex.quote(token)}')
             if wifi_ssid:
-                content = content.replace('WIFI_SSID=""', f'WIFI_SSID="{wifi_ssid}"')
+                content = content.replace('WIFI_SSID=""', f'WIFI_SSID={shlex.quote(wifi_ssid)}')
             if wifi_psk:
-                content = content.replace('WIFI_PSK=""', f'WIFI_PSK="{wifi_psk}"')
+                content = content.replace('WIFI_PSK=""', f'WIFI_PSK={shlex.quote(wifi_psk)}')
             if wizard is True:
                 content = content.replace('LAUNCH_WIZARD=0', 'LAUNCH_WIZARD=1')
             if force is True:

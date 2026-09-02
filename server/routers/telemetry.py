@@ -245,7 +245,8 @@ async def list_evidence_bundles(sensor_id: str):
 
 @router.get(
     "/api/v1/evidence",
-    summary="List All System Evidence & Incident PCAP Bundles"
+    summary="List All System Evidence & Incident PCAP Bundles",
+    dependencies=[Depends(verify_admin_key)]
 )
 async def list_all_evidence():
     """Returns all forensic incident evidence bundles across all edge sensors."""

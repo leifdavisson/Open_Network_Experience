@@ -159,6 +159,10 @@ For staging large batches of sensors (20 to 100+ Raspberry Pis / x86 Mini-PCs) r
 4. The auto-provisioner automatically copies offline synthetic probes, provisions Wi-Fi, registers with the CMP, and writes a physical audit receipt (`provisioned_sensors.csv`) back to the USB drive with the sensor's MAC, UUID, and assigned IP address.
 5. Unplug the USB drive and insert it into the next sensor!
 
+#### Option D: Remote SSH Automated Deployment (Helpdesk Fleet Rollout)
+For IT Helpdesk staff deploying to a fleet of remote Linux hosts (e.g. Ubuntu or Debian nodes) where SSH access is available. We have simplified this using First Principles to ensure smooth fleet management.
+For complete step-by-step instructions from first principles, refer to our [Helpdesk Installation Guide](file:///data/Open_Network_Experience/docs/HELPDESK_INSTALL_GUIDE.md) (`file:///data/Open_Network_Experience/docs/HELPDESK_INSTALL_GUIDE.md`).
+
 > [!NOTE]
 > The bootstrapper automatically detects hardware specs, installs dependencies, downloads synthetic probe modules from the CMP server, writes `/etc/sensor/reconciler.json`, symlinks `/usr/local/bin/one-wizard`, and activates `sensor-reconciler.service`.
 

@@ -148,6 +148,9 @@ If testing on entry-level development boards, VMs, or Raspberry Pi boards with <
 curl -sSL http://192.0.2.10:8000/install.sh | sudo bash -s -- --cmp http://192.0.2.10:8000/api/v1 --force
 ```
 
+#### D. Remote SSH Automated Deployment (Helpdesk Fleet Rollout)
+If you are pushing deployments remotely to a list of known IP addresses (e.g., from an IT Helpdesk), see our [Helpdesk Installation Guide](file:///data/Open_Network_Experience/docs/HELPDESK_INSTALL_GUIDE.md) (`file:///data/Open_Network_Experience/docs/HELPDESK_INSTALL_GUIDE.md`) to learn how to roll out sensors using First Principles (Access, Payload, and Execution).
+
 ---
 
 ### 2. Manual / Offline Installation (From Git Clone)

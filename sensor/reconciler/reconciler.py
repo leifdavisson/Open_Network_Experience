@@ -308,7 +308,10 @@ def start_container(name, container_spec):
 
     cmd.append(image)
     if command:
-        cmd.extend(command.split())
+        if isinstance(command, list):
+            cmd.extend(command)
+        else:
+            cmd.extend(command.split())
 
     print(f"Starting container {name} using command: {' '.join(cmd)}")
     return run_cmd(cmd)

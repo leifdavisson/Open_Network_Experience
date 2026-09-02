@@ -201,9 +201,10 @@ def test_install_script_with_query_params():
     """Validates dynamic substitution of campus, room, and wizard flags via query parameters."""
     res = client.get("/install.sh?site=West+High+School&room=Room+204&building=Science+Wing&wizard=true")
     assert res.status_code == 200
-    assert 'SITE_NAME="West High School"' in res.text
-    assert 'ROOM_NAME="Room 204"' in res.text
-    assert 'BUILDING_NAME="Science Wing"' in res.text
+    # After shell injection fix, values are wrapped via shlex.quote() (single-quoted)
+    assert "SITE_NAME='West High School'" in res.text
+    assert "ROOM_NAME='Room 204'" in res.text
+    assert "BUILDING_NAME='Science Wing'" in res.text
     assert 'LAUNCH_WIZARD=1' in res.text
 
 def test_health_check_endpoint():

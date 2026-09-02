@@ -253,10 +253,26 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# CORS Configuration (REQ-SEC-004): Wildcard origins must not be combined with credentials
+_cors_origins_env = os.environ.get("CORS_ORIGINS", "")
+_env_mode = os.environ.get("ENV", os.environ.get("ENVIRONMENT", "development")).lower()
+
+if _cors_origins_env:
+    _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+    _cors_credentials = True
+elif _env_mode == "production":
+    # Production without explicit CORS_ORIGINS: restrict to same-origin only
+    _cors_origins = []
+    _cors_credentials = False
+else:
+    # Development: allow all origins but disable credentials (CORS spec compliance)
+    _cors_origins = ["*"]
+    _cors_credentials = False
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_credentials,
     allow_methods=["*"],
     allow_headers=["*"]
 )
