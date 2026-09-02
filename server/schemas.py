@@ -325,6 +325,9 @@ class SensorConfigUpdate(BaseModel):
 
 class SensorStatusResponse(BaseModel):
     sensor_id: str
+    hostname: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
     last_seen: int
     os: str
     is_online: bool
@@ -374,6 +377,9 @@ class SensorReconcileResponseSafe(BaseModel):
 class SensorStatusResponseSafe(BaseModel):
     """Admin-facing sensor status with credentials redacted."""
     sensor_id: str
+    hostname: Optional[str] = None
+    ip_address: Optional[str] = None
+    mac_address: Optional[str] = None
     last_seen: int
     os: str
     is_online: bool
@@ -385,7 +391,7 @@ class SensorStatusResponseSafe(BaseModel):
     target_config: SensorReconcileResponseSafe
 
     @classmethod
-    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config, location_val=None, probing_state="GREEN"):
+    def from_internal(cls, sensor_id, last_seen, os_val, is_online, reconciled_ok, status_val, reported_containers, target_config, location_val=None, probing_state="GREEN", hostname=None, ip_address=None, mac_address=None):
         """
         Maps the internal DB state of a sensor to an admin-safe response payload,
         invoking from_wifi_spec to scrub credentials from the outgoing target configuration.
@@ -408,6 +414,9 @@ class SensorStatusResponseSafe(BaseModel):
         )
         return cls(
             sensor_id=sensor_id,
+            hostname=hostname,
+            ip_address=ip_address,
+            mac_address=mac_address,
             last_seen=last_seen,
             os=os_val,
             is_online=is_online,
