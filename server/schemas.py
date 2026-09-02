@@ -492,10 +492,10 @@ class AlertRecord(BaseModel):
     updated_at: Optional[int] = None
 
 class AlertAcknowledgeRequest(BaseModel):
-    acknowledged_by: Optional[str] = Field("NOC Operator", description="Operator identity acknowledging alarm")
+    acknowledged_by: Optional[str] = "NOC Operator"
 
 class AlertResolveRequest(BaseModel):
-    resolution_notes: Optional[str] = Field("Resolved via CMP Webhook/Console", description="Resolution notes")
+    resolution_notes: Optional[str] = "Resolved via CMP Webhook/Console"
 
 class AlertSimulateRequest(BaseModel):
     alertname: str = Field("CAASPPUntrustedCertificate", description="Alarm name / rule")

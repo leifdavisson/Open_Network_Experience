@@ -108,6 +108,7 @@ def get_or_create_sensor(sensor_id: str) -> dict:
             "reported_containers": {},
             "target_config": SensorReconcileResponse(
                 reset=False,
+                ota_upgrade=False,
                 wifi=copy.deepcopy(DEFAULT_TARGET_WIFI),
                 containers=copy.deepcopy(DEFAULT_TARGET_CONTAINERS),
                 custom_probes=[],
