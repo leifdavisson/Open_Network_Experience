@@ -6,20 +6,21 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 
 import copy
 import time
-from typing import Dict, List
-from server.schemas import (
-    WifiSpec,
-    TargetContainerSpec,
-    LocationSpec,
-    SensorReconcileResponse
-)
+
+from server.schemas import LocationSpec, SensorReconcileResponse, TargetContainerSpec, WifiSpec
 
 # In-Memory Active Caches (Synchronized with SQLite)
-SENSORS_DB: Dict[str, dict] = {}
-PROBES_DB: Dict[str, dict] = {}
-SCHEDULES_DB: Dict[str, dict] = {}
-EVIDENCE_DB: Dict[str, List[dict]] = {}
-ROAMING_EVENTS_DB: List[dict] = []
+SENSORS_DB: dict[str, dict] = {}
+PROBES_DB: dict[str, dict] = {}
+SCHEDULES_DB: dict[str, dict] = {}
+EVIDENCE_DB: dict[str, list[dict]] = {}
+ROAMING_EVENTS_DB: list[dict] = []
+
+# Global fleet settings for Chromebooks
+CHROMEBOOK_GLOBAL_SETTINGS = {
+    "settings_locked": True,
+    "helpdesk_pin": "4357"
+}
 
 DEFAULT_TARGET_CONTAINERS = {
     "blackbox-exporter": TargetContainerSpec(
@@ -62,7 +63,7 @@ DEFAULT_TARGET_WIFI = WifiSpec(
 
 def get_or_create_sensor(sensor_id: str) -> dict:
     """Helper to load sensor from SQLite or initialize if new to the platform."""
-    import server.db as db
+    from server import db
     db_sensor = db.load_sensor(sensor_id)
     if db_sensor:
         loc_val = db_sensor.get("location")
@@ -115,6 +116,9 @@ def get_or_create_sensor(sensor_id: str) -> dict:
                 probing_state="GREEN"
             )
         }
+        if str(sensor_id).startswith("chromebook-"):
+            SENSORS_DB[sensor_id]["settings_locked"] = CHROMEBOOK_GLOBAL_SETTINGS["settings_locked"]
+            SENSORS_DB[sensor_id]["helpdesk_pin"] = CHROMEBOOK_GLOBAL_SETTINGS["helpdesk_pin"]
         db.save_sensor(SENSORS_DB[sensor_id])
     else:
         s = SENSORS_DB[sensor_id]
