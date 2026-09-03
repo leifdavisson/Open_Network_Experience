@@ -241,3 +241,94 @@ def test_cors_no_wildcard_with_credentials():
                     "Wildcard origins must not be combined with credentials=True."
                 )
             break
+
+# --- Validation Gate Tests ---
+
+@verifies("REQ-SEC-005")
+def test_custom_probe_spec_validation():
+    from pydantic import ValidationError
+    from server.schemas import CustomProbeSpec
+
+    # Valid
+    CustomProbeSpec(id="1", name="http_test", probe_type="http", target="https://example.com")
+    CustomProbeSpec(id="2", name="dns_test", probe_type="dns", target="example.com")
+    CustomProbeSpec(id="3", name="tcp_test", probe_type="tcp", target="example.com:80")
+
+    # Invalid HTTP
+    with pytest.raises(ValidationError) as exc:
+        CustomProbeSpec(id="4", name="http_invalid", probe_type="http", target="example.com")
+    assert "target must be a valid HTTP/HTTPS URL" in str(exc.value)
+
+    # Invalid DNS
+    with pytest.raises(ValidationError) as exc:
+        CustomProbeSpec(id="5", name="dns_invalid", probe_type="dns", target="https://example.com")
+    assert "target must be a valid domain name or IP address" in str(exc.value)
+
+    # Invalid TCP - no port
+    with pytest.raises(ValidationError) as exc:
+        CustomProbeSpec(id="6", name="tcp_invalid1", probe_type="tcp", target="example.com")
+    assert "target must be formatted as host:port" in str(exc.value)
+
+    # Invalid TCP - port out of bounds
+    with pytest.raises(ValidationError) as exc:
+        CustomProbeSpec(id="7", name="tcp_invalid2", probe_type="tcp", target="example.com:70000")
+    assert "port must be between 1 and 65535" in str(exc.value)
+
+@verifies("REQ-SEC-005")
+def test_wifi_spec_validation():
+    from pydantic import ValidationError
+    from server.schemas import WifiSpec
+
+    # Valid open
+    WifiSpec(ssid="guest", security="open")
+
+    # Valid psk
+    WifiSpec(ssid="secure", security="psk", psk="supersecret123")
+
+    # Valid eap
+    WifiSpec(ssid="enterprise", security="eap-peap", username="user", password="pwd")
+
+    # Invalid psk (missing)
+    with pytest.raises(ValidationError) as exc:
+        WifiSpec(ssid="secure", security="psk")
+    assert "psk is required when security is psk" in str(exc.value)
+
+    # Invalid psk (too short)
+    with pytest.raises(ValidationError) as exc:
+        WifiSpec(ssid="secure", security="psk", psk="short")
+    assert "psk must be between 8 and 63 characters" in str(exc.value)
+
+    # Invalid eap (missing username/pwd)
+    with pytest.raises(ValidationError) as exc:
+        WifiSpec(ssid="enterprise", security="eap-peap", username="user")
+    assert "username and password are required when security is eap-peap" in str(exc.value)
+
+    # Invalid security type
+    with pytest.raises(ValidationError) as exc:
+        WifiSpec(ssid="guest", security="wep")
+    assert "security must be open, psk, or eap-peap" in str(exc.value)
+
+@verifies("REQ-SEC-005")
+def test_unified_schedule_spec_validation():
+    from pydantic import ValidationError
+    from server.schemas import UnifiedScheduleSpec
+
+    # Valid
+    UnifiedScheduleSpec(id="1", name="test1", probe_id="p1", mode="daily_once")
+    UnifiedScheduleSpec(id="2", name="test2", probe_id="p2", mode="raw_cron", cron_expr="* * * * *")
+    UnifiedScheduleSpec(id="3", name="test3", probe_id="p3", mode="raw_cron", cron_expr="*/15 8-16 * * 1-5")
+
+    # Invalid raw_cron (missing expr)
+    with pytest.raises(ValidationError) as exc:
+        UnifiedScheduleSpec(id="4", name="test4", probe_id="p4", mode="raw_cron")
+    assert "cron_expr is required when mode is raw_cron" in str(exc.value)
+
+    # Invalid raw_cron (wrong fields)
+    with pytest.raises(ValidationError) as exc:
+        UnifiedScheduleSpec(id="5", name="test5", probe_id="p5", mode="raw_cron", cron_expr="* * * *")
+    assert "cron_expr must be a standard 5-field cron syntax" in str(exc.value)
+
+    # Invalid raw_cron (bad characters)
+    with pytest.raises(ValidationError) as exc:
+        UnifiedScheduleSpec(id="6", name="test6", probe_id="p6", mode="raw_cron", cron_expr="a b c d e")
+    assert "invalid cron field" in str(exc.value)
