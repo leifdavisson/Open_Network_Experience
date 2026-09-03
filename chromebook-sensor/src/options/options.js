@@ -82,6 +82,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const isServerLocked = (config.settings_locked !== false);
   setFormLockedState(isServerLocked && !isUnlockedSession);
 
+  // Dynamically monitor settings_locked property changes
+  if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (changes.settings_locked) {
+        const newLocked = changes.settings_locked.newValue !== false;
+        config.settings_locked = changes.settings_locked.newValue;
+        setFormLockedState(newLocked && !isUnlockedSession);
+      }
+    });
+  }
+
   // Toggle Lock Button (Unlock with PIN / Relock)
   toggleLockBtn.addEventListener('click', () => {
     if (isUnlockedSession) {
