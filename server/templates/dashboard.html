@@ -5205,7 +5205,7 @@
                 cbRows.push(`
                     <tr>
                         <td><strong>${cb.serial_number || 'UNTAGGED'}</strong><br><span style="font-size:11px; color:var(--text-muted);">${cb.asset_id || cb.sensor_id}</span></td>
-                        <td><strong>${cb.annotated_location || 'Mobile Fleet'}</strong><br><span style="font-size:11px; color:var(--accent);">${cb.annotated_user || 'Shared Student Cart'}</span></td>
+                        <td><strong>${cb.annotated_location || 'Mobile Fleet'}</strong><br><span style="font-size:11px; color:var(--accent);">${cb.annotated_user || 'Shared Student Cart'}</span><br><span style="font-size:11px; color:var(--text-muted);">${cb.hostname || 'Unknown Host'}</span>${cb.mac_address ? `<br><span style="font-size:11px; color:var(--text-muted); font-family: monospace;">${cb.mac_address}</span>` : ''}</td>
                         <td>${versionBadge} ${lockBadge}</td>
                         <td>${bssidText}</td>
                         <td>${rssiText}</td>
