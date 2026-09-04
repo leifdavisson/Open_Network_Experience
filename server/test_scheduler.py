@@ -28,8 +28,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 import db
 import main
-from schemas import UnifiedScheduleSpec, SensorReportRequest
-from reconciler import reconcile_unified_schedules
+from schemas import UnifiedScheduleSpec
 
 ADMIN_KEY = "admin-noc-key-change-me"
 AUTH_HEADERS = {"X-API-Key": ADMIN_KEY}
@@ -60,10 +59,10 @@ def test_01_schema_daily_once_validation():
         guardrails_enabled=True,
         is_active=True
     )
-    assert spec.mode == "daily_once"
-    assert spec.start_time == "07:15"
-    assert len(spec.days_of_week) == 5
-    assert spec.guardrails_enabled is True
+    assert spec.mode == "daily_once"  # nosec B101
+    assert spec.start_time == "07:15"  # nosec B101
+    assert len(spec.days_of_week) == 5  # nosec B101
+    assert spec.guardrails_enabled is True  # nosec B101
 
 def test_02_schema_window_repeat_validation():
     """Validates window_repeat mode schema for instructional hours."""
@@ -79,10 +78,10 @@ def test_02_schema_window_repeat_validation():
         interval_unit="minutes",
         cron_expr="*/15 8-16 * * 1-5"
     )
-    assert spec.mode == "window_repeat"
-    assert spec.end_time == "16:00"
-    assert spec.interval_value == 15
-    assert spec.interval_unit == "minutes"
+    assert spec.mode == "window_repeat"  # nosec B101
+    assert spec.end_time == "16:00"  # nosec B101
+    assert spec.interval_value == 15  # nosec B101
+    assert spec.interval_unit == "minutes"  # nosec B101
 
 def test_03_schema_continuous_interval_validation():
     """Validates continuous_interval mode schema across all days."""
@@ -95,10 +94,10 @@ def test_03_schema_continuous_interval_validation():
         interval_value=15,
         interval_unit="seconds"
     )
-    assert spec.mode == "continuous_interval"
-    assert spec.interval_value == 15
-    assert spec.interval_unit == "seconds"
-    assert len(spec.days_of_week) == 7
+    assert spec.mode == "continuous_interval"  # nosec B101
+    assert spec.interval_value == 15  # nosec B101
+    assert spec.interval_unit == "seconds"  # nosec B101
+    assert len(spec.days_of_week) == 7  # nosec B101
 
 # --- 2. Database Persistence & CRUD Tests ---
 
@@ -122,12 +121,12 @@ def test_04_db_schedule_persistence_and_loading():
     }
     db.save_schedule(sample)
     loaded = db.load_all_schedules()
-    assert len(loaded) == 1
+    assert len(loaded) == 1  # nosec B101
     s = loaded[0]
-    assert s["id"] == "sched_db_01"
-    assert s["days_of_week"] == ["sat"]
-    assert s["target_scope"] == "campus:west-high"
-    assert s["guardrails_enabled"] is True
+    assert s["id"] == "sched_db_01"  # nosec B101
+    assert s["days_of_week"] == ["sat"]  # nosec B101
+    assert s["target_scope"] == "campus:west-high"  # nosec B101
+    assert s["guardrails_enabled"] is True  # nosec B101
 
 def test_05_db_schedule_toggle_and_deletion():
     """Validates toggling active status and deleting schedules in SQLite."""
@@ -141,16 +140,16 @@ def test_05_db_schedule_toggle_and_deletion():
 
     # Toggle to paused
     new_state = db.toggle_schedule("sched_toggle_test")
-    assert new_state is False
+    assert new_state is False  # nosec B101
 
     # Toggle back to active
     new_state = db.toggle_schedule("sched_toggle_test")
-    assert new_state is True
+    assert new_state is True  # nosec B101
 
     # Delete
     db.delete_schedule("sched_toggle_test")
     loaded = db.load_all_schedules()
-    assert len(loaded) == 0
+    assert len(loaded) == 0  # nosec B101
 
 def test_06_backup_and_disaster_recovery_schedules():
     """Validates that system backup export includes schedules and restores faithfully."""
@@ -166,7 +165,7 @@ def test_06_backup_and_disaster_recovery_schedules():
     db.save_schedule(sample)
 
     backup_data = db.export_backup_json()
-    assert "schedules" in backup_data or len(db.load_all_schedules()) == 1
+    assert "schedules" in backup_data or len(db.load_all_schedules()) == 1  # nosec B101
 
 # --- 3. REST API Endpoint Tests ---
 
@@ -174,14 +173,14 @@ def test_07_api_unauthorized_access():
     """Validates that schedules API rejects requests without valid admin API key."""
     # Missing header
     res_get_missing = client.get("/api/v1/schedules")
-    assert res_get_missing.status_code in (401, 422)
+    assert res_get_missing.status_code in (401, 422)  # nosec B101
 
     # Invalid header
     res_get_invalid = client.get("/api/v1/schedules", headers={"X-API-Key": "wrong-secret-key"})
-    assert res_get_invalid.status_code == 401
+    assert res_get_invalid.status_code == 401  # nosec B101
 
     res_post = client.post("/api/v1/schedules", json={}, headers={"X-API-Key": "wrong-key"})
-    assert res_post.status_code == 401
+    assert res_post.status_code == 401  # nosec B101
 
 @verifies("REQ-SCH-001")
 @verifies("REQ-SCH-001")
@@ -199,14 +198,14 @@ def test_08_api_schedule_creation_and_listing():
         "is_active": True
     }
     res = client.post("/api/v1/schedules", json=payload, headers=AUTH_HEADERS)
-    assert res.status_code == 200
-    assert res.json()["status"] == "success"
+    assert res.status_code == 200  # nosec B101
+    assert res.json()["status"] == "success"  # nosec B101
 
     res_list = client.get("/api/v1/schedules", headers=AUTH_HEADERS)
-    assert res_list.status_code == 200
+    assert res_list.status_code == 200  # nosec B101
     schedules = res_list.json()
-    assert len(schedules) == 1
-    assert schedules[0]["name"] == "Morning CAASPP Pre-Flight"
+    assert len(schedules) == 1  # nosec B101
+    assert schedules[0]["name"] == "Morning CAASPP Pre-Flight"  # nosec B101
 
 def test_09_api_schedule_toggle_endpoint():
     """Validates PUT /api/v1/schedules/{id}/toggle endpoint."""
@@ -219,12 +218,12 @@ def test_09_api_schedule_toggle_endpoint():
     client.post("/api/v1/schedules", json=payload, headers=AUTH_HEADERS)
 
     res_toggle = client.put("/api/v1/schedules/sched_api_toggle/toggle", headers=AUTH_HEADERS)
-    assert res_toggle.status_code == 200
-    assert res_toggle.json()["is_active"] is False
+    assert res_toggle.status_code == 200  # nosec B101
+    assert res_toggle.json()["is_active"] is False  # nosec B101
 
     res_toggle2 = client.put("/api/v1/schedules/sched_api_toggle/toggle", headers=AUTH_HEADERS)
-    assert res_toggle2.status_code == 200
-    assert res_toggle2.json()["is_active"] is True
+    assert res_toggle2.status_code == 200  # nosec B101
+    assert res_toggle2.json()["is_active"] is True  # nosec B101
 
 def test_10_api_schedule_delete_endpoint():
     """Validates DELETE /api/v1/schedules/{id} endpoint."""
@@ -236,11 +235,11 @@ def test_10_api_schedule_delete_endpoint():
     client.post("/api/v1/schedules", json=payload, headers=AUTH_HEADERS)
 
     res_del = client.delete("/api/v1/schedules/sched_api_del", headers=AUTH_HEADERS)
-    assert res_del.status_code == 200
+    assert res_del.status_code == 200  # nosec B101
 
     # Nonexistent should return 404
     res_404 = client.delete("/api/v1/schedules/sched_api_del", headers=AUTH_HEADERS)
-    assert res_404.status_code == 404
+    assert res_404.status_code == 404  # nosec B101
 
 # --- 4. Edge Sensor Targeted Delivery & Scope Tests ---
 
@@ -293,14 +292,14 @@ def test_11_edge_reconciliation_delivers_active_schedules():
         "containers": {}
     }
     rec_res = client.post("/api/v1/sensors/reconcile", json=report_payload, headers={"X-API-Key": api_key})
-    assert rec_res.status_code == 200
+    assert rec_res.status_code == 200  # nosec B101
     delivered = rec_res.json()["unified_schedules"]
     delivered_ids = [s["id"] for s in delivered]
 
     # Must contain global schedule and targeted schedule
-    assert "sched_global" in delivered_ids
+    assert "sched_global" in delivered_ids  # nosec B101
     # Must NOT contain paused schedule
-    assert "sched_paused" not in delivered_ids
+    assert "sched_paused" not in delivered_ids  # nosec B101
 
 # --- 5. Edge Sensor Reconciler File Sync Tests ---
 
@@ -325,6 +324,6 @@ def test_12_edge_reconciler_file_sync(tmp_path, monkeypatch):
 
     with open(sched_file, "r") as f:
         data = json.load(f)
-        assert len(data) == 1
-        assert data[0]["id"] == "sched_sync_01"
-        assert data[0]["probe_id"] == "caaspp_readiness"
+        assert len(data) == 1  # nosec B101
+        assert data[0]["id"] == "sched_sync_01"  # nosec B101
+        assert data[0]["probe_id"] == "caaspp_readiness"  # nosec B101
