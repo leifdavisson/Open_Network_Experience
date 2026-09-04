@@ -443,7 +443,7 @@
             <div class="brand" style="display: flex; align-items: center; gap: 8px;">
                 <img src="/static/logo-animated.svg" alt="ONE" style="width: 26px; height: 26px; display: inline-block;"> <span class="brand-text" style="font-weight: 800; letter-spacing: 0.5px;">ONE Platform</span>
             </div>
-            <button class="toggle-btn" id="btn-toggle-sidebar" onclick="toggleSidebar()" title="Toggle Navigation">≡</button>
+            <button class="toggle-btn" id="btn-toggle-sidebar" onclick="toggleSidebar()" aria-label="Toggle Navigation" title="Toggle Navigation">≡</button>
         </div>
         <nav class="nav-menu">
             <!-- 1. MONITOR BUCKET -->
@@ -538,9 +538,9 @@
                         <button class="slide-tab-btn" onclick="goToSlide(5)" id="tab-slide-5">💻 6. Chromebook Fleet</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-outline btn-sm" onclick="togglePlayPause()" id="btn-play-pause">⏸ Pause</button>
-                        <button class="btn btn-outline btn-sm" onclick="prevSlide()">◀</button>
-                        <button class="btn btn-outline btn-sm" onclick="nextSlide()">▶</button>
+                        <button class="btn btn-outline btn-sm" onclick="togglePlayPause()" id="btn-play-pause" aria-label="Pause Slideshow">⏸ Pause</button>
+                        <button class="btn btn-outline btn-sm" onclick="prevSlide()" aria-label="Previous Slide" title="Previous Slide">◀</button>
+                        <button class="btn btn-outline btn-sm" onclick="nextSlide()" aria-label="Next Slide" title="Next Slide">▶</button>
                         <button class="btn btn-sm" onclick="toggleFullscreenMode()" id="btn-fullscreen">⛶ 72" Display Mode</button>
                     </div>
                     <div class="progress-track">
@@ -1971,7 +1971,7 @@
         <div class="modal" style="max-width: 640px; width: 94vw;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🔕 Scheduled Maintenance & Construction Muting Window</h2>
-                <button type="button" class="close-btn" onclick="closeMaintenanceModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeMaintenanceModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="maintenance-form" onsubmit="handleSaveMaintenance(event)">
                 <input type="hidden" id="maint-id">
@@ -2070,7 +2070,7 @@
         <div class="modal" style="max-width: 600px; width: 94vw;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🚨 Alert Detection Rule</h2>
-                <button type="button" class="close-btn" onclick="closeAlertRuleModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeAlertRuleModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="alert-rule-form" onsubmit="handleSaveAlertRule(event)">
                 <input type="hidden" id="rule-id">
@@ -2178,7 +2178,7 @@
         <div class="modal" style="max-width: 560px; width: 94vw;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🔔 Notification Channel</h2>
-                <button type="button" class="close-btn" onclick="closeChannelModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeChannelModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="channel-form" onsubmit="handleSaveChannel(event)">
                 <input type="hidden" id="chan-id">
@@ -2301,7 +2301,7 @@
         <div class="modal">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">📍 Edit Sensor Physical Location</h2>
-                <button type="button" class="close-btn" onclick="closeLocationModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeLocationModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="location-form" onsubmit="handleSaveLocation(event)">
                 <input type="hidden" id="loc-sensor-id">
@@ -2352,7 +2352,7 @@
         <div class="modal">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">Create Custom Synthetic Probe</h2>
-                <button type="button" class="close-btn" onclick="closeProbeModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeProbeModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="probe-form" onsubmit="handleSaveProbe(event)">
                 <div class="form-group" style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
@@ -2434,7 +2434,7 @@
         <div class="modal" style="max-width: 680px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">📅 Configure Probe Schedule & Timing</h2>
-                <button type="button" class="close-btn" onclick="closeScheduleModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeScheduleModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="schedule-form" onsubmit="handleSaveSchedule(event)">
                 <input type="hidden" id="sch-id">
@@ -2589,7 +2589,7 @@
         <div class="modal" style="max-width: 650px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="cb-modal-title">💻 Chromebook Diagnostic Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeCbDetailModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeCbDetailModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="cb-modal-body" style="padding: 10px 0;">
                 <p>Loading Chromebook telemetry...</p>
@@ -2605,7 +2605,7 @@
         <div class="modal" style="max-width: 780px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="sensor-modal-title">📡 Edge Sensor Diagnostic & Hardware Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeSensorDetailModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeSensorDetailModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="sensor-modal-body" style="padding: 10px 0; max-height: 75vh; overflow-y: auto;">
                 <p>Loading Edge Sensor telemetry...</p>
@@ -2622,7 +2622,7 @@
         <div class="modal" style="max-width: 600px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🧪 Simulate & Ingest High-Assurance Test Alert</h2>
-                <button type="button" class="close-btn" onclick="closeSimulateAlertModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeSimulateAlertModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="simulate-alert-form" onsubmit="handleSimulateAlert(event)">
                 <div class="form-group" style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
@@ -2690,7 +2690,7 @@
         <div class="modal" style="max-width: 520px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">✅ Resolve & Close Network Alarm</h2>
-                <button type="button" class="close-btn" onclick="closeResolveAlertModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeResolveAlertModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <form id="resolve-alert-form" onsubmit="handleConfirmResolveAlert(event)">
                 <input type="hidden" id="resolve-alert-id">
@@ -2714,7 +2714,7 @@
         <div class="modal" style="max-width: 680px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="alert-detail-title">🔍 Alert Forensic Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeAlertDetailModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeAlertDetailModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="alert-detail-body" style="padding: 10px 0;">
                 <p>Loading alert details...</p>
@@ -2730,7 +2730,7 @@
         <div class="modal" style="max-width: 680px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="evidence-modal-title">📦 PCAP Packet Capture Forensic Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeEvidenceModal()">✕</button>
+                <button type="button" class="close-btn" onclick="closeEvidenceModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="evidence-modal-body" style="padding: 10px 0;">
                 <p>Loading packet capture forensic evidence...</p>
