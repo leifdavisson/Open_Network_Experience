@@ -33,6 +33,26 @@ async def save_custom_probe(probe: CustomProbeSpec):
     probe_dict = probe.model_dump()
     PROBES_DB[probe.id] = probe_dict
     db.save_probe(probe_dict)
+
+    # Synchronize to fleet target configs
+    from server.state import SENSORS_DB
+    for s_id, s_data in SENSORS_DB.items():
+        if "target_config" in s_data:
+            target_scope = probe_dict.get("target_sensors", ["all"])
+            is_targeted = "all" in target_scope or s_id in target_scope
+
+            # Remove old definition if it exists
+            if hasattr(s_data["target_config"], "custom_probes"):
+                s_data["target_config"].custom_probes = [p for p in s_data["target_config"].custom_probes if p.id != probe.id]
+                if is_targeted and probe_dict.get("enabled", True):
+                    s_data["target_config"].custom_probes.append(probe)
+            elif isinstance(s_data["target_config"], dict):
+                custom_probes = s_data["target_config"].get("custom_probes", [])
+                s_data["target_config"]["custom_probes"] = [p for p in custom_probes if (p.get("id") if isinstance(p, dict) else p.id) != probe.id]
+                if is_targeted and probe_dict.get("enabled", True):
+                    s_data["target_config"]["custom_probes"].append(probe)
+            db.save_sensor(s_data)
+
     return {"status": "success", "message": f"Custom probe '{probe.name}' saved and ready for distribution."}
 
 @router.delete(
@@ -45,5 +65,17 @@ async def delete_custom_probe(probe_id: str):
     if probe_id in PROBES_DB:
         del PROBES_DB[probe_id]
         db.delete_probe(probe_id)
+
+        # Synchronize deletion to fleet target configs
+        from server.state import SENSORS_DB
+        for s_id, s_data in SENSORS_DB.items():
+            if "target_config" in s_data:
+                if hasattr(s_data["target_config"], "custom_probes"):
+                    s_data["target_config"].custom_probes = [p for p in s_data["target_config"].custom_probes if p.id != probe_id]
+                elif isinstance(s_data["target_config"], dict):
+                    custom_probes = s_data["target_config"].get("custom_probes", [])
+                    s_data["target_config"]["custom_probes"] = [p for p in custom_probes if (p.get("id") if isinstance(p, dict) else p.id) != probe_id]
+                db.save_sensor(s_data)
+
         return {"status": "success", "message": f"Probe '{probe_id}' deleted."}
     raise HTTPException(status_code=404, detail="Probe not found")
