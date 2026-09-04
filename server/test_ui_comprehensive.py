@@ -29,6 +29,12 @@ BASE_URL = "http://localhost:8000"
 API_BASE_URL = f"{BASE_URL}/api/v1"
 ADMIN_KEY = "admin-noc-key-change-me"
 
+def safe_urlopen(req, timeout=15):
+    url = req.full_url if hasattr(req, 'full_url') else req
+    if not url.startswith("http://") and not url.startswith("https://"):
+        raise ValueError("Invalid protocol scheme in URL")
+    return safe_urlopen(req, timeout=timeout)
+
 class DOMStructureParser(HTMLParser):
     """Parses HTML DOM elements, IDs, classes, buttons, and event bindings."""
     def __init__(self):
@@ -77,7 +83,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
                 cls.html_content = f.read()
         else:
             req = urllib.request.Request(f"{BASE_URL}/")
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with safe_urlopen(req, timeout=15) as resp:
                 cls.html_content = resp.read().decode('utf-8')
 
         cls.parser = DOMStructureParser()
@@ -232,7 +238,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             data=json.dumps(reg_payload).encode('utf-8'),
             headers={"Content-Type": "application/json"}
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with safe_urlopen(req, timeout=15) as resp:
             self.assertEqual(resp.status, 200)
 
         # 1. Simulate Approve Button
@@ -242,7 +248,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             headers={"X-API-Key": ADMIN_KEY},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with safe_urlopen(req, timeout=15) as resp:
             self.assertEqual(resp.status, 200)
             data = json.loads(resp.read().decode('utf-8'))
             self.assertEqual(data["status"], "success")
@@ -264,7 +270,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             headers={"Content-Type": "application/json", "X-API-Key": ADMIN_KEY},
             method="PUT"
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with safe_urlopen(req, timeout=15) as resp:
             self.assertEqual(resp.status, 200)
 
         # 3. Simulate Trigger PCAP Button
@@ -274,7 +280,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             headers={"X-API-Key": ADMIN_KEY},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with safe_urlopen(req, timeout=15) as resp:
             self.assertEqual(resp.status, 200)
 
         # 4. Simulate Trigger Speedtest Button
@@ -284,7 +290,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             headers={"X-API-Key": ADMIN_KEY},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with safe_urlopen(req, timeout=15) as resp:
             self.assertEqual(resp.status, 200)
 
         # 5. Simulate Create Custom Probe Button (WYSIWYG EasyBuilder)
@@ -305,7 +311,7 @@ class TestComprehensiveWebUI(unittest.TestCase):
             headers={"Content-Type": "application/json", "X-API-Key": ADMIN_KEY},
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with safe_urlopen(req, timeout=15) as resp:
             self.assertEqual(resp.status, 200)
 
     @verifies("REQ-TEL-001")

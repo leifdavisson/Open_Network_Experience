@@ -36,6 +36,7 @@ async def save_custom_probe(probe: CustomProbeSpec):
 
     # Synchronize to fleet target configs
     from server.state import SENSORS_DB
+    modified_sensors = []
     for s_id, s_data in SENSORS_DB.items():
         if "target_config" in s_data:
             target_scope = probe_dict.get("target_sensors", ["all"])
@@ -50,8 +51,11 @@ async def save_custom_probe(probe: CustomProbeSpec):
                 custom_probes = s_data["target_config"].get("custom_probes", [])
                 s_data["target_config"]["custom_probes"] = [p for p in custom_probes if (p.get("id") if isinstance(p, dict) else p.id) != probe.id]
                 if is_targeted and probe_dict.get("enabled", True):
-                    s_data["target_config"]["custom_probes"].append(probe)
-            db.save_sensor(s_data)
+                    s_data["target_config"]["custom_probes"].append(probe_dict)
+            modified_sensors.append(s_data)
+            
+    if modified_sensors:
+        db.batch_save_sensors(modified_sensors)
 
     return {"status": "success", "message": f"Custom probe '{probe.name}' saved and ready for distribution."}
 
@@ -68,6 +72,7 @@ async def delete_custom_probe(probe_id: str):
 
         # Synchronize deletion to fleet target configs
         from server.state import SENSORS_DB
+        modified_sensors = []
         for s_id, s_data in SENSORS_DB.items():
             if "target_config" in s_data:
                 if hasattr(s_data["target_config"], "custom_probes"):
@@ -75,7 +80,9 @@ async def delete_custom_probe(probe_id: str):
                 elif isinstance(s_data["target_config"], dict):
                     custom_probes = s_data["target_config"].get("custom_probes", [])
                     s_data["target_config"]["custom_probes"] = [p for p in custom_probes if (p.get("id") if isinstance(p, dict) else p.id) != probe_id]
-                db.save_sensor(s_data)
+                modified_sensors.append(s_data)
+        if modified_sensors:
+            db.batch_save_sensors(modified_sensors)
 
         return {"status": "success", "message": f"Probe '{probe_id}' deleted."}
     raise HTTPException(status_code=404, detail="Probe not found")
