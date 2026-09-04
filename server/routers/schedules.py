@@ -36,6 +36,7 @@ async def save_schedule_endpoint(schedule: UnifiedScheduleSpec):
 
     # Synchronize to fleet target configs
     from server.state import SENSORS_DB
+    modified_sensors = []
     for s_id, s_data in SENSORS_DB.items():
         if "target_config" in s_data:
             target_scope = sch_dict.get("target_scope", "all")
@@ -49,8 +50,11 @@ async def save_schedule_endpoint(schedule: UnifiedScheduleSpec):
                 unified_schedules = s_data["target_config"].get("unified_schedules", [])
                 s_data["target_config"]["unified_schedules"] = [s for s in unified_schedules if (s.get("id") if isinstance(s, dict) else s.id) != schedule.id]
                 if is_targeted and sch_dict.get("is_active", True):
-                    s_data["target_config"]["unified_schedules"].append(schedule)
-            db.save_sensor(s_data)
+                    s_data["target_config"]["unified_schedules"].append(sch_dict)
+            modified_sensors.append(s_data)
+            
+    if modified_sensors:
+        db.batch_save_sensors(modified_sensors)
 
     return {"status": "success", "message": f"Schedule '{schedule.name}' saved.", "schedule": sch_dict}
 
@@ -67,6 +71,7 @@ async def delete_schedule_endpoint(schedule_id: str):
 
         # Synchronize deletion to fleet target configs
         from server.state import SENSORS_DB
+        modified_sensors = []
         for s_id, s_data in SENSORS_DB.items():
             if "target_config" in s_data:
                 if hasattr(s_data["target_config"], "unified_schedules"):
@@ -74,7 +79,9 @@ async def delete_schedule_endpoint(schedule_id: str):
                 elif isinstance(s_data["target_config"], dict):
                     unified_schedules = s_data["target_config"].get("unified_schedules", [])
                     s_data["target_config"]["unified_schedules"] = [s for s in unified_schedules if (s.get("id") if isinstance(s, dict) else s.id) != schedule_id]
-                db.save_sensor(s_data)
+                modified_sensors.append(s_data)
+        if modified_sensors:
+            db.batch_save_sensors(modified_sensors)
 
         return {"status": "success", "message": f"Schedule '{schedule_id}' deleted."}
     raise HTTPException(status_code=404, detail="Schedule not found")
@@ -93,6 +100,7 @@ async def toggle_schedule_endpoint(schedule_id: str):
         # Synchronize toggle to fleet target configs
         from server.state import SENSORS_DB
         from server.schemas import UnifiedScheduleSpec
+        modified_sensors = []
         for s_id, s_data in SENSORS_DB.items():
             if "target_config" in s_data:
                 if hasattr(s_data["target_config"], "unified_schedules"):
@@ -113,8 +121,10 @@ async def toggle_schedule_endpoint(schedule_id: str):
                         target_scope = sch_dict.get("target_scope", "all")
                         is_targeted = "all" in target_scope or s_id in target_scope or (s_data.get("campus_id") and s_data.get("campus_id") in target_scope)
                         if is_targeted:
-                            s_data["target_config"]["unified_schedules"].append(UnifiedScheduleSpec(**sch_dict))
-                db.save_sensor(s_data)
+                            s_data["target_config"]["unified_schedules"].append(sch_dict)
+                modified_sensors.append(s_data)
+        if modified_sensors:
+            db.batch_save_sensors(modified_sensors)
 
         return {
             "status": "success",

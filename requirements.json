@@ -1,170 +1,51 @@
 [
   {
-    "id": "REQ-SEC-001",
-    "title": "Administrative API Key Constant-Time Verification & Production Fail-Fast",
-    "safety_level": "CRITICAL",
-    "description": "The CMP control plane must reject default credentials in production mode and enforce constant-time comparison on admin keys."
-  },
-  {
-    "id": "REQ-SEC-002",
-    "title": "HMAC-SHA256 Signed Session Token & Cookie Isolation",
-    "safety_level": "HIGH",
-    "description": "Dashboard authentication must issue tamper-proof HMAC-SHA256 signed session tokens with HttpOnly, SameSite cookie attributes."
-  },
-  {
-    "id": "REQ-PRB-001",
-    "title": "Wi-Fi 802.11 Association & DHCP Timing Exporter",
-    "safety_level": "HIGH",
-    "description": "The edge sensor must measure L2 association, 802.1X/WPA authentication, and DHCP lease duration from journal logs."
-  },
-  {
-    "id": "REQ-PRB-002",
-    "title": "Incident-Triggered RAM Ring Buffer PCAP Capture",
-    "safety_level": "HIGH",
-    "description": "The edge sensor must maintain a rolling RAM ring buffer and slice bounded 128-byte packet captures on diagnostic incident triggers."
-  },
-  {
-    "id": "REQ-PRB-003",
-    "title": "Forensic Diagnostic Evidence Bundle Packaging",
-    "safety_level": "HIGH",
-    "description": "The system must bundle system logs, routing tables, link metrics, and human-readable HTML/Text summaries into a compressed archive."
-  },
-  {
-    "id": "REQ-PRB-004",
-    "title": "Wi-Fi Radio Resource Management & Dynamic Channel Flap Detection",
-    "safety_level": "HIGH",
-    "description": "The system must track dynamic channel changes, co-channel interference (CCI), and alert if APs flap >3 times per hour."
-  },
-  {
-    "id": "REQ-PRB-005",
-    "title": "Lateral East-West Subnet Segmentation Compliance",
-    "safety_level": "CRITICAL",
-    "description": "The edge sensor must perform TCP probes against internal management infrastructure to verify isolation of client VLANs."
-  },
-  {
-    "id": "REQ-PRB-006",
-    "title": "Synthetic Browser & API Transaction Waterfalls",
-    "safety_level": "HIGH",
-    "description": "The system must execute headless browser synthetic transactions and capture timing metrics for key educational applications."
-  },
-  {
-    "id": "REQ-PRB-007",
-    "title": "GPS Precision Geolocation & Fallback Profile Resolution",
+    "id": "REQ-DIAG-001",
+    "title": "Built-in Diagnostic Suite Execution",
     "safety_level": "STANDARD",
-    "description": "The edge sensor must parse NMEA-0183 serial streams from hardware GNSS receivers and fall back to static campus room profiles when indoor."
+    "description": "When the diagnostics API receives a recognized built-in test type (e.g., 'speedtest', 'canvas', 'pcap'), it MUST execute the corresponding predefined diagnostic suite."
   },
   {
-    "id": "REQ-PRB-008",
-    "title": "CIPA Internet Safety & Content Filter Policy Compliance",
-    "safety_level": "CRITICAL",
-    "description": "The prober must verify whether restricted adult and high-risk threat categories are blocked by the firewall and web proxy."
-  },
-  {
-    "id": "REQ-PRB-009",
-    "title": "Real-Time UDP Voice & Video Jitter (MOS) Estimation",
-    "safety_level": "HIGH",
-    "description": "The sensor must compute RFC 3550 interarrival jitter, UDP packet loss, and ITU-T G.107 Mean Opinion Scores for real-time media."
-  },
-  {
-    "id": "REQ-PRB-010",
-    "title": "Multi-Resolver DNS Benchmark & Failure Detection",
-    "safety_level": "HIGH",
-    "description": "The sensor must benchmark local DHCP nameservers against public recursive resolvers to detect query latency anomalies and RCODE failures."
-  },
-  {
-    "id": "REQ-PRB-011",
-    "title": "Scheduled & Throttled iPerf3 Bandwidth Benchmarking",
-    "safety_level": "MEDIUM",
-    "description": "The system must execute scheduled throughput benchmarks with bandwidth caps and strict off-peak time window enforcement."
-  },
-  {
-    "id": "REQ-PRB-012",
-    "title": "WYSIWYG Dynamic Custom Synthetic Probe Execution",
-    "safety_level": "HIGH",
-    "description": "The sensor must execute dynamically distributed HTTP, TCP, and DNS synthetic test probes with regex payload validation."
-  },
-  {
-    "id": "REQ-ONB-001",
-    "title": "Interactive & Automated TUI Onboarding Wizard",
-    "safety_level": "HIGH",
-    "description": "The sensor wizard must execute site surveys, configure Wi-Fi credentials, discover CMP via DHCP Option 43/DNS/mDNS, and register."
-  },
-  {
-    "id": "REQ-ONB-002",
-    "title": "FAT32 USB Flash Drive Assembly-Line Staging Kit",
-    "safety_level": "HIGH",
-    "description": "The CMP must generate an in-memory zip archive with bootstrap manifests to support offline mass staging of sensors via USB."
-  },
-  {
-    "id": "REQ-ONB-003",
-    "title": "Subnet-Based Zero-Touch Provisioning (ZTP) Auto-Approval",
-    "safety_level": "HIGH",
-    "description": "The CMP must automatically approve and assign pending sensors based on matched client subnet CIDR ranges."
-  },
-  {
-    "id": "REQ-CMP-001",
-    "title": "Multi-Campus Hierarchy & District SLA Rollup",
+    "id": "REQ-DIAG-002",
+    "title": "Custom Probe Execution via ID Match",
     "safety_level": "STANDARD",
-    "description": "The CMP must organize sensors into campus hierarchies and compute aggregated SLA and health statistics."
+    "description": "When the requested test type is NOT a built-in test, but matches an ID in PROBES_DB, it MUST execute the target override or configured target using the custom probe's specified protocol type (http, api, dns, tcp)."
   },
   {
-    "id": "REQ-SCH-001",
-    "title": "Unified Visual Probe Scheduler & Off-Peak Windows",
-    "safety_level": "HIGH",
-    "description": "The CMP must deliver centralized visual schedules with calendar timing, intervals, and pause/resume toggles to sensors."
-  },
-  {
-    "id": "REQ-SCH-002",
-    "title": "Instructional Hours Safety Guardrails & Emergency Override",
+    "id": "REQ-DIAG-003",
+    "title": "Fail-Closed for Unknown and Unconfigured Test Types",
     "safety_level": "CRITICAL",
-    "description": "The edge reconciler must block active intrusive bandwidth and RF scans during instructional hours unless emergency override is active."
+    "description": "When the requested test type is NOT a built-in test AND does NOT match any ID in PROBES_DB, the diagnostic run MUST fall back to the default 7-Layer OSI & SaaS Suite."
   },
   {
-    "id": "REQ-TEL-001",
-    "title": "Chromebook Fleet Telemetry Ingestion & AP Roaming Trail",
-    "safety_level": "HIGH",
-    "description": "The CMP must ingest extension telemetry from Chromebooks, track AP roaming transitions, and forward PromQL metrics to TSDB."
-  },
+    "id": "REQ-DIAG-004",
+    "title": "Overall Status Degradation",
+    "safety_level": "CRITICAL",
+    "description": "If any individual diagnostic probe step fails (passed=False), the final payload status MUST be 'FAIL' and the log output MUST record 'State: RED (FAIL)'."
+  }
+,
   {
-    "id": "REQ-TEL-002",
-    "title": "NOC Wallboard Real-Time Metrics & SaaS Health Feed",
+    "id": "REQ-UI-001",
+    "title": "Live Diagnostics Custom Probe Propagation",
     "safety_level": "STANDARD",
-    "description": "The CMP must aggregate instant PromQL metrics and SLA statuses for real-time presentation on NOC displays."
+    "description": "The Live Diagnostics action center MUST dynamically load and display user-created Custom Probes from PROBES_DB in the test selection dropdown."
   },
   {
-    "id": "REQ-DB-001",
-    "title": "Database Persistence & Scoped Resource Management",
-    "safety_level": "HIGH",
-    "description": "The CMP must manage SQLite connections using deterministic context managers with WAL mode and busy timeouts."
+    "id": "REQ-UI-002",
+    "title": "EasyBuilder HTTP 422 Alert Handling",
+    "safety_level": "STANDARD",
+    "description": "The EasyBuilder save probe logic MUST catch non-OK REST responses (e.g., 422) and visually alert the user instead of failing silently."
   },
   {
-    "id": "REQ-SNMP-001",
-    "title": "SNMP Infrastructure & Switch Interface Poller",
-    "safety_level": "HIGH",
-    "description": "The platform must poll core switches and firewalls via SNMP v2c/v3 to detect bandwidth saturation, memory conserve mode, and interface drops."
+    "id": "REQ-UI-003",
+    "title": "Chromebook Lock Button State Binding",
+    "safety_level": "STANDARD",
+    "description": "The dedicated Chromebook fleet view MUST dynamically evaluate settings_locked for each device and render the correct Unlock/Lock toggle state."
   },
   {
-    "id": "REQ-SEC-003",
-    "title": "Install Script Shell Injection Prevention",
-    "safety_level": "CRITICAL",
-    "description": "The onboarding install script generator must sanitize all user-supplied query parameters (site, building, room, district, notes, token, wifi_ssid, wifi_psk) using shlex.quote() before injection into bash variable definitions. Unsanitized input must never appear in generated shell scripts. Validation must reject parameters containing shell metacharacters (;, |, &, $, `, \\n) when strict mode is enabled."
-  },
-  {
-    "id": "REQ-SEC-004",
-    "title": "CORS Origin Restriction & Credential Isolation",
-    "safety_level": "HIGH",
-    "description": "The CMP FastAPI application must not configure CORS with allow_origins=['*'] when allow_credentials=True. In production mode (ENV=production), CORS origins must be explicitly enumerated via the CORS_ORIGINS environment variable. Wildcard origins are only permitted when allow_credentials=False."
-  },
-  {
-    "id": "REQ-SEC-005",
-    "title": "Evidence Vault Authentication Enforcement",
-    "safety_level": "HIGH",
-    "description": "All evidence vault endpoints (GET /api/v1/evidence, GET /api/v1/evidence/{id}) must require administrative API key authentication via the verify_admin_key dependency. Unauthenticated requests must receive HTTP 401."
-  },
-  {
-    "id": "REQ-PRB-013",
-    "title": "CAASPP/ELPAC SSL Bypass & Endpoint Readiness Validation",
-    "safety_level": "CRITICAL",
-    "description": "The CAASPP readiness checker must validate that all Cambium TDS, TIDE, ETS TOMS, and SmarterBalanced SSO endpoints are reachable with TLS handshake latency <= 1500ms. SSL inspection bypass must be verified by confirming the presented certificate chain does not contain non-CA injected certificates. Each endpoint check must emit a pass/fail metric with latency_ms measurement. The overall readiness score must be computed as (passed_endpoints / total_endpoints) with a minimum threshold of 100% for CRITICAL endpoints."
+    "id": "REQ-UI-004",
+    "title": "Chromebook Dynamic Identity Binding",
+    "safety_level": "STANDARD",
+    "description": "The Chromebook fleet view MUST display true hostname and mac_address variables rather than hardcoded string placeholders."
   }
 ]

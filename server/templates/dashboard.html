@@ -977,22 +977,26 @@
                         <div class="form-group">
                             <label>2. Diagnostic Probe / Action</label>
                             <select id="diag-test-select" onchange="updateDiagTargetHint()">
-                                <option value="all">🚀 Run Full 7-Layer OSI & SaaS Diagnostic Suite</option>
-                                <option value="speedtest">📊 iPerf3 Bandwidth Throughput Test</option>
-                                <option value="caaspp">🎓 CAASPP / Cambium TDS State Testing Readiness</option>
-                                <option value="dns">🌐 Multi-Resolver DNS Benchmark (Internal + Public)</option>
-                                <option value="gateway">🔍 Security Gateway Latency (eno1 vs wlp1s0)</option>
-                                <option value="canvas">📚 Canvas LMS (Instructure) Synthetic Probe</option>
-                                <option value="classroom">💻 Google Classroom & Docs Probe</option>
-                                <option value="iready">📈 i-Ready Assessment Portal Probe</option>
-                                <option value="ringcentral">📞 RingCentral UCaaS SIP & Voice Quality SLA</option>
-                                <option value="zoom">🎥 Zoom Real-Time RTP Jitter & MOS Score</option>
-                                <option value="client_isolation">🛡️ Wi-Fi Client Isolation & Intra-BSS Peer Defense</option>
-                                <option value="vlan_isolation">🔒 East-West Lateral VLAN Isolation & Subnet Escape Check</option>
-                                <option value="cipa">🛡️ CIPA Compliance Content Filter Probe</option>
-                                <option value="dhcp">⏱️ DHCP DORA 4-Way Lease Timing</option>
-                                <option value="wifi_flapping">📡 Wi-Fi RF Flapping & Dwell Test</option>
-                                <option value="pcap">⚡ 60-Second Deep Packet Capture (PCAP)</option>
+                                <optgroup label="Built-in Standard Tests">
+                                    <option value="all">🚀 Run Full 7-Layer OSI & SaaS Diagnostic Suite</option>
+                                    <option value="speedtest">📊 iPerf3 Bandwidth Throughput Test</option>
+                                    <option value="caaspp">🎓 CAASPP / Cambium TDS State Testing Readiness</option>
+                                    <option value="dns">🌐 Multi-Resolver DNS Benchmark (Internal + Public)</option>
+                                    <option value="gateway">🔍 Security Gateway Latency (eno1 vs wlp1s0)</option>
+                                    <option value="canvas">📚 Canvas LMS (Instructure) Synthetic Probe</option>
+                                    <option value="classroom">💻 Google Classroom & Docs Probe</option>
+                                    <option value="iready">📈 i-Ready Assessment Portal Probe</option>
+                                    <option value="ringcentral">📞 RingCentral UCaaS SIP & Voice Quality SLA</option>
+                                    <option value="zoom">🎥 Zoom Real-Time RTP Jitter & MOS Score</option>
+                                    <option value="client_isolation">🛡️ Wi-Fi Client Isolation & Intra-BSS Peer Defense</option>
+                                    <option value="vlan_isolation">🔒 East-West Lateral VLAN Isolation & Subnet Escape Check</option>
+                                    <option value="cipa">🛡️ CIPA Compliance Content Filter Probe</option>
+                                    <option value="dhcp">⏱️ DHCP DORA 4-Way Lease Timing</option>
+                                    <option value="wifi_flapping">📡 Wi-Fi RF Flapping & Dwell Test</option>
+                                    <option value="pcap">⚡ 60-Second Deep Packet Capture (PCAP)</option>
+                                </optgroup>
+                                <optgroup label="Custom EasyBuilder Probes" id="diag-custom-probes-optgroup">
+                                </optgroup>
                             </select>
                         </div>
                     </div>
@@ -4983,10 +4987,13 @@
                 renderSchedulesTable(schedules);
 
                 const customOptGroup = document.getElementById('sch-custom-probes-optgroup');
-                if (customOptGroup && probes) {
-                    customOptGroup.innerHTML = probes.length > 0 ?
+                const diagOptGroup = document.getElementById('diag-custom-probes-optgroup');
+                if (probes) {
+                    const html = probes.length > 0 ?
                         probes.map(p => `<option value="${p.id}">🛠️ ${p.name} (${p.probe_type.toUpperCase()})</option>`).join('') :
                         '<option disabled>No custom probes defined</option>';
+                    if (customOptGroup) customOptGroup.innerHTML = html;
+                    if (diagOptGroup) diagOptGroup.innerHTML = html;
                 }
 
                 let liveStats = null;
@@ -5149,9 +5156,9 @@
                 }
             });
 
-            // Populate Chromebook Fleet Table & Wallboard Slide 6
             const cbList = chromebooks || CHROMEBOOKS_CACHE || [];
             const cbRows = [];
+            const cbDedicatedRows = [];
             const cbWallboardRows = [];
             let cbOnlineCount = 0;
             let cbTotalRssi = 0;
@@ -5202,8 +5209,7 @@
                     '<span style="font-size:11px; margin-left:4px;" title="Settings Locked (Student Protection Active)">🔒</span>' :
                     '<span style="font-size:11px; margin-left:4px; color:#f59e0b;" title="Settings Unlocked (Helpdesk Mode)">🔓</span>';
 
-                cbRows.push(`
-                    <tr>
+                const rowContent = `
                         <td><strong>${cb.serial_number || 'UNTAGGED'}</strong><br><span style="font-size:11px; color:var(--text-muted);">${cb.asset_id || cb.sensor_id}</span></td>
                         <td><strong>${cb.annotated_location || 'Mobile Fleet'}</strong><br><span style="font-size:11px; color:var(--accent);">${cb.annotated_user || 'Shared Student Cart'}</span><br><span style="font-size:11px; color:var(--text-muted);">${cb.hostname || 'Unknown Host'}</span>${cb.mac_address ? `<br><span style="font-size:11px; color:var(--text-muted); font-family: monospace;">${cb.mac_address}</span>` : ''}</td>
                         <td>${versionBadge} ${lockBadge}</td>
@@ -5211,8 +5217,25 @@
                         <td>${rssiText}</td>
                         <td>${battText}</td>
                         <td>${mosText}</td>
-                        <td>${statusBadge}</td>
+                        <td>${statusBadge}</td>`;
+
+                cbRows.push(`
+                    <tr>
+                        ${rowContent}
                         <td><button class="btn btn-outline btn-sm" onclick="openCbDetailModal('${cb.sensor_id}')">⚡ Details</button></td>
+                    </tr>
+                `);
+
+                cbDedicatedRows.push(`
+                    <tr>
+                        ${rowContent}
+                        <td>
+                            <div class="btn-group">
+                                <button class="btn btn-outline btn-sm" onclick="openCbDetailModal('${cb.sensor_id}')">⚡ Details</button>
+                                <button class="btn btn-outline btn-sm" onclick="toggleDeviceLock('${cb.sensor_id}')" title="Toggle Remote Settings Lock">${cb.settings_locked ? '🔓 Unlock' : '🔒 Lock'}</button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectSensor('${cb.sensor_id}')">Revoke</button>
+                            </div>
+                        </td>
                     </tr>
                 `);
 
@@ -5241,16 +5264,7 @@
 
             const cbDedicatedTableBody = document.getElementById('cb-dedicated-fleet-table-body');
             if (cbDedicatedTableBody) {
-                cbDedicatedTableBody.innerHTML = cbRows.length > 0 ? cbRows.map(row => {
-                    return row.replace(
-                        /<button class="btn btn-outline btn-sm" onclick="openCbDetailModal\('([^']+)'\)">⚡ Details<\/button>/,
-                        `<div class="btn-group">
-                            <button class="btn btn-outline btn-sm" onclick="openCbDetailModal('$1')">⚡ Details</button>
-                            <button class="btn btn-outline btn-sm" onclick="toggleDeviceLock('$1')" title="Toggle Remote Settings Lock">🔒 Lock</button>
-                            <button class="btn btn-danger btn-sm" onclick="rejectSensor('$1')">Revoke</button>
-                        </div>`
-                    );
-                }).join('') : '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">No student Chromebook sensors reporting yet. (Install extension to auto-enroll)</td></tr>';
+                cbDedicatedTableBody.innerHTML = cbDedicatedRows.length > 0 ? cbDedicatedRows.join('') : '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">No student Chromebook sensors reporting yet. (Install extension to auto-enroll)</td></tr>';
             }
 
             const cbWbTableBody = document.getElementById('cb-wallboard-table-body');
@@ -6135,11 +6149,16 @@
                 enabled: true
             };
 
-            await fetch('/api/v1/probes', {
+            const res = await fetch('/api/v1/probes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
                 body: JSON.stringify(probe)
             });
+            if (!res.ok) {
+                const err = await res.json();
+                alert(`Failed to save probe: ${JSON.stringify(err.detail || err)}`);
+                return;
+            }
             closeProbeModal();
             loadDashboardData();
         }

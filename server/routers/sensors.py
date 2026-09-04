@@ -907,6 +907,51 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
             f"[OK] Default Gateway ({gw_target}:443): {gw_lat}ms RTT.",
             f"[OK] CMP ({_cmp_host}:{_cmp_port}): {cmp_res['latency_ms']}ms RTT."
         ])
+    elif tt in PROBES_DB:
+        cp_spec = CustomProbeSpec(**PROBES_DB[tt])
+        cp_type = cp_spec.probe_type
+        cp_target = str(target_override or cp_spec.target)
+        cp_name = cp_spec.name
+
+        src = f"Physical Sensor ({sensor_ip})" if is_edge else "CMP Container"
+        passed = False
+        status_code = ""
+        latency_ms = 0.0
+
+        if cp_type in ("http", "api"):
+            res = _live_probe_http(cp_target)
+            passed = res["status_code"].startswith("2") or res["status_code"].startswith("3")
+            status_code = res["status_code"]
+            latency_ms = res["latency_ms"]
+        elif cp_type == "dns":
+            res = _live_probe_dns(cp_target)
+            passed = "Error" not in res.get("status_code", "") and res.get("latency_ms", 0.0) < 5000.0
+            status_code = res.get("status_code") or f"{res.get('latency_ms', 0.0)} ms"
+            latency_ms = res.get("latency_ms", 0.0)
+        elif cp_type == "tcp":
+            try:
+                host, port_str = cp_target.split(":")
+                port_int = int(port_str)
+            except Exception:
+                host = cp_target
+                port_int = 80
+            res = _live_probe_tcp(host, port_int)
+            passed = res.get("connected", False) or str(res.get("status_code", "")).startswith("200")
+            status_code = res.get("status_code", f"{res.get('latency_ms', 0.0)} ms")
+            latency_ms = res.get("latency_ms", 0.0)
+        else:
+            res = _live_probe_tcp(cp_target, 80)
+            passed = res.get("connected", False)
+            status_code = res.get("status_code", f"{res.get('latency_ms', 0.0)} ms")
+            latency_ms = res.get("latency_ms", 0.0)
+
+        details = [
+            {"name": cp_name, "target": cp_target, "type": cp_type.upper(), "passed": passed, "status_code": status_code, "latency_ms": latency_ms, "info": f"[{src}] Custom {cp_type.upper()} Probe Executed"}
+        ]
+        log_lines.extend([
+            f"[INFO] Probing custom target '{cp_target}' from {src}...",
+            f"[{'OK' if passed else 'WARN'}] Probe completed in {latency_ms}ms with status: {status_code}"
+        ])
     else:
         # Default / Full 7-Layer OSI & SaaS Suite - run live probes
         fallback_gw = "10.0.0.1"
@@ -938,21 +983,20 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
         log_lines.append(f"[OK] Full 7-Layer OSI and SaaS synthetic suite executed from {src} successfully.")
 
     total_latency = sum(d["latency_ms"] for d in details)
-    log_lines.append(f"[INFO] Diagnostics completed in {total_latency:.2f}ms. State: GREEN (PASS).")
+    all_passed = all(d.get("passed", True) for d in details)
+    final_status = "PASS" if all_passed else "FAIL"
+    final_state = "GREEN (PASS)" if all_passed else "RED (FAIL)"
+
+    log_lines.append(f"[INFO] Diagnostics completed in {total_latency:.2f}ms. State: {final_state}.")
 
     return {
-        "status": "PASS",
+        "status": final_status,
         "message": f"Diagnostics job completed for sensor {sensor_id}.",
         "test_type": tt,
         "sensor_id": sensor_id,
         "execution_time_ms": round(total_latency, 2),
         "details": details,
         "log_output": "\n".join(log_lines),
-        "results": {
-            "ping": {"status": "ok", "latency_ms": 0.92},
-            "dns": {"status": "ok", "latency_ms": 1.45},
-            "http": {"status": "ok", "latency_ms": 18.3}
-        }
     }
 
 @router.get(
