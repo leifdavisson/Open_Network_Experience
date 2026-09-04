@@ -227,11 +227,15 @@ class CustomProbeSpec(BaseModel):
             if not re.match(r'^([a-zA-Z0-9_-]+\.)*[a-zA-Z0-9_-]+$', self.target) and not re.match(r'^([0-9a-fA-F:]+)$', self.target):
                 raise ValueError("target must be a valid domain name or IP address")
         elif self.probe_type == 'tcp':
-            match = re.match(r'^([^:]+):(\d+)$', self.target)
+            match = re.match(r'^([^:]+):(.*)$', self.target)
             if match:
-                port = int(match.group(2))
-                if not (1 <= port <= 65535):
-                    raise ValueError("port must be between 1 and 65535")
+                port_str = match.group(2)
+                if port_str.isdigit():
+                    port = int(port_str)
+                    if not (1 <= port <= 65535):
+                        raise ValueError("port must be between 1 and 65535")
+                else:
+                    raise ValueError("target must be formatted as host:port")
             else:
                 raise ValueError("target must be formatted as host:port")
         return self

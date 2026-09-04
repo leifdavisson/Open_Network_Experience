@@ -234,11 +234,12 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
     if getattr(sensor["target_config"], "pcap_trigger", None) and sensor["target_config"].pcap_trigger.trigger_now:
         sensor["target_config"].pcap_trigger.trigger_now = False
 
-    active_probes = [
-        p for p in PROBES_DB.values()
-        if p.get("enabled", True) and ("all" in p.get("target_sensors", ["all"]) or report.sensor_id in p.get("target_sensors", []))
-    ]
-    response.custom_probes = [CustomProbeSpec(**p) for p in active_probes]
+    active_probes = []
+    for p_dict in PROBES_DB.values():
+        p = CustomProbeSpec(**p_dict)
+        if p.enabled and ("all" in p.target_sensors or report.sensor_id in p.target_sensors):
+            active_probes.append(p)
+    response.custom_probes = active_probes
 
     active_schedules = [
         s for s in SCHEDULES_DB.values()
@@ -324,11 +325,12 @@ async def ingest_sensor_report(
         if len(ROAMING_EVENTS_DB) > 500:
             ROAMING_EVENTS_DB.pop(0)
 
-    active_probes = [
-        p for p in PROBES_DB.values()
-        if p.get("enabled", True) and ("all" in p.get("target_sensors", ["all"]) or sensor_id in p.get("target_sensors", []))
-    ]
-    custom_probe_specs = [CustomProbeSpec(**p) for p in active_probes]
+    active_probes = []
+    for p_dict in PROBES_DB.values():
+        p = CustomProbeSpec(**p_dict)
+        if p.enabled and ("all" in p.target_sensors or sensor_id in p.target_sensors):
+            active_probes.append(p)
+    custom_probe_specs = active_probes
 
     return SensorIngestResponse(
         status="received",
@@ -908,10 +910,16 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
             f"[OK] CMP ({_cmp_host}:{_cmp_port}): {cmp_res['latency_ms']}ms RTT."
         ])
     elif tt in PROBES_DB:
-        cp_spec = CustomProbeSpec(**PROBES_DB[tt])
-        cp_type = cp_spec.probe_type
-        cp_target = str(target_override or cp_spec.target)
-        cp_name = cp_spec.name
+        try:
+            cp_spec = CustomProbeSpec(**PROBES_DB[tt])
+            cp_type = cp_spec.probe_type
+            cp_target = target_override or cp_spec.target
+            cp_name = cp_spec.name
+        except Exception:
+            cp = PROBES_DB[tt]
+            cp_type = cp.get("probe_type", "http")
+            cp_target = target_override or cp.get("target", "")
+            cp_name = cp.get("name", tt)
 
         src = f"Physical Sensor ({sensor_ip})" if is_edge else "CMP Container"
         passed = False
