@@ -738,13 +738,25 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
                 f"[{'OK' if enforced else 'ALERT'}] Outcome: {remote_res.get('summary', 'Audit complete')}."
             ])
         else:
-            gw_probe = _live_probe_tcp("10.98.2.1", 443, timeout=0.3)
-            peer1_probe = _live_probe_tcp("10.98.2.102", 445, timeout=0.2)
+            fallback_gw = "10.0.0.1"
+            if isinstance(sensor.get("target_config"), dict):
+                fallback_gw = sensor["target_config"].get("gateway", fallback_gw)
+            elif hasattr(sensor.get("target_config"), "gateway"):
+                fallback_gw = getattr(sensor["target_config"], "gateway") or fallback_gw
+
+            try:
+                gw_parts = list(map(int, fallback_gw.split(".")))
+                peer1_ip = f"{gw_parts[0]}.{gw_parts[1]}.{gw_parts[2]}.102"
+            except Exception:
+                peer1_ip = "10.0.0.102"
+
+            gw_probe = _live_probe_tcp(fallback_gw, 443, timeout=0.3)
+            peer1_probe = _live_probe_tcp(peer1_ip, 445, timeout=0.2)
             details = [
                 {"name": "Intra-BSS Layer-2 ARP Discovery", "target": target_net, "type": "ARP ISOLATION", "passed": True, "status_code": "Suppressed (Pass)", "latency_ms": 0.4, "info": "0 neighbor MACs learned via ARP; broadcast/unicast ARP client isolation enforced"},
                 {"name": "Lateral Peer TCP/ICMP Port Probing", "target": "Adjacent Hosts (.102-.108)", "type": "LATERAL DEFENSE", "passed": True, "status_code": peer1_probe["status_code"], "latency_ms": peer1_probe["latency_ms"], "info": "Direct peer connections (AirDrop 8770, SMB 445, HTTP 8080) dropped by AP/switch"},
                 {"name": "Multicast / mDNS Inter-Client Filter", "target": "224.0.0.251:5353 (mDNS)", "type": "MCAST FILTER", "passed": True, "status_code": "Filtered (Pass)", "latency_ms": 0.2, "info": "Peer service discovery broadcasts contained to local interface"},
-                {"name": "Default Gateway Routing Invariant", "target": "10.98.2.1:443 (Internet Egress)", "type": "GATEWAY", "passed": True, "status_code": "Reachable (Pass)", "latency_ms": gw_probe["latency_ms"], "info": "Outbound gateway reachability preserved while inter-client lateral path is blocked"}
+                {"name": "Default Gateway Routing Invariant", "target": f"{fallback_gw}:443 (Internet Egress)", "type": "GATEWAY", "passed": True, "status_code": "Reachable (Pass)", "latency_ms": gw_probe["latency_ms"], "info": "Outbound gateway reachability preserved while inter-client lateral path is blocked"}
             ]
             log_lines.extend([
                 f"[INFO] Auditing Wi-Fi Client Isolation & Intra-BSS Peer Isolation on {target_net}...",
@@ -895,8 +907,14 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
         ])
     else:
         # Default / Full 7-Layer OSI & SaaS Suite - run live probes
+        fallback_gw = "10.0.0.1"
+        if isinstance(sensor.get("target_config"), dict):
+            fallback_gw = sensor["target_config"].get("gateway", fallback_gw)
+        elif hasattr(sensor.get("target_config"), "gateway"):
+            fallback_gw = getattr(sensor["target_config"], "gateway") or fallback_gw
+
         if is_edge:
-            gw_res = _live_probe_tcp("10.98.2.1", 80, timeout=0.5)
+            gw_res = _live_probe_tcp(fallback_gw, 80, timeout=0.5)
             dns_res = _live_probe_dns("google.com")
             http_target = target_override or "https://google.com"
             http_res = _live_probe_http(http_target)
@@ -910,7 +928,7 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
             cipa_res = {"status_code": "403 Blocked", "latency_ms": 24.1}
             src = "CMP Container"
         details = [
-            {"name": "Default Gateway ICMP Ping", "target": "10.98.2.1", "type": "TCP CONNECT", "passed": True, "status_code": f"{gw_res['latency_ms']} ms", "latency_ms": gw_res["latency_ms"], "info": f"[{src}] Core switch / router reachability: {gw_res['latency_ms']}ms"},
+            {"name": "Default Gateway ICMP Ping", "target": fallback_gw, "type": "TCP CONNECT", "passed": True, "status_code": f"{gw_res['latency_ms']} ms", "latency_ms": gw_res["latency_ms"], "info": f"[{src}] Core switch / router reachability: {gw_res['latency_ms']}ms"},
             {"name": "Internal District DNS Resolution", "target": "google.com", "type": "DNS UDP", "passed": True, "status_code": f"{dns_res['latency_ms']} ms", "latency_ms": dns_res["latency_ms"], "info": f"[{src}] Resolved in {dns_res['latency_ms']}ms"},
             {"name": target_override or "External Core SaaS HTTP Probe", "target": http_target, "type": "HTTP 2XX", "passed": http_res["status_code"].startswith("2") or http_res["status_code"].startswith("3"), "status_code": http_res["status_code"], "latency_ms": http_res["latency_ms"], "info": f"[{src}] HTTP response with valid SSL cert in {http_res['latency_ms']}ms"},
             {"name": "CIPA Compliance Guardrail", "target": "http://iwf.testfiltering.com", "type": "CIPA FILTER", "passed": True, "status_code": cipa_res["status_code"], "latency_ms": cipa_res["latency_ms"], "info": f"[{src}] Content filter response: {cipa_res['status_code']}"}
