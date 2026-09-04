@@ -4,46 +4,48 @@ Copyright (C) 2026 Open Network Experience Authors.
 Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 """
 
-import os
 import json
-import subprocess
-import time
+import os
 import secrets
 import socket
 import ssl
-import urllib.request
+import subprocess
+import time
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
-from fastapi import APIRouter, Header, Depends, HTTPException, Request
-from fastapi.responses import FileResponse
+from typing import Any
 
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+
+from server import db
 from server.schemas import (
+    ChromebookFleetItemResponse,
+    ChromebookLockUpdateRequest,
+    CustomProbeSpec,
+    LocationSpec,
+    RoamingEventResponse,
+    SensorConfigUpdate,
+    SensorIngestResponse,
+    SensorReconcileResponse,
     SensorRegisterRequest,
     SensorRegisterResponse,
     SensorReportRequest,
-    SensorReconcileResponse,
     SensorStatusResponseSafe,
-    SensorConfigUpdate,
-    SensorIngestResponse,
-    ChromebookFleetItemResponse,
-    ChromebookLockUpdateRequest,
-    RoamingEventResponse,
-    CustomProbeSpec,
     UnifiedScheduleSpec,
-    LocationSpec
 )
 from server.security import ADMIN_API_KEY, verify_admin_key
 from server.state import (
-    SENSORS_DB,
-    PROBES_DB,
-    SCHEDULES_DB,
-    ROAMING_EVENTS_DB,
+    CHROMEBOOK_GLOBAL_SETTINGS,
     EVIDENCE_DB,
-    get_or_create_sensor
+    PROBES_DB,
+    ROAMING_EVENTS_DB,
+    SCHEDULES_DB,
+    SENSORS_DB,
+    get_or_create_sensor,
 )
-import server.db as db
 
 router = APIRouter(tags=["Edge Sensors & Fleet"])
 
@@ -258,9 +260,9 @@ async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(
     summary="Chromebook Fleet Telemetry Ingestion"
 )
 async def ingest_sensor_report(
-    report: Dict[str, Any],
+    report: dict[str, Any],
     req: Request,
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key")
+    x_api_key: str | None = Header(None, alias="X-API-Key")
 ):
     """Ingestion endpoint for Chromebook Fleet extensions and Edge Sensor telemetry."""
     sensor_id = report.get("sensor_id", f"cb-anon-{int(time.time())}")
@@ -341,13 +343,13 @@ async def ingest_sensor_report(
 
 @router.get(
     "/api/v1/sensors",
-    response_model=List[SensorStatusResponseSafe],
+    response_model=list[SensorStatusResponseSafe],
     summary="List Active Sensors",
     dependencies=[Depends(verify_admin_key)]
 )
 @router.get(
     "/sensors",
-    response_model=List[SensorStatusResponseSafe],
+    response_model=list[SensorStatusResponseSafe],
     dependencies=[Depends(verify_admin_key)],
     include_in_schema=False
 )
@@ -400,7 +402,7 @@ def _live_probe_tcp(host: str, port: int, timeout: float = 1.2) -> dict:
         s.close()
         lat = round((time.perf_counter() - start) * 1000.0, 2)
         return {"connected": True, "latency_ms": lat, "status_code": "200 OK"}
-    except (ConnectionRefusedError, socket.timeout, OSError):
+    except (TimeoutError, ConnectionRefusedError, OSError):
         lat = round((time.perf_counter() - start) * 1000.0, 2)
         return {"connected": False, "latency_ms": lat, "status_code": "Blocked (Pass)"}
 
@@ -453,7 +455,7 @@ def _live_probe_stun_jitter(host: str = "stun.l.google.com", port: int = 19302, 
     except Exception:
         return {"success": True, "rtt_ms": 16.4, "jitter_ms": 1.2, "mos_score": 4.41, "loss_pct": 0.0}
 
-def _run_remote_sensor_probe(sensor_ip: Optional[str], cmd: str, timeout_sec: float = 12.0) -> Optional[dict]:
+def _run_remote_sensor_probe(sensor_ip: str | None, cmd: str, timeout_sec: float = 12.0) -> dict | None:
     """Executes a probe script directly on the physical edge sensor over SSH and parses JSON stdout.
 
     Credentials are sourced from environment variables:
@@ -490,7 +492,7 @@ def _run_remote_sensor_probe(sensor_ip: Optional[str], cmd: str, timeout_sec: fl
 
 class DiagnosticRunRequest(BaseModel):
     test_type: str = "all"
-    custom_target: Optional[str] = ""
+    custom_target: str | None = ""
 
 @router.post(
     "/api/v1/sensors/{sensor_id}/diagnostics/run",
@@ -738,13 +740,25 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
                 f"[{'OK' if enforced else 'ALERT'}] Outcome: {remote_res.get('summary', 'Audit complete')}."
             ])
         else:
-            gw_probe = _live_probe_tcp("10.98.2.1", 443, timeout=0.3)
-            peer1_probe = _live_probe_tcp("10.98.2.102", 445, timeout=0.2)
+            fallback_gw = "10.0.0.1"
+            if isinstance(sensor.get("target_config"), dict):
+                fallback_gw = sensor["target_config"].get("gateway", fallback_gw)
+            elif hasattr(sensor.get("target_config"), "gateway"):
+                fallback_gw = getattr(sensor["target_config"], "gateway") or fallback_gw
+
+            try:
+                gw_parts = list(map(int, fallback_gw.split(".")))
+                peer1_ip = f"{gw_parts[0]}.{gw_parts[1]}.{gw_parts[2]}.102"
+            except Exception:
+                peer1_ip = "10.0.0.102"
+
+            gw_probe = _live_probe_tcp(fallback_gw, 443, timeout=0.3)
+            peer1_probe = _live_probe_tcp(peer1_ip, 445, timeout=0.2)
             details = [
                 {"name": "Intra-BSS Layer-2 ARP Discovery", "target": target_net, "type": "ARP ISOLATION", "passed": True, "status_code": "Suppressed (Pass)", "latency_ms": 0.4, "info": "0 neighbor MACs learned via ARP; broadcast/unicast ARP client isolation enforced"},
                 {"name": "Lateral Peer TCP/ICMP Port Probing", "target": "Adjacent Hosts (.102-.108)", "type": "LATERAL DEFENSE", "passed": True, "status_code": peer1_probe["status_code"], "latency_ms": peer1_probe["latency_ms"], "info": "Direct peer connections (AirDrop 8770, SMB 445, HTTP 8080) dropped by AP/switch"},
                 {"name": "Multicast / mDNS Inter-Client Filter", "target": "224.0.0.251:5353 (mDNS)", "type": "MCAST FILTER", "passed": True, "status_code": "Filtered (Pass)", "latency_ms": 0.2, "info": "Peer service discovery broadcasts contained to local interface"},
-                {"name": "Default Gateway Routing Invariant", "target": "10.98.2.1:443 (Internet Egress)", "type": "GATEWAY", "passed": True, "status_code": "Reachable (Pass)", "latency_ms": gw_probe["latency_ms"], "info": "Outbound gateway reachability preserved while inter-client lateral path is blocked"}
+                {"name": "Default Gateway Routing Invariant", "target": f"{fallback_gw}:443 (Internet Egress)", "type": "GATEWAY", "passed": True, "status_code": "Reachable (Pass)", "latency_ms": gw_probe["latency_ms"], "info": "Outbound gateway reachability preserved while inter-client lateral path is blocked"}
             ]
             log_lines.extend([
                 f"[INFO] Auditing Wi-Fi Client Isolation & Intra-BSS Peer Isolation on {target_net}...",
@@ -895,8 +909,14 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
         ])
     else:
         # Default / Full 7-Layer OSI & SaaS Suite - run live probes
+        fallback_gw = "10.0.0.1"
+        if isinstance(sensor.get("target_config"), dict):
+            fallback_gw = sensor["target_config"].get("gateway", fallback_gw)
+        elif hasattr(sensor.get("target_config"), "gateway"):
+            fallback_gw = getattr(sensor["target_config"], "gateway") or fallback_gw
+
         if is_edge:
-            gw_res = _live_probe_tcp("10.98.2.1", 80, timeout=0.5)
+            gw_res = _live_probe_tcp(fallback_gw, 80, timeout=0.5)
             dns_res = _live_probe_dns("google.com")
             http_target = target_override or "https://google.com"
             http_res = _live_probe_http(http_target)
@@ -910,7 +930,7 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
             cipa_res = {"status_code": "403 Blocked", "latency_ms": 24.1}
             src = "CMP Container"
         details = [
-            {"name": "Default Gateway ICMP Ping", "target": "10.98.2.1", "type": "TCP CONNECT", "passed": True, "status_code": f"{gw_res['latency_ms']} ms", "latency_ms": gw_res["latency_ms"], "info": f"[{src}] Core switch / router reachability: {gw_res['latency_ms']}ms"},
+            {"name": "Default Gateway ICMP Ping", "target": fallback_gw, "type": "TCP CONNECT", "passed": True, "status_code": f"{gw_res['latency_ms']} ms", "latency_ms": gw_res["latency_ms"], "info": f"[{src}] Core switch / router reachability: {gw_res['latency_ms']}ms"},
             {"name": "Internal District DNS Resolution", "target": "google.com", "type": "DNS UDP", "passed": True, "status_code": f"{dns_res['latency_ms']} ms", "latency_ms": dns_res["latency_ms"], "info": f"[{src}] Resolved in {dns_res['latency_ms']}ms"},
             {"name": target_override or "External Core SaaS HTTP Probe", "target": http_target, "type": "HTTP 2XX", "passed": http_res["status_code"].startswith("2") or http_res["status_code"].startswith("3"), "status_code": http_res["status_code"], "latency_ms": http_res["latency_ms"], "info": f"[{src}] HTTP response with valid SSL cert in {http_res['latency_ms']}ms"},
             {"name": "CIPA Compliance Guardrail", "target": "http://iwf.testfiltering.com", "type": "CIPA FILTER", "passed": True, "status_code": cipa_res["status_code"], "latency_ms": cipa_res["latency_ms"], "info": f"[{src}] Content filter response: {cipa_res['status_code']}"}
@@ -937,10 +957,10 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
 
 @router.get(
     "/api/v1/chromebooks",
-    response_model=List[ChromebookFleetItemResponse],
+    response_model=list[ChromebookFleetItemResponse],
     summary="List Active Chromebook Fleet Devices"
 )
-async def list_chromebook_fleet(campus: Optional[str] = None):
+async def list_chromebook_fleet(campus: str | None = None):
     """Returns a list of all reporting Chromebook fleet sensors with Wi-Fi RF and hardware vitals."""
     now = int(time.time())
     result = []
@@ -1031,17 +1051,9 @@ async def update_chromebook_lock_state(
 )
 async def get_chromebook_fleet_settings():
     """Returns global default lock state and active helpdesk PIN for Chromebook fleet."""
-    global_locked = True
-    global_pin = "4357"
-    for s in SENSORS_DB.values():
-        if s.get("os") == "chromeos" or str(s.get("sensor_id", "")).startswith("chromebook-"):
-            global_locked = s.get("settings_locked", True)
-            if s.get("helpdesk_pin"):
-                global_pin = s.get("helpdesk_pin")
-            break
     return {
-        "settings_locked": global_locked,
-        "helpdesk_pin": global_pin,
+        "settings_locked": CHROMEBOOK_GLOBAL_SETTINGS["settings_locked"],
+        "helpdesk_pin": CHROMEBOOK_GLOBAL_SETTINGS["helpdesk_pin"],
         "target_version": "1.0.0"
     }
 
@@ -1054,6 +1066,10 @@ async def update_chromebook_fleet_settings(
     admin_key: str = Depends(verify_admin_key)
 ):
     """Centrally locks or unlocks all Chromebook sensors and updates the active helpdesk PIN."""
+    CHROMEBOOK_GLOBAL_SETTINGS["settings_locked"] = settings_req.locked
+    if settings_req.helpdesk_pin:
+        CHROMEBOOK_GLOBAL_SETTINGS["helpdesk_pin"] = settings_req.helpdesk_pin
+
     updated_count = 0
     for s_id, s in SENSORS_DB.items():
         if s.get("os") == "chromeos" or str(s_id).startswith("chromebook-"):
@@ -1065,8 +1081,8 @@ async def update_chromebook_fleet_settings(
     return {
         "status": "success",
         "updated_sensors": updated_count,
-        "settings_locked": settings_req.locked,
-        "helpdesk_pin": settings_req.helpdesk_pin or "4357",
+        "settings_locked": CHROMEBOOK_GLOBAL_SETTINGS["settings_locked"],
+        "helpdesk_pin": CHROMEBOOK_GLOBAL_SETTINGS["helpdesk_pin"],
         "message": f"Updated security settings for {updated_count} Chromebook sensors"
     }
 
@@ -1074,10 +1090,11 @@ async def update_chromebook_fleet_settings(
     "/api/v1/chromebooks/download/extension.zip",
     summary="Download Packaged ChromeOS Extension (.zip)"
 )
-async def download_chromebook_extension_zip(request: Request, cmp_url: Optional[str] = None):
+async def download_chromebook_extension_zip(request: Request, cmp_url: str | None = None):
     """Serves the zipped Chromebook sensor extension with an auto-incremented version number and injected CMP URL."""
     import io
     import zipfile
+
     from fastapi.responses import StreamingResponse
 
     # Fallback to server's own base URL if not provided by query param
@@ -1144,7 +1161,7 @@ async def download_chromebook_policy_json():
 
 @router.get(
     "/api/v1/chromebooks/roaming-trail",
-    response_model=List[RoamingEventResponse],
+    response_model=list[RoamingEventResponse],
     summary="Get Recent Chromebook AP Roaming Events"
 )
 async def get_chromebook_roaming_trail(limit: int = 50):
@@ -1460,8 +1477,9 @@ async def trigger_bandwidth_test(sensor_id: str):
 
 from pydantic import BaseModel
 
+
 class BurstTriggerRequest(BaseModel):
-    sensor_ids: List[str]
+    sensor_ids: list[str]
     duration_seconds: int = 60
     reason: str = "packet_loss_investigation"
 
