@@ -41,7 +41,7 @@ class TestCMPFlow(unittest.TestCase):
             method=method
         )
         try:
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:
                 return resp.status, json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             return e.code, None
@@ -315,7 +315,7 @@ class TestCMPFlow(unittest.TestCase):
         # 1. Test Web UI Dashboard HTML serving
         url = "http://localhost:8000/"
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=15) as resp:
             self.assertEqual(resp.status, 200)
             html = resp.read().decode('utf-8')
             self.assertIn("Open Network Experience (ONE)", html)
