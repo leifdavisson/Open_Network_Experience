@@ -4,6 +4,29 @@ All notable changes to the Open Network Experience (OpenUX) platform will be doc
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0] — 2026-09-02
+
+### Added
+- **Linux Edge Sensor Over-The-Air (OTA) Upgrade Pipeline** (`sensor/reconciler/reconciler.py`, `server/routers/sensors.py`, `server/templates/dashboard.html`):
+  - Implemented remote zero-downtime OTA upgrade mechanism for edge sensors via CMP API (`POST /api/v1/sensors/{id}/upgrade`).
+  - Edge reconciler securely downloads updated script payload from CMP, compiles via `py_compile` to verify syntax integrity, copies over binary/daemon, clears pending upgrade flag (`POST /api/v1/sensors/{id}/upgrade/clear`), and exits cleanly (`sys.exit(0)`) allowing systemd (`Restart=always`) to respawn with new code.
+  - Added "Upgrade" action buttons and visual upgrade state pills to CMP Fleet Management dashboard.
+- **Dynamic In-Memory Chromebook Extension Package Builder** (`server/routers/sensors.py`, `server/routers/onboarding.py`, `server/templates/dashboard.html`):
+  - Added zero-configuration packaged extension generation endpoint (`GET /api/v1/chromebooks/download/extension.zip`).
+  - Intercepts `manifest.json` on the fly to auto-increment extension versions with strictly monotonic timestamp semantics (`1.YYYY.MMDD.HHMM`) compliant with Chrome's 65535 integer limit per version segment.
+  - Injects target CMP host/URL directly into `DEFAULT_CONFIG` in `src/background/config_manager.js` for out-of-the-box zero-touch Google Admin deployment.
+  - Added pre-flight connectivity validation and health probing (`/api/v1/health`) with prompt verification in UI to prevent fleet stranding from IP typos.
+- **Chromebook Sensor Custom Probe Compatibility & Normalization** (`chromebook-sensor/src/background/service_worker.js`):
+  - Filter incoming custom probes from CMP to only run supported `http` and `api` probe types, gracefully ignoring raw UDP/ICMP/DNS probes that browser sandboxes cannot execute.
+  - Added automatic URL schema normalization to ensure bare domains (e.g. `Google.com`) are automatically prefixed with `https://`.
+- **Bench Staging Harness Multi-Component Sync** (`scripts/deploy_bench.sh`, `server/Dockerfile`):
+  - Added `chromebook-sensor` directory synchronization to staging script and Docker container image build.
+
+### Fixed
+- **Chromebook Sensor Custom Probe Target Key Mismatch** (`chromebook-sensor/src/background/service_worker.js`): Fixed crash (`TypeError: Cannot read properties of undefined (reading 'includes')`) where client attempted to read `target_url` instead of `target` from `CustomProbeSpec`.
+- **Sensor1 Staging Offline Hang**: Resolved indefinite hang on sensor1 caused by outdated ping command lacking timeouts and pointing to localhost.
+- **Ghost Sensor Database Inconsistency**: Cleaned up ghost SQLite database rows on CMP caused by lingering background worker processes.
+
 ## [0.5.1] — 2026-09-01
 
 ### Added

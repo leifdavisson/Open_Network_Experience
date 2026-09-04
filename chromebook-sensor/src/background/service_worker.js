@@ -138,13 +138,21 @@ export async function executeDiagnosticCycle() {
 
     if (sendResult.success && sendResult.data) {
       if (sendResult.data.custom_probes) {
-        // Dynamically sync custom probes created in CMP Web UI
-        cmpDynamicTargets = sendResult.data.custom_probes.map((p) => ({
-          name: p.name,
-          url: p.target_url,
-          category: p.category || "CMP Custom",
-          timeout_ms: p.timeout_seconds ? p.timeout_seconds * 1000 : 5000
-        }));
+        // Dynamically sync custom probes created in CMP Web UI, filtering for supported HTTP/API probes
+        cmpDynamicTargets = sendResult.data.custom_probes
+          .filter(p => !p.probe_type || p.probe_type === "http" || p.probe_type === "api")
+          .map((p) => {
+            let targetUrl = p.target || p.target_url;
+            if (targetUrl && !/^https?:\/\//i.test(targetUrl)) {
+                targetUrl = "https://" + targetUrl; // Default to HTTPS if missing schema
+            }
+            return {
+              name: p.name,
+              url: targetUrl,
+              category: p.category || p.probe_type || "CMP Custom",
+              timeout_ms: p.timeout_seconds ? p.timeout_seconds * 1000 : 5000
+            };
+          });
         logger.info(`Synchronized ${cmpDynamicTargets.length} active custom probes from CMP.`);
       }
 

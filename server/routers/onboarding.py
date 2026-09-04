@@ -208,3 +208,39 @@ HOW TO RAPID-STAGE SENSORS:
         media_type="application/zip",
         headers={"Content-Disposition": "attachment; filename=one_usb_staging_kit.zip"}
     )
+
+@router.get("/chromebook/package", summary="Build Chromebook Extension Package")
+async def build_chromebook_package():
+    import time
+    from fastapi.responses import StreamingResponse
+
+    cb_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "chromebook-sensor"))
+    if not os.path.exists(cb_dir):
+        raise HTTPException(status_code=404, detail="Chromebook source not found")
+
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(cb_dir):
+            dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'test', '.coverage']]
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, cb_dir)
+
+                if arcname == "manifest.json":
+                    with open(file_path, 'r') as f:
+                        manifest = json.load(f)
+
+                    base_version = manifest.get("version", "1.0.0")
+                    manifest["version"] = f"{base_version}.{int(time.time() / 1000)}"
+
+                    zf.writestr(arcname, json.dumps(manifest, indent=2))
+                else:
+                    zf.write(file_path, arcname)
+
+    memory_file.seek(0)
+
+    return StreamingResponse(
+        memory_file,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=one-chromebook-sensor-{int(time.time())}.zip"}
+    )

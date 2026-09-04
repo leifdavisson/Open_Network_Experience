@@ -18,10 +18,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import pytest
-try:
-    from server.schemas import ChromebookFleetItemResponse, SensorStatusResponseSafe, LocationSpec
-except ImportError:
-    from schemas import ChromebookFleetItemResponse, SensorStatusResponseSafe, LocationSpec
+from server.schemas import ChromebookFleetItemResponse, SensorStatusResponseSafe, LocationSpec
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 

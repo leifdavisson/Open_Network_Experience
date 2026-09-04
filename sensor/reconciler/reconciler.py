@@ -716,9 +716,12 @@ def reconcile_pcap_trigger(pcap_spec: dict, config: dict):
     except Exception as e:
         print(f"Failed to trigger PCAP snapshot: {e}")
 
+_active_custom_probe_proc = None
+
 def reconcile_custom_probes(custom_probes: list, config: dict):
     """Synchronizes custom synthetic probes from CMP with /etc/sensor/custom_probes.json
     and spawns the custom probe runner."""
+    global _active_custom_probe_proc
     if custom_probes is None:
         return
 
@@ -742,14 +745,25 @@ def reconcile_custom_probes(custom_probes: list, config: dict):
         except Exception as e:
             print(f"Failed to write {probes_file}: {e}")
 
-    try:
-        runner_script = "/usr/local/bin/custom_probe_runner.py"
-        if not os.path.exists(runner_script):
-            runner_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "custom_probe_runner.py"))
-        if os.path.exists(runner_script):
-            subprocess.Popen(["python3", runner_script, "--config", probes_file])
-    except Exception as e:
-        print(f"Failed to spawn custom probe runner: {e}")
+                # Kill the existing process if it's running before spawning a new one
+        if _active_custom_probe_proc is not None:
+            if _active_custom_probe_proc.poll() is None:
+                print("Terminating previous custom probe runner...")
+                _active_custom_probe_proc.terminate()
+            _active_custom_probe_proc = None
+
+        if len(custom_probes) == 0:
+            print("No custom probes configured. Custom probe runner stopped.")
+            return
+
+        try:
+            runner_script = "/usr/local/bin/custom_probe_runner.py"
+            if not os.path.exists(runner_script):
+                runner_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "custom_probe_runner.py"))
+            if os.path.exists(runner_script):
+                _active_custom_probe_proc = subprocess.Popen(["python3", runner_script, "--config", probes_file])
+        except Exception as e:
+            print(f"Failed to spawn custom probe runner: {e}")
 
 def reconcile_unified_schedules(unified_schedules: list, config: dict):
     """Synchronizes unified visual probe schedules from CMP and executes active tests
@@ -766,6 +780,47 @@ def reconcile_unified_schedules(unified_schedules: list, config: dict):
         os.replace(schedules_file + ".tmp", schedules_file)
     except Exception as e:
         print(f"Failed to write {schedules_file}: {e}")
+
+def reconcile_ota_upgrade(should_upgrade: bool, config: dict, cmp_url: str):
+    if not should_upgrade:
+        return
+
+    print("OTA Upgrade Commanded! Initiating in-place Python script update...")
+    import urllib.request
+    import shutil
+    import subprocess
+    import sys
+
+    tmp_path = "/tmp/reconciler_new.py"
+    target_path = "/usr/local/bin/reconciler.py"
+    script_url = f"{cmp_url}/sensor/scripts/reconciler.py"
+
+    try:
+        # 1. Download the latest reconciler
+        print(f"Downloading update from {script_url}...")
+        urllib.request.urlretrieve(script_url, tmp_path)
+
+        # 2. Integrity Check (Prevent Bricking)
+        print("Validating downloaded script syntax...")
+        if subprocess.call(["python3", "-m", "py_compile", tmp_path]) != 0:
+            print("OTA Upgrade Failed: Downloaded script has syntax errors! Aborting.")
+            return
+
+        # 3. Overwrite the active binary
+        shutil.copy(tmp_path, target_path)
+        print(f"Successfully updated {target_path}")
+
+        # 4. Acknowledge and clear the flag on the CMP so we don't boot loop
+        clear_url = f"{cmp_url}/sensors/{config['sensor_id']}/upgrade/clear"
+        req = urllib.request.Request(clear_url, method="POST", headers={"Content-Length": "0"})
+        urllib.request.urlopen(req, timeout=5)
+
+        # 5. Clean Exit (Systemd Restart=always will relaunch the new code)
+        print("OTA Upgrade complete. Exiting for systemd respawn...")
+        sys.exit(0)
+
+    except Exception as e:
+        print(f"Failed to initiate OTA upgrade: {e}")
 
 def main():
     print("Starting Sensor Reconciler service with Adaptive Multi-Resolution Probing & Unified Scheduler...")
@@ -803,6 +858,9 @@ def main():
             # Check for reset trigger
             if target_state.get("reset", False):
                 wipe_and_reset()
+
+            # Check for OTA Upgrade
+            reconcile_ota_upgrade(target_state.get("ota_upgrade", False), config, cmp_url)
 
             # Reconcile local networking, docker runtimes, test schedules, and PCAP triggers
             reconcile_wifi(target_state.get("wifi"), config["wifi_interface"], config["wifi_config_path"])

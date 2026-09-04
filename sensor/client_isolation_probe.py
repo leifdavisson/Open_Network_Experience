@@ -60,8 +60,10 @@ def get_default_gateway_and_ip() -> Dict[str, Optional[str]]:
         "local_ip": local_ip or None
     }
 
-def probe_gateway_reachability(gateway_ip: str, timeout_sec: float = 1.0) -> bool:
-    """Verifies gateway is reachable via ICMP or TCP control port."""
+def probe_gateway_reachability(gateway_ip: Optional[str], timeout_sec: float = 1.0) -> bool:
+    """Verifies that the default gateway is responsive via ICMP / ARP."""
+    if not gateway_ip:
+        return True
     try:
         res = subprocess.run(
             ["ping", "-c", "1", "-W", str(int(timeout_sec)), gateway_ip],
@@ -72,13 +74,16 @@ def probe_gateway_reachability(gateway_ip: str, timeout_sec: float = 1.0) -> boo
     except Exception:
         return True
 
-def probe_lateral_peers(local_ip: str, gateway_ip: str, sample_size: int = 5, timeout_sec: float = 0.5) -> Dict[str, Any]:
+def probe_lateral_peers(local_ip: Optional[str], gateway_ip: Optional[str], sample_size: int = 5, timeout_sec: float = 0.5) -> Dict[str, Any]:
     """
     Tests peer IP reachability on the same /24 subnet.
     If client isolation is active, peer connection attempts must timeout/fail.
     """
     try:
-        ip_parts = list(map(int, local_ip.split(".")))
+        if local_ip:
+            ip_parts = list(map(int, local_ip.split(".")))
+        else:
+            ip_parts = [10, 98, 2, 105]
     except Exception:
         ip_parts = [10, 98, 2, 105]
 

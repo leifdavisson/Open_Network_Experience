@@ -5,7 +5,8 @@ Defines schemas for edge sensor reports, target state reconciliation configurati
 and safe administrative responses that redact sensitive credentials.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+import re
 from typing import Dict, List, Optional, Any, Union
 
 # --- Sensor Reports (Incoming from Edge) ---
@@ -91,6 +92,20 @@ class WifiSpec(BaseModel):
     psk: Optional[str] = Field(None, description="Pre-shared key (for PSK networks)")
     username: Optional[str] = Field(None, description="EAP Identity/Username (for EAP-PEAP)")
     password: Optional[str] = Field(None, description="EAP Password (for EAP-PEAP)")
+
+    @model_validator(mode='after')
+    def validate_security(self):
+        if self.security == 'psk':
+            if not self.psk:
+                raise ValueError("psk is required when security is psk")
+            if len(self.psk) < 8 or len(self.psk) > 63:
+                raise ValueError("psk must be between 8 and 63 characters")
+        elif self.security == 'eap-peap':
+            if not self.username or not self.password:
+                raise ValueError("username and password are required when security is eap-peap")
+        elif self.security != 'open':
+            raise ValueError("security must be open, psk, or eap-peap")
+        return self
 
 class TargetContainerSpec(BaseModel):
     image: str = Field(..., description="Docker image registry path and tag/digest")
@@ -202,6 +217,25 @@ class CustomProbeSpec(BaseModel):
     target_sensors: List[str] = Field(default_factory=lambda: ["all"], description="Target sensor IDs or 'all'")
     enabled: bool = True
 
+    @model_validator(mode='after')
+    def validate_target(self):
+        if self.probe_type in ('http', 'api'):
+            if not re.match(r'^https?://', self.target):
+                raise ValueError("target must be a valid HTTP/HTTPS URL")
+        elif self.probe_type in ('dns', 'ping'):
+            # Allow basic domain names, IPv4, IPv6
+            if not re.match(r'^([a-zA-Z0-9_-]+\.)*[a-zA-Z0-9_-]+$', self.target) and not re.match(r'^([0-9a-fA-F:]+)$', self.target):
+                raise ValueError("target must be a valid domain name or IP address")
+        elif self.probe_type == 'tcp':
+            match = re.match(r'^([^:]+):(\d+)$', self.target)
+            if match:
+                port = int(match.group(2))
+                if not (1 <= port <= 65535):
+                    raise ValueError("port must be between 1 and 65535")
+            else:
+                raise ValueError("target must be formatted as host:port")
+        return self
+
 class SensorIngestResponse(BaseModel):
     status: str = "received"
     sensor_id: str
@@ -230,8 +264,22 @@ class UnifiedScheduleSpec(BaseModel):
     is_active: bool = Field(True, description="Whether this schedule is currently enabled")
     created_at: Optional[int] = Field(None, description="Epoch creation timestamp")
 
+    @model_validator(mode='after')
+    def validate_cron(self):
+        if self.mode == 'raw_cron':
+            if not self.cron_expr:
+                raise ValueError("cron_expr is required when mode is raw_cron")
+            fields = self.cron_expr.split()
+            if len(fields) != 5:
+                raise ValueError("cron_expr must be a standard 5-field cron syntax")
+            for field in fields:
+                if not re.match(r'^[\d\*/,\-]+$', field):
+                    raise ValueError(f"invalid cron field: {field}")
+        return self
+
 class SensorReconcileResponse(BaseModel):
     reset: bool = Field(False, description="Tells the sensor to perform a factory cleanup of all containers")
+    ota_upgrade: bool = Field(False, description="One-shot trigger instructing the edge sensor to perform an in-place python self-update")
     wifi: Optional[WifiSpec] = Field(None, description="Wi-Fi configuration profiles")
     containers: Dict[str, TargetContainerSpec] = Field(
         default_factory=dict,
@@ -372,6 +420,7 @@ class WifiSpecSafe(BaseModel):
 class SensorReconcileResponseSafe(BaseModel):
     """Safe target config with Wi-Fi credentials scrubbed for admin views."""
     reset: bool = False
+    ota_upgrade: bool = False
     wifi: Optional[WifiSpecSafe] = None
     containers: Dict[str, TargetContainerSpec] = Field(default_factory=dict)
     schedules: TestSchedulesSpec = Field(default_factory=lambda: TestSchedulesSpec())
@@ -414,6 +463,7 @@ class SensorStatusResponseSafe(BaseModel):
 
         safe_config = SensorReconcileResponseSafe(
             reset=getattr(target_config, "reset", False),
+            ota_upgrade=getattr(target_config, "ota_upgrade", False),
             wifi=WifiSpecSafe.from_wifi_spec(target_config.wifi) if getattr(target_config, "wifi", None) else WifiSpecSafe(ssid="none", security="open"),
             containers=getattr(target_config, "containers", {}),
             schedules=getattr(target_config, "schedules", TestSchedulesSpec()),
@@ -489,10 +539,10 @@ class AlertRecord(BaseModel):
     updated_at: Optional[int] = None
 
 class AlertAcknowledgeRequest(BaseModel):
-    acknowledged_by: Optional[str] = Field("NOC Operator", description="Operator identity acknowledging alarm")
+    acknowledged_by: Optional[str] = "NOC Operator"
 
 class AlertResolveRequest(BaseModel):
-    resolution_notes: Optional[str] = Field("Resolved via CMP Webhook/Console", description="Resolution notes")
+    resolution_notes: Optional[str] = "Resolved via CMP Webhook/Console"
 
 class AlertSimulateRequest(BaseModel):
     alertname: str = Field("CAASPPUntrustedCertificate", description="Alarm name / rule")
