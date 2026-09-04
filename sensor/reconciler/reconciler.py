@@ -716,9 +716,12 @@ def reconcile_pcap_trigger(pcap_spec: dict, config: dict):
     except Exception as e:
         print(f"Failed to trigger PCAP snapshot: {e}")
 
+_active_custom_probe_proc = None
+
 def reconcile_custom_probes(custom_probes: list, config: dict):
     """Synchronizes custom synthetic probes from CMP with /etc/sensor/custom_probes.json
     and spawns the custom probe runner."""
+    global _active_custom_probe_proc
     if custom_probes is None:
         return
 
@@ -742,14 +745,25 @@ def reconcile_custom_probes(custom_probes: list, config: dict):
         except Exception as e:
             print(f"Failed to write {probes_file}: {e}")
 
-    try:
-        runner_script = "/usr/local/bin/custom_probe_runner.py"
-        if not os.path.exists(runner_script):
-            runner_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "custom_probe_runner.py"))
-        if os.path.exists(runner_script):
-            subprocess.Popen(["python3", runner_script, "--config", probes_file])
-    except Exception as e:
-        print(f"Failed to spawn custom probe runner: {e}")
+                # Kill the existing process if it's running before spawning a new one
+        if _active_custom_probe_proc is not None:
+            if _active_custom_probe_proc.poll() is None:
+                print("Terminating previous custom probe runner...")
+                _active_custom_probe_proc.terminate()
+            _active_custom_probe_proc = None
+
+        if len(custom_probes) == 0:
+            print("No custom probes configured. Custom probe runner stopped.")
+            return
+
+        try:
+            runner_script = "/usr/local/bin/custom_probe_runner.py"
+            if not os.path.exists(runner_script):
+                runner_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "custom_probe_runner.py"))
+            if os.path.exists(runner_script):
+                _active_custom_probe_proc = subprocess.Popen(["python3", runner_script, "--config", probes_file])
+        except Exception as e:
+            print(f"Failed to spawn custom probe runner: {e}")
 
 def reconcile_unified_schedules(unified_schedules: list, config: dict):
     """Synchronizes unified visual probe schedules from CMP and executes active tests
