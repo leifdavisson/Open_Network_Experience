@@ -60,15 +60,15 @@ def test_01_alert_schemas_validation():
         annotations={"summary": "Untrusted MITM cert detected", "description": "Cambium TDS synthetic probe failed TLS handshake."},
         startsAt="2026-08-30T19:00:00Z"
     )
-    assert alert_item.status == "firing"
-    assert alert_item.labels["alertname"] == "CAASPPUntrustedCertificate"
+    assert alert_item.status == "firing"  # nosec B101
+    assert alert_item.labels["alertname"] == "CAASPPUntrustedCertificate"  # nosec B101
 
     payload = AlertmanagerWebhookPayload(
         receiver="default-receiver",
         status="firing",
         alerts=[alert_item]
     )
-    assert len(payload.alerts) == 1
+    assert len(payload.alerts) == 1  # nosec B101
 
     record = AlertRecord(
         id="alt-test-01",
@@ -78,8 +78,8 @@ def test_01_alert_schemas_validation():
         title="Test Alert",
         starts_at=int(time.time())
     )
-    assert record.status == "firing"
-    assert record.severity == "critical"
+    assert record.status == "firing"  # nosec B101
+    assert record.severity == "critical"  # nosec B101
 
 
 # --- 2. Database CRUD & Deduplication Tests ---
@@ -103,39 +103,39 @@ def test_02_database_crud_operations():
         "raw_annotations": {"summary": "CAASPP SSL Interception"}
     }
     saved_id = db.save_alert(alt_data)
-    assert saved_id == "alt-unit-101"
+    assert saved_id == "alt-unit-101"  # nosec B101
 
     # Retrieve by ID
     loaded = db.load_alert_by_id("alt-unit-101")
-    assert loaded is not None
-    assert loaded["title"] == "CAASPP SSL Interception"
-    assert loaded["severity"] == "critical"
-    assert loaded["status"] == "firing"
+    assert loaded is not None  # nosec B101
+    assert loaded["title"] == "CAASPP SSL Interception"  # nosec B101
+    assert loaded["severity"] == "critical"  # nosec B101
+    assert loaded["status"] == "firing"  # nosec B101
 
     # Retrieve active by fingerprint
     active_fp = db.load_active_alert_by_fingerprint("fp-unit-101")
-    assert active_fp is not None
-    assert active_fp["id"] == "alt-unit-101"
+    assert active_fp is not None  # nosec B101
+    assert active_fp["id"] == "alt-unit-101"  # nosec B101
 
     # Acknowledge
     acked = db.acknowledge_alert("alt-unit-101", acknowledged_by="NOC Lead")
-    assert acked["status"] == "acknowledged"
-    assert acked["acknowledged_by"] == "NOC Lead"
-    assert acked["acknowledged_at"] is not None
+    assert acked["status"] == "acknowledged"  # nosec B101
+    assert acked["acknowledged_by"] == "NOC Lead"  # nosec B101
+    assert acked["acknowledged_at"] is not None  # nosec B101
 
     # Resolve
     resolved = db.resolve_alert("alt-unit-101", resolution_notes="Firewall bypass rule added.")
-    assert resolved["status"] == "resolved"
-    assert resolved["resolution_notes"] == "Firewall bypass rule added."
-    assert resolved["ends_at"] is not None
+    assert resolved["status"] == "resolved"  # nosec B101
+    assert resolved["resolution_notes"] == "Firewall bypass rule added."  # nosec B101
+    assert resolved["ends_at"] is not None  # nosec B101
 
     # Verify no longer returned by load_active_alert_by_fingerprint
-    assert db.load_active_alert_by_fingerprint("fp-unit-101") is None
+    assert db.load_active_alert_by_fingerprint("fp-unit-101") is None  # nosec B101
 
     # Delete
     deleted = db.delete_alert("alt-unit-101")
-    assert deleted is True
-    assert db.load_alert_by_id("alt-unit-101") is None
+    assert deleted is True  # nosec B101
+    assert db.load_alert_by_id("alt-unit-101") is None  # nosec B101
 
 
 # --- 3. Summary & Filtering Tests ---
@@ -177,24 +177,24 @@ def test_03_alerts_summary_and_filtering():
     })
 
     summary = db.get_alerts_summary()
-    assert summary["total_count"] == 3
-    assert summary["open_count"] == 2  # firing + acknowledged
-    assert summary["firing_count"] == 1
-    assert summary["acknowledged_count"] == 1
-    assert summary["critical_count"] == 1
-    assert summary["warning_count"] == 1
-    assert summary["resolved_24h_count"] == 1
+    assert summary["total_count"] == 3  # nosec B101
+    assert summary["open_count"] == 2  # firing + acknowledged  # nosec B101
+    assert summary["firing_count"] == 1  # nosec B101
+    assert summary["acknowledged_count"] == 1  # nosec B101
+    assert summary["critical_count"] == 1  # nosec B101
+    assert summary["warning_count"] == 1  # nosec B101
+    assert summary["resolved_24h_count"] == 1  # nosec B101
 
     # Filter tests
     active_alerts = db.load_all_alerts(status="active")
-    assert len(active_alerts) == 2
+    assert len(active_alerts) == 2  # nosec B101
 
     crit_alerts = db.load_all_alerts(severity="critical")
-    assert len(crit_alerts) == 1
-    assert crit_alerts[0]["id"] == "alt-1"
+    assert len(crit_alerts) == 1  # nosec B101
+    assert crit_alerts[0]["id"] == "alt-1"  # nosec B101
 
     west_alerts = db.load_all_alerts(campus_id="CAMPUS-WEST")
-    assert len(west_alerts) == 2
+    assert len(west_alerts) == 2  # nosec B101
 
 
 # --- 4. Backup & Disaster Recovery Roundtrip ---
@@ -213,17 +213,17 @@ def test_04_backup_restore_roundtrip():
     })
 
     backup = db.export_backup_json()
-    assert "alerts" in backup
-    assert any(a["id"] == "alt-backup-test" for a in backup["alerts"])
+    assert "alerts" in backup  # nosec B101
+    assert any(a["id"] == "alt-backup-test" for a in backup["alerts"])  # nosec B101
 
     # Clear and restore
     db.delete_alert("alt-backup-test")
-    assert db.load_alert_by_id("alt-backup-test") is None
+    assert db.load_alert_by_id("alt-backup-test") is None  # nosec B101
 
     db.restore_backup_json(backup)
     restored = db.load_alert_by_id("alt-backup-test")
-    assert restored is not None
-    assert restored["title"] == "Disaster Recovery Test Alarm"
+    assert restored is not None  # nosec B101
+    assert restored["title"] == "Disaster Recovery Test Alarm"  # nosec B101
 
 
 # --- 5. Alertmanager Webhook Ingestion & Lifecycle REST Tests ---
@@ -258,31 +258,31 @@ def test_05_alertmanager_webhook_lifecycle():
 
     # Ingest webhook
     res = client.post("/api/v1/alerts/webhook", json=webhook_payload)
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     res_data = res.json()
-    assert res_data["status"] == "success"
-    assert res_data["firing_updated"] == 1
+    assert res_data["status"] == "success"  # nosec B101
+    assert res_data["firing_updated"] == 1  # nosec B101
 
     # Check alert in database
     active = db.load_active_alert_by_fingerprint("fp-caaspp-001")
-    assert active is not None
-    assert active["status"] == "firing"
-    assert active["severity"] == "critical"
-    assert active["evidence_id"] is not None  # Auto PCAP capture generated!
+    assert active is not None  # nosec B101
+    assert active["status"] == "firing"  # nosec B101
+    assert active["severity"] == "critical"  # nosec B101
+    assert active["evidence_id"] is not None  # Auto PCAP capture generated!  # nosec B101
     alert_id = active["id"]
 
     # Ingest identical firing alert (Deduplication)
     res2 = client.post("/api/v1/alerts/webhook", json=webhook_payload)
-    assert res2.status_code == 200
+    assert res2.status_code == 200  # nosec B101
     all_active = db.load_all_alerts(status="active")
-    assert len(all_active) == 1
-    assert all_active[0]["id"] == alert_id
+    assert len(all_active) == 1  # nosec B101
+    assert all_active[0]["id"] == alert_id  # nosec B101
 
     # Acknowledge via REST
     ack_res = client.post(f"/api/v1/alerts/{alert_id}/acknowledge", json={"acknowledged_by": "Senior NOC Engineer"})
-    assert ack_res.status_code == 200
-    assert ack_res.json()["status"] == "acknowledged"
-    assert ack_res.json()["acknowledged_by"] == "Senior NOC Engineer"
+    assert ack_res.status_code == 200  # nosec B101
+    assert ack_res.json()["status"] == "acknowledged"  # nosec B101
+    assert ack_res.json()["acknowledged_by"] == "Senior NOC Engineer"  # nosec B101
 
     # Ingest resolve webhook for the same fingerprint
     resolve_payload = {
@@ -306,12 +306,12 @@ def test_05_alertmanager_webhook_lifecycle():
         ]
     }
     res_resolve = client.post("/api/v1/alerts/webhook", json=resolve_payload)
-    assert res_resolve.status_code == 200
-    assert res_resolve.json()["resolved_updated"] == 1
+    assert res_resolve.status_code == 200  # nosec B101
+    assert res_resolve.json()["resolved_updated"] == 1  # nosec B101
 
     # Check alert is now resolved
     resolved_alert = db.load_alert_by_id(alert_id)
-    assert resolved_alert["status"] == "resolved"
+    assert resolved_alert["status"] == "resolved"  # nosec B101
 
 
 # --- 6. REST API Endpoints & Simulation ---
@@ -330,46 +330,46 @@ def test_06_alerts_rest_endpoints():
         "probe_id": "rrm_darrp"
     }
     sim_res = client.post("/api/v1/alerts/simulate", json=sim_payload)
-    assert sim_res.status_code == 200
+    assert sim_res.status_code == 200  # nosec B101
     alert_obj = sim_res.json()
     alert_id = alert_obj["id"]
-    assert alert_obj["status"] == "firing"
-    assert alert_obj["severity"] == "warning"
-    assert alert_obj["evidence_id"] is not None
+    assert alert_obj["status"] == "firing"  # nosec B101
+    assert alert_obj["severity"] == "warning"  # nosec B101
+    assert alert_obj["evidence_id"] is not None  # nosec B101
 
     # GET /api/v1/alerts
     list_res = client.get("/api/v1/alerts?status=active")
-    assert list_res.status_code == 200
+    assert list_res.status_code == 200  # nosec B101
     alerts = list_res.json()
-    assert len(alerts) >= 1
-    assert any(a["id"] == alert_id for a in alerts)
+    assert len(alerts) >= 1  # nosec B101
+    assert any(a["id"] == alert_id for a in alerts)  # nosec B101
 
     # GET /api/v1/alerts/summary
     sum_res = client.get("/api/v1/alerts/summary")
-    assert sum_res.status_code == 200
+    assert sum_res.status_code == 200  # nosec B101
     summary = sum_res.json()
-    assert summary["open_count"] >= 1
-    assert summary["warning_count"] >= 1
+    assert summary["open_count"] >= 1  # nosec B101
+    assert summary["warning_count"] >= 1  # nosec B101
 
     # GET single alert
     get_res = client.get(f"/api/v1/alerts/{alert_id}")
-    assert get_res.status_code == 200
-    assert get_res.json()["title"] == "Wi-Fi AP Channel Hopping"
+    assert get_res.status_code == 200  # nosec B101
+    assert get_res.json()["title"] == "Wi-Fi AP Channel Hopping"  # nosec B101
 
     # Ack via alias
     ack_res = client.post(f"/api/v1/alerts/{alert_id}/ack", json={"acknowledged_by": "Operator 42"})
-    assert ack_res.status_code == 200
-    assert ack_res.json()["status"] == "acknowledged"
+    assert ack_res.status_code == 200  # nosec B101
+    assert ack_res.json()["status"] == "acknowledged"  # nosec B101
 
     # Resolve via REST
     res_res = client.post(f"/api/v1/alerts/{alert_id}/resolve", json={"resolution_notes": "RF channel plan locked."})
-    assert res_res.status_code == 200
-    assert res_res.json()["status"] == "resolved"
-    assert res_res.json()["resolution_notes"] == "RF channel plan locked."
+    assert res_res.status_code == 200  # nosec B101
+    assert res_res.json()["status"] == "resolved"  # nosec B101
+    assert res_res.json()["resolution_notes"] == "RF channel plan locked."  # nosec B101
 
     # Delete
     del_res = client.delete(f"/api/v1/alerts/{alert_id}")
-    assert del_res.status_code == 200
+    assert del_res.status_code == 200  # nosec B101
 
 
 # --- 7. Telemetry Wallboard Live Alarms Integration ---
@@ -388,10 +388,10 @@ def test_07_telemetry_wallboard_integration():
     })
 
     res = client.get("/api/v1/wallboard/live-stats")
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     data = res.json()
-    assert data["kpis"]["alarms"] >= 1
-    assert any("Wallboard Live Alarm Test" in inc["title"] for inc in data["incidents"])
+    assert data["kpis"]["alarms"] >= 1  # nosec B101
+    assert any("Wallboard Live Alarm Test" in inc["title"] for inc in data["incidents"])  # nosec B101
 
 
 # --- 8. Web UI HTML Validation & DOM Balance ---
@@ -400,23 +400,23 @@ def test_07_telemetry_wallboard_integration():
 def test_08_dashboard_ui_elements():
     """Validates that the Alert Center DOM elements, modals, PCAP inspection, and balanced DOM exist in dashboard.html."""
     res = client.get("/")
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     html = res.text
 
-    assert "id=\"nav-monitor-alerts\"" in html
-    assert "id=\"view-monitor-alerts\"" in html
-    assert "id=\"noc-alarms-banner\"" in html
-    assert "id=\"alerts-table-body\"" in html
-    assert "id=\"simulate-alert-modal\"" in html
-    assert "id=\"resolve-alert-modal\"" in html
-    assert "id=\"alert-detail-modal\"" in html
-    assert "id=\"maintenance-modal\"" in html
-    assert "id=\"view-configure-maintenance\"" in html
-    assert "id=\"evidence-modal\"" in html
-    assert "id=\"btn-download-pcap\"" in html
-    assert "loadAlertCenterData()" in html
-    assert "openEvidenceModal(" in html
-    assert "renderEvidenceTable(" in html
+    assert "id=\"nav-monitor-alerts\"" in html  # nosec B101
+    assert "id=\"view-monitor-alerts\"" in html  # nosec B101
+    assert "id=\"noc-alarms-banner\"" in html  # nosec B101
+    assert "id=\"alerts-table-body\"" in html  # nosec B101
+    assert "id=\"simulate-alert-modal\"" in html  # nosec B101
+    assert "id=\"resolve-alert-modal\"" in html  # nosec B101
+    assert "id=\"alert-detail-modal\"" in html  # nosec B101
+    assert "id=\"maintenance-modal\"" in html  # nosec B101
+    assert "id=\"view-configure-maintenance\"" in html  # nosec B101
+    assert "id=\"evidence-modal\"" in html  # nosec B101
+    assert "id=\"btn-download-pcap\"" in html  # nosec B101
+    assert "loadAlertCenterData()" in html  # nosec B101
+    assert "openEvidenceModal(" in html  # nosec B101
+    assert "renderEvidenceTable(" in html  # nosec B101
 
     # Strict HTML Tag Balance & Well-Formedness Check
     from html.parser import HTMLParser
@@ -444,8 +444,8 @@ def test_08_dashboard_ui_elements():
 
     checker = TagChecker()
     checker.feed(html)
-    assert len(checker.errors) == 0, f"HTML parser errors encountered: {checker.errors}"
-    assert len(checker.stack) == 0, f"Unclosed tags on stack: {checker.stack}"
+    assert len(checker.errors) == 0, f"HTML parser errors encountered: {checker.errors}"  # nosec B101
+    assert len(checker.stack) == 0, f"Unclosed tags on stack: {checker.stack}"  # nosec B101
 
 
 # --- 9. PromQL Alert Rules YAML Specification Validation ---
@@ -454,23 +454,23 @@ def test_08_dashboard_ui_elements():
 def test_09_alert_rules_yaml_validation():
     """Ensures alerts.rules.yml is well-formed YAML and defines all critical probe rules."""
     rules_path = os.path.join(os.path.dirname(__file__), "deploy", "alerts.rules.yml")
-    assert os.path.exists(rules_path), f"Rules file not found at {rules_path}"
+    assert os.path.exists(rules_path), f"Rules file not found at {rules_path}"  # nosec B101
 
     with open(rules_path, "r") as f:
         rules_data = yaml.safe_load(f)
 
-    assert "groups" in rules_data
-    assert len(rules_data["groups"]) >= 1
+    assert "groups" in rules_data  # nosec B101
+    assert len(rules_data["groups"]) >= 1  # nosec B101
 
     rule_names = []
     for grp in rules_data["groups"]:
         for r in grp.get("rules", []):
             rule_names.append(r.get("alert"))
-            assert "expr" in r
-            assert "labels" in r
-            assert "severity" in r["labels"]
-            assert "annotations" in r
-            assert "summary" in r["annotations"]
+            assert "expr" in r  # nosec B101
+            assert "labels" in r  # nosec B101
+            assert "severity" in r["labels"]  # nosec B101
+            assert "annotations" in r  # nosec B101
+            assert "summary" in r["annotations"]  # nosec B101
 
     expected_rules = [
         "CAASPPUntrustedCertificate",
@@ -485,7 +485,7 @@ def test_09_alert_rules_yaml_validation():
         "ChromebookFleetRssiCritical"
     ]
     for exp in expected_rules:
-        assert exp in rule_names, f"Expected alert rule '{exp}' missing from alerts.rules.yml"
+        assert exp in rule_names, f"Expected alert rule '{exp}' missing from alerts.rules.yml"  # nosec B101
 
 
 # --- 10. Automated Forensic PCAP Evidence Capture & Endpoints ---
@@ -501,38 +501,38 @@ def test_10_pcap_evidence_automatic_freeze_and_endpoints():
         "sensor_id": "pi5-science-01",
         "probe_id": "caaspp_readiness"
     })
-    assert sim_res.status_code == 200
+    assert sim_res.status_code == 200  # nosec B101
     alert_obj = sim_res.json()
     alert_id = alert_obj["id"]
     evidence_id = alert_obj.get("evidence_id")
-    assert evidence_id is not None
-    assert evidence_id.startswith("ev-pcap-")
+    assert evidence_id is not None  # nosec B101
+    assert evidence_id.startswith("ev-pcap-")  # nosec B101
 
     # 2. Retrieve evidence directly for the alert
     ev_res = client.get(f"/api/v1/alerts/{alert_id}/evidence")
-    assert ev_res.status_code == 200
+    assert ev_res.status_code == 200  # nosec B101
     ev_data = ev_res.json()
-    assert ev_data["id"] == evidence_id
-    assert ev_data["sensor_id"] == "pi5-science-01"
-    assert "dissection" in ev_data
-    assert "protocols" in ev_data["dissection"]
+    assert ev_data["id"] == evidence_id  # nosec B101
+    assert ev_data["sensor_id"] == "pi5-science-01"  # nosec B101
+    assert "dissection" in ev_data  # nosec B101
+    assert "protocols" in ev_data["dissection"]  # nosec B101
 
     # 3. Trigger manual PCAP freeze on existing alert
     cap_res = client.post(f"/api/v1/alerts/{alert_id}/capture-pcap")
-    assert cap_res.status_code == 200
+    assert cap_res.status_code == 200  # nosec B101
     new_ev_id = cap_res.json()["evidence_id"]
-    assert new_ev_id is not None
+    assert new_ev_id is not None  # nosec B101
 
     # Verify updated alert has new evidence_id
     alert_updated = client.get(f"/api/v1/alerts/{alert_id}").json()
-    assert alert_updated["evidence_id"] == new_ev_id
+    assert alert_updated["evidence_id"] == new_ev_id  # nosec B101
 
     # 4. List all evidence bundles across the system
     all_ev_res = client.get("/api/v1/evidence", headers={"X-API-Key": "admin-noc-key-change-me"})
-    assert all_ev_res.status_code == 200
+    assert all_ev_res.status_code == 200  # nosec B101
     all_ev_list = all_ev_res.json()
-    assert len(all_ev_list) >= 1
-    assert any(e["id"] == new_ev_id for e in all_ev_list)
+    assert len(all_ev_list) >= 1  # nosec B101
+    assert any(e["id"] == new_ev_id for e in all_ev_list)  # nosec B101
 
 
 # --- 11. Custom Alert Rules Configuration & Toggle API Tests ---
@@ -542,9 +542,9 @@ def test_11_custom_alert_rules_crud_and_toggle():
     """Tests CRUD lifecycle and toggle state for custom metric threshold detection rules."""
     # 1. List seeded default alert rules
     rules_res = client.get("/api/v1/alerts/rules")
-    assert rules_res.status_code == 200
+    assert rules_res.status_code == 200  # nosec B101
     rules = rules_res.json()
-    assert len(rules) >= 6
+    assert len(rules) >= 6  # nosec B101
 
     # 2. Create a new custom threshold rule
     new_rule_payload = {
@@ -564,25 +564,25 @@ def test_11_custom_alert_rules_crud_and_toggle():
         "is_active": True
     }
     create_res = client.post("/api/v1/alerts/rules", json=new_rule_payload)
-    assert create_res.status_code == 200
+    assert create_res.status_code == 200  # nosec B101
     created = create_res.json()
-    assert created["id"] == "rule_ci_test_dns"
-    assert created["threshold_value"] == 750.0
+    assert created["id"] == "rule_ci_test_dns"  # nosec B101
+    assert created["threshold_value"] == 750.0  # nosec B101
 
     # 3. Retrieve rule by ID
     get_res = client.get("/api/v1/alerts/rules/rule_ci_test_dns")
-    assert get_res.status_code == 200
-    assert get_res.json()["name"] == "CI Test DNS Latency Threshold"
+    assert get_res.status_code == 200  # nosec B101
+    assert get_res.json()["name"] == "CI Test DNS Latency Threshold"  # nosec B101
 
     # 4. Toggle rule active state
     toggle_res = client.post("/api/v1/alerts/rules/rule_ci_test_dns/toggle")
-    assert toggle_res.status_code == 200
-    assert toggle_res.json()["is_active"] is False
+    assert toggle_res.status_code == 200  # nosec B101
+    assert toggle_res.json()["is_active"] is False  # nosec B101
 
     # 5. Delete rule
     del_res = client.delete("/api/v1/alerts/rules/rule_ci_test_dns")
-    assert del_res.status_code == 200
-    assert client.get("/api/v1/alerts/rules/rule_ci_test_dns").status_code == 404
+    assert del_res.status_code == 200  # nosec B101
+    assert client.get("/api/v1/alerts/rules/rule_ci_test_dns").status_code == 404  # nosec B101
 
 
 # --- 12. Notification Channels Webhook Dispatch & Test API Tests ---
@@ -592,9 +592,9 @@ def test_12_notification_channels_crud_and_test_dispatch():
     """Tests CRUD operations and test dispatch connectivity for outbound webhook destinations."""
     # 1. List default notification channels
     chans_res = client.get("/api/v1/alerts/channels")
-    assert chans_res.status_code == 200
+    assert chans_res.status_code == 200  # nosec B101
     channels = chans_res.json()
-    assert len(channels) >= 3
+    assert len(channels) >= 3  # nosec B101
 
     # 2. Create new PagerDuty channel
     new_chan_payload = {
@@ -607,10 +607,10 @@ def test_12_notification_channels_crud_and_test_dispatch():
         "is_active": True
     }
     create_res = client.post("/api/v1/alerts/channels", json=new_chan_payload)
-    assert create_res.status_code == 200
+    assert create_res.status_code == 200  # nosec B101
     created = create_res.json()
-    assert created["id"] == "chan_ci_test_pd"
-    assert created["channel_type"] == "pagerduty"
+    assert created["id"] == "chan_ci_test_pd"  # nosec B101
+    assert created["channel_type"] == "pagerduty"  # nosec B101
 
     # 3. Send test notification to channel
     test_res = client.post("/api/v1/alerts/channels/chan_ci_test_pd/test", json={
@@ -618,13 +618,13 @@ def test_12_notification_channels_crud_and_test_dispatch():
         "sample_severity": "critical",
         "sample_message": "Verifying delivery engine."
     })
-    assert test_res.status_code == 200
-    assert "status" in test_res.json()
+    assert test_res.status_code == 200  # nosec B101
+    assert "status" in test_res.json()  # nosec B101
 
     # 4. Delete channel
     del_res = client.delete("/api/v1/alerts/channels/chan_ci_test_pd")
-    assert del_res.status_code == 200
-    assert client.get("/api/v1/alerts/channels/chan_ci_test_pd").status_code == 404
+    assert del_res.status_code == 200  # nosec B101
+    assert client.get("/api/v1/alerts/channels/chan_ci_test_pd").status_code == 404  # nosec B101
 
 
 # --- 13. District K-12 Email (SMTP) Channel & Dispatch Tests ---
@@ -652,8 +652,8 @@ def test_13_district_email_smtp_dispatch():
         "is_active": True
     }
     g_res = client.post("/api/v1/alerts/channels", json=g_relay_payload)
-    assert g_res.status_code == 200
-    assert g_res.json()["channel_type"] == "email"
+    assert g_res.status_code == 200  # nosec B101
+    assert g_res.json()["channel_type"] == "email"  # nosec B101
 
     # 2. Create Microsoft 365 Exchange Online channel
     m365_payload = {
@@ -675,7 +675,7 @@ def test_13_district_email_smtp_dispatch():
         "is_active": True
     }
     m_res = client.post("/api/v1/alerts/channels", json=m365_payload)
-    assert m_res.status_code == 200
+    assert m_res.status_code == 200  # nosec B101
 
     # 3. Trigger test email dispatch
     test_res = client.post("/api/v1/alerts/channels/chan_google_workspace/test", json={
@@ -683,10 +683,10 @@ def test_13_district_email_smtp_dispatch():
         "sample_severity": "critical",
         "sample_message": "Cambium TDS pre-flight synthetic probe failed TLS handshake on science wing sensor."
     })
-    assert test_res.status_code == 200
+    assert test_res.status_code == 200  # nosec B101
     test_data = test_res.json()
-    assert test_data["delivered"] is True
-    assert "Simulated Email" in test_data["channel"]["last_status"]
+    assert test_data["delivered"] is True  # nosec B101
+    assert "Simulated Email" in test_data["channel"]["last_status"]  # nosec B101
 
     # 4. Clean up test channels
     client.delete("/api/v1/alerts/channels/chan_google_workspace")
@@ -702,8 +702,8 @@ def test_14_maintenance_windows_muting_lifecycle():
 
     # 1. List maintenance windows
     list_res = client.get("/api/v1/alerts/maintenance-windows")
-    assert list_res.status_code == 200
-    assert isinstance(list_res.json(), list)
+    assert list_res.status_code == 200  # nosec B101
+    assert isinstance(list_res.json(), list)  # nosec B101
 
     # 2. Create an active maintenance window for West Campus
     maint_payload = {
@@ -720,16 +720,16 @@ def test_14_maintenance_windows_muting_lifecycle():
         "created_by": "District NOC Engineer"
     }
     create_res = client.post("/api/v1/alerts/maintenance-windows", json=maint_payload)
-    assert create_res.status_code == 200
+    assert create_res.status_code == 200  # nosec B101
     created = create_res.json()
-    assert created["id"] == "maint_ci_west_switch"
-    assert created["is_active"] is True
+    assert created["id"] == "maint_ci_west_switch"  # nosec B101
+    assert created["is_active"] is True  # nosec B101
 
     # 3. Verify window is returned in active-now endpoint
     active_res = client.get("/api/v1/alerts/maintenance-windows/active-now")
-    assert active_res.status_code == 200
+    assert active_res.status_code == 200  # nosec B101
     active_list = active_res.json()
-    assert any(w["id"] == "maint_ci_west_switch" for w in active_list)
+    assert any(w["id"] == "maint_ci_west_switch" for w in active_list)  # nosec B101
 
     # 4. Trigger alert that MATCHES maintenance window scope
     matched_alert_res = client.post("/api/v1/alerts/simulate", json={
@@ -741,11 +741,11 @@ def test_14_maintenance_windows_muting_lifecycle():
         "sensor_id": "sensor-west-01",
         "probe_id": "caaspp_readiness"
     })
-    assert matched_alert_res.status_code == 200
+    assert matched_alert_res.status_code == 200  # nosec B101
     matched_alert = matched_alert_res.json()
-    assert matched_alert["is_muted"] is True
-    assert matched_alert["muted_by_window_id"] == "maint_ci_west_switch"
-    assert matched_alert["muted_by_window_name"] == "West Campus Core Switch Firmware Upgrade"
+    assert matched_alert["is_muted"] is True  # nosec B101
+    assert matched_alert["muted_by_window_id"] == "maint_ci_west_switch"  # nosec B101
+    assert matched_alert["muted_by_window_name"] == "West Campus Core Switch Firmware Upgrade"  # nosec B101
 
     # 5. Trigger alert that DOES NOT MATCH maintenance window scope (different campus)
     unmatched_alert_res = client.post("/api/v1/alerts/simulate", json={
@@ -757,15 +757,15 @@ def test_14_maintenance_windows_muting_lifecycle():
         "sensor_id": "sensor-east-01",
         "probe_id": "caaspp_readiness"
     })
-    assert unmatched_alert_res.status_code == 200
+    assert unmatched_alert_res.status_code == 200  # nosec B101
     unmatched_alert = unmatched_alert_res.json()
-    assert unmatched_alert["is_muted"] is False
-    assert unmatched_alert["muted_by_window_id"] is None
+    assert unmatched_alert["is_muted"] is False  # nosec B101
+    assert unmatched_alert["muted_by_window_id"] is None  # nosec B101
 
     # 6. Toggle maintenance window to disabled
     toggle_res = client.post("/api/v1/alerts/maintenance-windows/maint_ci_west_switch/toggle")
-    assert toggle_res.status_code == 200
-    assert toggle_res.json()["is_active"] is False
+    assert toggle_res.status_code == 200  # nosec B101
+    assert toggle_res.json()["is_active"] is False  # nosec B101
 
     # 7. Trigger alert on West Campus now that window is disabled -> should NOT be muted
     after_toggle_res = client.post("/api/v1/alerts/simulate", json={
@@ -777,13 +777,13 @@ def test_14_maintenance_windows_muting_lifecycle():
         "sensor_id": "sensor-west-01",
         "probe_id": "caaspp_readiness"
     })
-    assert after_toggle_res.status_code == 200
-    assert after_toggle_res.json()["is_muted"] is False
+    assert after_toggle_res.status_code == 200  # nosec B101
+    assert after_toggle_res.json()["is_muted"] is False  # nosec B101
 
     # 8. Clean up maintenance window
     del_res = client.delete("/api/v1/alerts/maintenance-windows/maint_ci_west_switch")
-    assert del_res.status_code == 200
-    assert client.get("/api/v1/alerts/maintenance-windows/maint_ci_west_switch").status_code == 404
+    assert del_res.status_code == 200  # nosec B101
+    assert client.get("/api/v1/alerts/maintenance-windows/maint_ci_west_switch").status_code == 404  # nosec B101
 
     # 9. Test Multi-Day Construction Window (e.g. 7-Day Campus Rewiring & AP Replacement)
     const_payload = {
@@ -801,10 +801,10 @@ def test_14_maintenance_windows_muting_lifecycle():
         "created_by": "Facilities & NOC Project Manager"
     }
     const_res = client.post("/api/v1/alerts/maintenance-windows", json=const_payload)
-    assert const_res.status_code == 200
+    assert const_res.status_code == 200  # nosec B101
     const_data = const_res.json()
-    assert const_data["window_type"] == "construction"
-    assert const_data["ends_at"] - const_data["starts_at"] == (7 * 86400 + 3600)
+    assert const_data["window_type"] == "construction"  # nosec B101
+    assert const_data["ends_at"] - const_data["starts_at"] == (7 * 86400 + 3600)  # nosec B101
 
     # 10. Test Expiration Reminder Warnings (24h warning trigger)
     # Create an expiring construction window ending in 1 hour (less than 24h & 2h)
@@ -823,10 +823,10 @@ def test_14_maintenance_windows_muting_lifecycle():
     client.post("/api/v1/alerts/maintenance-windows", json=expiring_payload)
 
     rem_res = client.post("/api/v1/alerts/maintenance-windows/check-reminders")
-    assert rem_res.status_code == 200
+    assert rem_res.status_code == 200  # nosec B101
     rem_data = rem_res.json()
-    assert rem_data["status"] == "success"
-    assert rem_data["reminders_dispatched"] >= 1
+    assert rem_data["status"] == "success"  # nosec B101
+    assert rem_data["reminders_dispatched"] >= 1  # nosec B101
 
     # Cleanup
     client.delete("/api/v1/alerts/maintenance-windows/maint_ci_const_7day")

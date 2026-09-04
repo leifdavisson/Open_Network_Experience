@@ -33,7 +33,7 @@ def safe_urlopen(req, timeout=15):
     url = req.full_url if hasattr(req, 'full_url') else req
     if not url.startswith("http://") and not url.startswith("https://"):
         raise ValueError("Invalid protocol scheme in URL")
-    return safe_urlopen(req, timeout=timeout)
+    return urllib.request.urlopen(req, timeout=timeout)  # nosec B310
 
 class DOMStructureParser(HTMLParser):
     """Parses HTML DOM elements, IDs, classes, buttons, and event bindings."""
