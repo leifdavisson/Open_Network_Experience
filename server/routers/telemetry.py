@@ -42,7 +42,7 @@ async def health_check():
     """Returns platform status, active sensors count, and server timestamp."""
     return {
         "status": "ok",
-        "version": "0.6.0",
+        "version": "0.6.1",
         "timestamp": int(time.time()),
         "active_sensors": len(SENSORS_DB),
         "district": "Unified School District"

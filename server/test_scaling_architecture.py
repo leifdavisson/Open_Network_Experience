@@ -59,15 +59,15 @@ def test_campus_hierarchy_crud():
         "contact_email": "tech@westhigh.edu"
     }
     res = client.post("/api/v1/campuses", json=campus_payload, headers=ADMIN_HEADERS)
-    assert res.status_code == 200
-    assert res.json()["status"] == "success"
+    assert res.status_code == 200  # nosec B101
+    assert res.json()["status"] == "success"  # nosec B101
 
     res = client.get("/api/v1/campuses", headers=ADMIN_HEADERS)
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     campuses = res.json()
-    assert len(campuses) == 1
-    assert campuses[0]["campus_id"] == "CAMPUS-WEST-HIGH"
-    assert campuses[0]["sensor_count"] == 0
+    assert len(campuses) == 1  # nosec B101
+    assert campuses[0]["campus_id"] == "CAMPUS-WEST-HIGH"  # nosec B101
+    assert campuses[0]["sensor_count"] == 0  # nosec B101
 
 @verifies("REQ-ONB-003")
 @verifies("REQ-ONB-003")
@@ -81,7 +81,7 @@ def test_subnet_auto_enroll_ztp():
         "auto_approve": True
     }
     res = client.post("/api/v1/subnets", json=subnet_payload, headers=ADMIN_HEADERS)
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
 
     reg_payload = {
         "sensor_id": "sensor-ztp-01",
@@ -95,17 +95,17 @@ def test_subnet_auto_enroll_ztp():
         json=reg_payload,
         headers={"X-Forwarded-For": "10.142.10.55"}
     )
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     data = res.json()
-    assert data["status"] == "approved"
-    assert data["api_key"] is not None
-    assert data["api_key"].startswith("key_")
+    assert data["status"] == "approved"  # nosec B101
+    assert data["api_key"] is not None  # nosec B101
+    assert data["api_key"].startswith("key_")  # nosec B101
 
     sensor = main.SENSORS_DB.get("sensor-ztp-01")
-    assert sensor is not None
-    assert sensor["campus_id"] == "CAMPUS-WEST-HIGH"
-    assert sensor["location"].site == "West High School"
-    assert sensor["location"].building == "Science Wing A"
+    assert sensor is not None  # nosec B101
+    assert sensor["campus_id"] == "CAMPUS-WEST-HIGH"  # nosec B101
+    assert sensor["location"].site == "West High School"  # nosec B101
+    assert sensor["location"].building == "Science Wing A"  # nosec B101
 
 def test_batch_sensor_approval():
     """Validates bulk approval of pending sensors."""
@@ -125,13 +125,13 @@ def test_batch_sensor_approval():
         "building": "Main Hall"
     }
     res = client.post("/api/v1/sensors/batch-approve", json=batch_payload, headers=ADMIN_HEADERS)
-    assert res.status_code == 200
-    assert res.json()["approved_count"] == 3
+    assert res.status_code == 200  # nosec B101
+    assert res.json()["approved_count"] == 3  # nosec B101
 
     for i in range(1, 4):
         s = main.SENSORS_DB[f"pending-sensor-{i}"]
-        assert s["status"] == "approved"
-        assert s["campus_id"] == "CAMPUS-RIDGEVIEW"
+        assert s["status"] == "approved"  # nosec B101
+        assert s["campus_id"] == "CAMPUS-RIDGEVIEW"  # nosec B101
 
 def test_on_demand_burst_trigger():
     """Validates triggering 1-second high-resolution burst on sensors."""
@@ -151,9 +151,9 @@ def test_on_demand_burst_trigger():
         "reason": "packet_loss_investigation"
     }
     res = client.post("/api/v1/sensors/burst", json=burst_payload, headers=ADMIN_HEADERS)
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
 
-    assert main.SENSORS_DB[s_id]["probing_state"] == "ON_DEMAND"
+    assert main.SENSORS_DB[s_id]["probing_state"] == "ON_DEMAND"  # nosec B101
 
 def test_adaptive_resolution_state_machine():
     """Validates the edge AdaptiveResolutionEngine state transitions and intervals."""
@@ -162,76 +162,76 @@ def test_adaptive_resolution_state_machine():
     # Mock gateway reachability healthy
     engine.check_gateway_reachability = lambda: (True, 12.0)
     state = engine.evaluate_state()
-    assert state == "GREEN"
-    assert engine.get_sleep_interval() == 15
+    assert state == "GREEN"  # nosec B101
+    assert engine.get_sleep_interval() == 15  # nosec B101
 
     # Mock high latency (>80ms) -> AMBER
     engine.check_gateway_reachability = lambda: (True, 95.0)
     state = engine.evaluate_state()
-    assert state == "AMBER"
-    assert engine.get_sleep_interval() == 5
+    assert state == "AMBER"  # nosec B101
+    assert engine.get_sleep_interval() == 5  # nosec B101
 
     # Mock gateway unreachable 1x -> RED
     engine.check_gateway_reachability = lambda: (False, 0.0)
     state = engine.evaluate_state()
-    assert state == "RED"
-    assert engine.get_sleep_interval() == 1
+    assert state == "RED"  # nosec B101
+    assert engine.get_sleep_interval() == 1  # nosec B101
 
     # Mock gateway unreachable 3x -> BLACKOUT (Backoff state)
     engine.evaluate_state()
     state = engine.evaluate_state()
-    assert state == "BLACKOUT"
-    assert engine.get_sleep_interval() == 300 # 5 min dampened interval
+    assert state == "BLACKOUT"  # nosec B101
+    assert engine.get_sleep_interval() == 300 # 5 min dampened interval  # nosec B101
 
     # Mock ON_DEMAND command
     state = engine.evaluate_state(commanded_state="ON_DEMAND")
-    assert state == "ON_DEMAND"
-    assert engine.get_sleep_interval() == 1
+    assert state == "ON_DEMAND"  # nosec B101
+    assert engine.get_sleep_interval() == 1  # nosec B101
 
 def test_install_script_endpoint():
     """Validates that CMP serves the 1-line curl installer script."""
     res = client.get("/install.sh")
-    assert res.status_code == 200
-    assert "Open Network Experience (ONE) Edge Sensor Installer" in res.text
-    assert "--cmp" in res.text
-    assert "--site" in res.text
-    assert "--wizard" in res.text
+    assert res.status_code == 200  # nosec B101
+    assert "Open Network Experience (ONE) Edge Sensor Installer" in res.text  # nosec B101
+    assert "--cmp" in res.text  # nosec B101
+    assert "--site" in res.text  # nosec B101
+    assert "--wizard" in res.text  # nosec B101
 
 def test_install_script_with_query_params():
     """Validates dynamic substitution of campus, room, and wizard flags via query parameters."""
     res = client.get("/install.sh?site=West+High+School&room=Room+204&building=Science+Wing&wizard=true")
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     # After shell injection fix, values are wrapped via shlex.quote() (single-quoted)
-    assert "SITE_NAME='West High School'" in res.text
-    assert "ROOM_NAME='Room 204'" in res.text
-    assert "BUILDING_NAME='Science Wing'" in res.text
-    assert 'LAUNCH_WIZARD=1' in res.text
+    assert "SITE_NAME='West High School'" in res.text  # nosec B101
+    assert "ROOM_NAME='Room 204'" in res.text  # nosec B101
+    assert "BUILDING_NAME='Science Wing'" in res.text  # nosec B101
+    assert 'LAUNCH_WIZARD=1' in res.text  # nosec B101
 
 def test_health_check_endpoint():
     """Validates platform health and readiness endpoint."""
     res = client.get("/api/v1/health")
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     data = res.json()
-    assert data["status"] == "ok"
-    assert "active_sensors" in data
-    assert "version" in data
+    assert data["status"] == "ok"  # nosec B101
+    assert "active_sensors" in data  # nosec B101
+    assert "version" in data  # nosec B101
 
 def test_sensor_script_distribution():
     """Validates that CMP serves edge synthetic probe scripts for remote curl bootstrap."""
     res = client.get("/sensor/scripts/reconciler.py")
-    assert res.status_code == 200
-    assert "AdaptiveResolutionEngine" in res.text
+    assert res.status_code == 200  # nosec B101
+    assert "AdaptiveResolutionEngine" in res.text  # nosec B101
 
     res = client.get("/sensor/scripts/wizard.py")
-    assert res.status_code == 200
-    assert "one-wizard" in res.text
+    assert res.status_code == 200  # nosec B101
+    assert "one-wizard" in res.text  # nosec B101
 
     res = client.get("/sensor/scripts/usb_provisioner.py")
-    assert res.status_code == 200
-    assert "USB AUTO-PROVISIONER" in res.text
+    assert res.status_code == 200  # nosec B101
+    assert "USB AUTO-PROVISIONER" in res.text  # nosec B101
 
     res = client.get("/sensor/scripts/cipa_compliance.py")
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
 
 def test_download_usb_staging_kit():
     """Validates dynamic generation of in-memory USB Staging Kit zip file."""
@@ -239,28 +239,28 @@ def test_download_usb_staging_kit():
     import io
 
     res = client.get("/api/v1/onboarding/usb-kit.zip?site=West+High&room=Room+204&wifi_ssid=School-Staff&wifi_psk=Secret88")
-    assert res.status_code == 200
-    assert res.headers["content-type"] == "application/zip"
-    assert "attachment; filename=one_usb_staging_kit.zip" in res.headers.get("content-disposition", "")
+    assert res.status_code == 200  # nosec B101
+    assert res.headers["content-type"] == "application/zip"  # nosec B101
+    assert "attachment; filename=one_usb_staging_kit.zip" in res.headers.get("content-disposition", "")  # nosec B101
 
     # Inspect zip contents in memory
     zip_bytes = io.BytesIO(res.content)
     with zipfile.ZipFile(zip_bytes, "r") as zf:
         file_list = zf.namelist()
-        assert "one-bootstrap.json" in file_list
-        assert "setup.sh" in file_list
-        assert "usb_provisioner.py" in file_list
-        assert "wizard.py" in file_list
-        assert "reconciler.py" in file_list
-        assert "README_USB_STAGING.txt" in file_list
+        assert "one-bootstrap.json" in file_list  # nosec B101
+        assert "setup.sh" in file_list  # nosec B101
+        assert "usb_provisioner.py" in file_list  # nosec B101
+        assert "wizard.py" in file_list  # nosec B101
+        assert "reconciler.py" in file_list  # nosec B101
+        assert "README_USB_STAGING.txt" in file_list  # nosec B101
 
         # Validate bootstrap json content
         bootstrap_raw = zf.read("one-bootstrap.json").decode("utf-8")
         bootstrap_cfg = json.loads(bootstrap_raw)
-        assert bootstrap_cfg["location"]["site"] == "West High"
-        assert bootstrap_cfg["location"]["room"] == "Room 204"
-        assert bootstrap_cfg["wifi"]["ssid"] == "School-Staff"
-        assert bootstrap_cfg["wifi"]["psk"] == "Secret88"
+        assert bootstrap_cfg["location"]["site"] == "West High"  # nosec B101
+        assert bootstrap_cfg["location"]["room"] == "Room 204"  # nosec B101
+        assert bootstrap_cfg["wifi"]["ssid"] == "School-Staff"  # nosec B101
+        assert bootstrap_cfg["wifi"]["psk"] == "Secret88"  # nosec B101
 
 def test_visual_schedule_crud_and_toggle():
     """Validates Visual Probe Schedule CRUD, timing modes, and toggle endpoints."""
@@ -282,27 +282,27 @@ def test_visual_schedule_crud_and_toggle():
 
     # 1. Create Schedule
     res = client.post("/api/v1/schedules", json=sch_payload, headers={"X-API-Key": ADMIN_KEY})
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
 
     # 2. List Schedules
     res = client.get("/api/v1/schedules", headers={"X-API-Key": ADMIN_KEY})
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
     schedules = res.json()
-    assert any(s["id"] == "sched_test_unit" for s in schedules)
+    assert any(s["id"] == "sched_test_unit" for s in schedules)  # nosec B101
 
     # 3. Toggle Active State
     res = client.put("/api/v1/schedules/sched_test_unit/toggle", headers={"X-API-Key": ADMIN_KEY})
-    assert res.status_code == 200
-    assert res.json()["is_active"] is False
+    assert res.status_code == 200  # nosec B101
+    assert res.json()["is_active"] is False  # nosec B101
 
     # 4. Re-enable
     res = client.put("/api/v1/schedules/sched_test_unit/toggle", headers={"X-API-Key": ADMIN_KEY})
-    assert res.status_code == 200
-    assert res.json()["is_active"] is True
+    assert res.status_code == 200  # nosec B101
+    assert res.json()["is_active"] is True  # nosec B101
 
     # 5. Delete Schedule
     res = client.delete("/api/v1/schedules/sched_test_unit", headers={"X-API-Key": ADMIN_KEY})
-    assert res.status_code == 200
+    assert res.status_code == 200  # nosec B101
 
 def test_edge_reconciliation_unified_schedules():
     """Validates that edge sensor reconciliation receives active unified visual schedules."""
@@ -342,8 +342,8 @@ def test_edge_reconciliation_unified_schedules():
         "containers": {}
     }
     rec_res = client.post("/api/v1/sensors/reconcile", json=report_payload, headers={"X-API-Key": api_key})
-    assert rec_res.status_code == 200
+    assert rec_res.status_code == 200  # nosec B101
     target_config = rec_res.json()
-    assert "unified_schedules" in target_config
-    assert len(target_config["unified_schedules"]) > 0
-    assert any(s["probe_id"] == "caaspp_readiness" for s in target_config["unified_schedules"])
+    assert "unified_schedules" in target_config  # nosec B101
+    assert len(target_config["unified_schedules"]) > 0  # nosec B101
+    assert any(s["probe_id"] == "caaspp_readiness" for s in target_config["unified_schedules"])  # nosec B101

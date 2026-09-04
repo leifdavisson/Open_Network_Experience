@@ -1,0 +1,2234 @@
+{
+  "platform": "Open Network Experience",
+  "version": "0.6.0",
+  "exported_at": 1788414750,
+  "export_date": "2026-09-03T05:52:30Z",
+  "sensors": {
+    "sched-test-sensor-01": {
+      "sensor_id": "sched-test-sensor-01",
+      "status": "approved",
+      "api_key": "sensor-key-3a61540ab34b7f24d3eb9f920cefe178",
+      "hostname": "bandwidth-test-node",
+      "mac_address": "11:22:33:44:55:66",
+      "os": "linux",
+      "last_seen": 1788414750,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Default District",
+        "site": "Main Campus",
+        "building": "Main Building",
+        "room": "Room 101",
+        "notes": null,
+        "latitude": null,
+        "longitude": null,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": true,
+            "server": "speedtest.example.com",
+            "port": 5201,
+            "duration_seconds": 15,
+            "bandwidth_cap_mbps": 250,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "22:00-05:00"
+            ],
+            "interval_seconds": 7200,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "pcap-test-sensor-1788414295": {
+      "sensor_id": "pcap-test-sensor-1788414295",
+      "status": "approved",
+      "api_key": "sensor-key-01314c74b06731d6a90ae7a000ee7914",
+      "hostname": "pcap-node",
+      "mac_address": "22:33:44:55:66:77",
+      "os": "linux",
+      "last_seen": 1788414295,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Default District",
+        "site": "Main Campus",
+        "building": "Main Building",
+        "room": "Room 101",
+        "notes": null,
+        "latitude": null,
+        "longitude": null,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "high_latency_spike"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "easybuilder-node-1788414295": {
+      "sensor_id": "easybuilder-node-1788414295",
+      "status": "approved",
+      "api_key": "sensor-key-0c5a3ee83f2e7333cd6a7d38c1fe21af",
+      "hostname": "stem-lab",
+      "mac_address": "AA:BB:CC:DD:EE:FF",
+      "os": "linux",
+      "last_seen": 1788414295,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Default District",
+        "site": "Main Campus",
+        "building": "Main Building",
+        "room": "Room 101",
+        "notes": null,
+        "latitude": null,
+        "longitude": null,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "location-test-1788414295": {
+      "sensor_id": "location-test-1788414295",
+      "status": "approved",
+      "api_key": "sensor-key-4bad623266526cd9df41ccd63e0b1edb",
+      "hostname": "outdoor-quad-sensor",
+      "mac_address": "CC:DD:EE:11:22:33",
+      "os": "linux",
+      "last_seen": 1788414295,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Unified School District",
+        "site": "North High Campus",
+        "building": "Library Wing",
+        "room": "Room 204",
+        "notes": "Mounted on ceiling grid",
+        "latitude": 35.3745,
+        "longitude": -119.0192,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "diag-test-sensor-1788414295": {
+      "sensor_id": "diag-test-sensor-1788414295",
+      "status": "approved",
+      "api_key": "sensor-key-6fbb4d471a4e6004146363026f2593b2",
+      "hostname": "diag-runner-node",
+      "mac_address": "00:11:22:33:44:55",
+      "os": "linux",
+      "last_seen": 1788414295,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Unified School District",
+        "site": "City Center",
+        "building": "1300 17th St",
+        "room": "IT Operations",
+        "notes": null,
+        "latitude": 0.0,
+        "longitude": 0.0,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "chromebook-sn-test1788414295": {
+      "sensor_id": "chromebook-sn-test1788414295",
+      "status": "approved",
+      "api_key": "",
+      "hostname": "cb-student-204-01",
+      "mac_address": "unknown",
+      "os": "ChromeOS",
+      "last_seen": 1788414295,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Unknown District",
+        "site": "Unknown Site",
+        "building": "Unknown Building",
+        "room": "Unknown Room",
+        "notes": "",
+        "latitude": 0.0,
+        "longitude": 0.0,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "pcap-test-sensor-1788414488": {
+      "sensor_id": "pcap-test-sensor-1788414488",
+      "status": "approved",
+      "api_key": "sensor-key-ab9aeb7a7208e3d8e33b369534e56db4",
+      "hostname": "pcap-node",
+      "mac_address": "22:33:44:55:66:77",
+      "os": "linux",
+      "last_seen": 1788414488,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Default District",
+        "site": "Main Campus",
+        "building": "Main Building",
+        "room": "Room 101",
+        "notes": null,
+        "latitude": null,
+        "longitude": null,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "high_latency_spike"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "easybuilder-node-1788414489": {
+      "sensor_id": "easybuilder-node-1788414489",
+      "status": "approved",
+      "api_key": "sensor-key-3d28814d354a23e861438d6c5f9f8074",
+      "hostname": "stem-lab",
+      "mac_address": "AA:BB:CC:DD:EE:FF",
+      "os": "linux",
+      "last_seen": 1788414489,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Default District",
+        "site": "Main Campus",
+        "building": "Main Building",
+        "room": "Room 101",
+        "notes": null,
+        "latitude": null,
+        "longitude": null,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "location-test-1788414489": {
+      "sensor_id": "location-test-1788414489",
+      "status": "approved",
+      "api_key": "sensor-key-24ffa1d3a1b144feb3f5af14b9354bc4",
+      "hostname": "outdoor-quad-sensor",
+      "mac_address": "CC:DD:EE:11:22:33",
+      "os": "linux",
+      "last_seen": 1788414489,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Unified School District",
+        "site": "North High Campus",
+        "building": "Library Wing",
+        "room": "Room 204",
+        "notes": "Mounted on ceiling grid",
+        "latitude": 35.3745,
+        "longitude": -119.0192,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "diag-test-sensor-1788414489": {
+      "sensor_id": "diag-test-sensor-1788414489",
+      "status": "approved",
+      "api_key": "sensor-key-0b44df4e1b4c18245b8cf28816e79b99",
+      "hostname": "diag-runner-node",
+      "mac_address": "00:11:22:33:44:55",
+      "os": "linux",
+      "last_seen": 1788414489,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Unified School District",
+        "site": "City Center",
+        "building": "1300 17th St",
+        "room": "IT Operations",
+        "notes": null,
+        "latitude": 0.0,
+        "longitude": 0.0,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "chromebook-sn-test1788414489": {
+      "sensor_id": "chromebook-sn-test1788414489",
+      "status": "approved",
+      "api_key": "",
+      "hostname": "cb-student-204-01",
+      "mac_address": "unknown",
+      "os": "ChromeOS",
+      "last_seen": 1788414489,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Unknown District",
+        "site": "Unknown Site",
+        "building": "Unknown Building",
+        "room": "Unknown Room",
+        "notes": "",
+        "latitude": 0.0,
+        "longitude": 0.0,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "pcap-test-sensor-1788414750": {
+      "sensor_id": "pcap-test-sensor-1788414750",
+      "status": "approved",
+      "api_key": "sensor-key-75ce47ceaa262d2ca07a9c0d43469b6c",
+      "hostname": "pcap-node",
+      "mac_address": "22:33:44:55:66:77",
+      "os": "linux",
+      "last_seen": 1788414750,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Default District",
+        "site": "Main Campus",
+        "building": "Main Building",
+        "room": "Room 101",
+        "notes": null,
+        "latitude": null,
+        "longitude": null,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "high_latency_spike"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "easybuilder-node-1788414750": {
+      "sensor_id": "easybuilder-node-1788414750",
+      "status": "approved",
+      "api_key": "sensor-key-1f1fc7aadc2aba5155a263c1869f4225",
+      "hostname": "stem-lab",
+      "mac_address": "AA:BB:CC:DD:EE:FF",
+      "os": "linux",
+      "last_seen": 1788414750,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Default District",
+        "site": "Main Campus",
+        "building": "Main Building",
+        "room": "Room 101",
+        "notes": null,
+        "latitude": null,
+        "longitude": null,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    },
+    "location-test-1788414750": {
+      "sensor_id": "location-test-1788414750",
+      "status": "approved",
+      "api_key": "sensor-key-cacd126c4d804a024805a44d5ed9c9d0",
+      "hostname": "outdoor-quad-sensor",
+      "mac_address": "CC:DD:EE:11:22:33",
+      "os": "linux",
+      "last_seen": 1788414750,
+      "reset_flag": false,
+      "campus_id": null,
+      "probing_state": "GREEN",
+      "location": {
+        "district": "Unified School District",
+        "site": "North High Campus",
+        "building": "Library Wing",
+        "room": "Room 204",
+        "notes": "Mounted on ceiling grid",
+        "latitude": 35.3745,
+        "longitude": -119.0192,
+        "altitude_meters": null,
+        "is_gps_auto": false,
+        "last_gps_fix": null
+      },
+      "target_config": {
+        "reset": false,
+        "ota_upgrade": false,
+        "wifi": {
+          "ssid": "District-Testing",
+          "security": "open",
+          "psk": null,
+          "username": null,
+          "password": null
+        },
+        "containers": {
+          "blackbox-exporter": {
+            "image": "prom/blackbox-exporter:master",
+            "ports": [
+              "9115:9115"
+            ],
+            "volumes": [],
+            "env": {},
+            "command": null
+          },
+          "node-exporter": {
+            "image": "prom/node-exporter:v1.8.2",
+            "ports": [
+              "9100:9100"
+            ],
+            "volumes": [
+              "/:/host:ro,rslave"
+            ],
+            "env": {},
+            "command": [
+              "--path.rootfs=/host",
+              "--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector"
+            ]
+          },
+          "browser-transaction-tester": {
+            "image": "open-ux/playwright-runner:latest",
+            "ports": [],
+            "volumes": [
+              "/var/lib/node_exporter/textfile_collector:/metrics"
+            ],
+            "env": {
+              "TARGET_URL": "https://portal.example.edu",
+              "TEST_TYPE": "page",
+              "TEST_INTERVAL_SECONDS": "300"
+            },
+            "command": null
+          }
+        },
+        "schedules": {
+          "bandwidth": {
+            "enabled": false,
+            "server": "iperf3.example.com",
+            "port": 5201,
+            "duration_seconds": 10,
+            "bandwidth_cap_mbps": 100,
+            "interfaces": [
+              "eth0",
+              "wlan0"
+            ],
+            "allowed_hours": [
+              "20:00-06:00"
+            ],
+            "interval_seconds": 3600,
+            "run_now": false
+          },
+          "cipa": {
+            "enabled": true,
+            "interval_seconds": 300
+          },
+          "browser": {
+            "enabled": true,
+            "interval_seconds": 300,
+            "targets": [
+              "https://google.com"
+            ]
+          },
+          "caaspp": {
+            "enabled": true,
+            "interval_seconds": 300
+          }
+        },
+        "adaptive_probing": {
+          "enabled": true,
+          "green_ping_interval_seconds": 15,
+          "amber_ping_interval_seconds": 5,
+          "red_ping_interval_seconds": 1,
+          "blackout_interval_seconds": 300,
+          "cooldown_seconds": 90,
+          "on_demand_burst_duration_seconds": 60
+        },
+        "probing_state": "GREEN",
+        "pcap_trigger": {
+          "trigger_now": false,
+          "reason": "manual_noc_trigger"
+        },
+        "custom_probes": [],
+        "unified_schedules": []
+      },
+      "reported_containers": {}
+    }
+  },
+  "probes": {},
+  "evidence": {
+    "pcap-test-sensor-1788414750": [
+      {
+        "id": "ev-pcap-pcap-tes-1788414750",
+        "bundle_id": "ev-pcap-pcap-tes-1788414750",
+        "sensor_id": "pcap-test-sensor-1788414750",
+        "timestamp": 1788414750,
+        "trigger_reason": "high_latency_spike",
+        "reason": "high_latency_spike",
+        "filename": "incident_pcap-tes_1788414750.pcap",
+        "size_bytes": 15528960,
+        "bundle": {
+          "pcap_file": "/var/lib/sensor/pcaps/incident_pcap-tes_1788414750.pcap",
+          "pcap_size_bytes": 15528960,
+          "packets_captured": 24890,
+          "interfaces": [
+            "eno1",
+            "wlp1s0"
+          ],
+          "sha256": "ceb5c61cf552359e7d0f989e769d385b5dc8da0d187d12ecf4a579b7b3bcb081"
+        }
+      },
+      {
+        "bundle_id": "bundle-001",
+        "sensor_id": "pcap-test-sensor-1788414750",
+        "timestamp": 1788414750,
+        "reason": "high_latency_spike",
+        "filename": "evidence_pcap-node_20260827_high_latency_spike.tar.gz",
+        "size_bytes": 1048576,
+        "id": "bundle-001",
+        "trigger_reason": "manual_trigger"
+      }
+    ],
+    "pcap-test-sensor-1788414488": [
+      {
+        "id": "ev-pcap-pcap-tes-1788414488",
+        "bundle_id": "ev-pcap-pcap-tes-1788414488",
+        "sensor_id": "pcap-test-sensor-1788414488",
+        "timestamp": 1788414488,
+        "trigger_reason": "high_latency_spike",
+        "reason": "high_latency_spike",
+        "filename": "incident_pcap-tes_1788414488.pcap",
+        "size_bytes": 15528960,
+        "bundle": {
+          "pcap_file": "/var/lib/sensor/pcaps/incident_pcap-tes_1788414488.pcap",
+          "pcap_size_bytes": 15528960,
+          "packets_captured": 24890,
+          "interfaces": [
+            "eno1",
+            "wlp1s0"
+          ],
+          "sha256": "eb4a368c1d6019b8e4ceda368da6ddffcdc569395ea462412da33a5fba888561"
+        }
+      }
+    ],
+    "pcap-test-sensor-1788414295": [
+      {
+        "id": "ev-pcap-pcap-tes-1788414295",
+        "bundle_id": "ev-pcap-pcap-tes-1788414295",
+        "sensor_id": "pcap-test-sensor-1788414295",
+        "timestamp": 1788414295,
+        "trigger_reason": "high_latency_spike",
+        "reason": "high_latency_spike",
+        "filename": "incident_pcap-tes_1788414295.pcap",
+        "size_bytes": 15528960,
+        "bundle": {
+          "pcap_file": "/var/lib/sensor/pcaps/incident_pcap-tes_1788414295.pcap",
+          "pcap_size_bytes": 15528960,
+          "packets_captured": 24890,
+          "interfaces": [
+            "eno1",
+            "wlp1s0"
+          ],
+          "sha256": "36f322021cbbac115732a3bf312cbf72ec59d5e6219aa247b748e4f76cc8b632"
+        }
+      }
+    ]
+  },
+  "campuses": {},
+  "subnets": [],
+  "schedules": [
+    {
+      "id": "sched_caaspp_morning",
+      "name": "Morning State Testing (CAASPP) Pre-Flight",
+      "probe_id": "caaspp_readiness",
+      "mode": "daily_once",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri"
+      ],
+      "start_time": "07:15",
+      "end_time": "16:00",
+      "interval_value": 15,
+      "interval_unit": "minutes",
+      "cron_expr": "15 7 * * 1-5",
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_classroom_voip",
+      "name": "Classroom VoIP & Zoom Stream Monitor",
+      "probe_id": "voip_jitter",
+      "mode": "window_repeat",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri"
+      ],
+      "start_time": "08:00",
+      "end_time": "16:00",
+      "interval_value": 1,
+      "interval_unit": "minutes",
+      "cron_expr": "*/1 8-16 * * 1-5",
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_continuous_gw_ping",
+      "name": "Continuous Dual-NIC Gateway Latency Ping",
+      "probe_id": "dual_nic_ping",
+      "mode": "continuous_interval",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "interval_value": 15,
+      "interval_unit": "seconds",
+      "cron_expr": null,
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_weekend_speedtest",
+      "name": "Off-Peak iperf3 Bandwidth Capacity Test",
+      "probe_id": "iperf3",
+      "mode": "daily_once",
+      "days_of_week": [
+        "sat"
+      ],
+      "start_time": "02:00",
+      "end_time": "04:00",
+      "interval_value": 60,
+      "interval_unit": "minutes",
+      "cron_expr": "0 2 * * 6",
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_cipa_audit",
+      "name": "CIPA Safety & Content Filter Audit",
+      "probe_id": "cipa_compliance",
+      "mode": "continuous_interval",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "interval_value": 4,
+      "interval_unit": "hours",
+      "cron_expr": null,
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_m365_health",
+      "name": "Microsoft 365 & Teams Media Health Sweep",
+      "probe_id": "m365_connectivity",
+      "mode": "continuous_interval",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "interval_value": 15,
+      "interval_unit": "minutes",
+      "cron_expr": null,
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_windows_update_do",
+      "name": "Windows Update & Delivery Optimization Peer Audit",
+      "probe_id": "windows_update_do",
+      "mode": "continuous_interval",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "interval_value": 4,
+      "interval_unit": "hours",
+      "cron_expr": null,
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_google_workspace",
+      "name": "Google Workspace & ChromeOS Health Sweep",
+      "probe_id": "google_workspace",
+      "mode": "continuous_interval",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "interval_value": 15,
+      "interval_unit": "minutes",
+      "cron_expr": null,
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_clever_identity",
+      "name": "Clever K-12 Identity, Badges & SSO Health Sweep",
+      "probe_id": "clever_identity",
+      "mode": "continuous_interval",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "interval_value": 15,
+      "interval_unit": "minutes",
+      "cron_expr": null,
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    },
+    {
+      "id": "sched_lightspeed_filter",
+      "name": "Lightspeed Systems Filter & Classroom Sweep",
+      "probe_id": "lightspeed_filter",
+      "mode": "continuous_interval",
+      "days_of_week": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "interval_value": 15,
+      "interval_unit": "minutes",
+      "cron_expr": null,
+      "target_scope": "all",
+      "guardrails_enabled": true,
+      "is_active": true,
+      "created_at": 1788414241
+    }
+  ],
+  "alerts": [],
+  "custom_alert_rules": [
+    {
+      "id": "rule_caaspp_tls",
+      "name": "CAASPP SSL Interception & TLS Failure",
+      "probe_id": "caaspp_readiness",
+      "metric": "ssl_handshake_status",
+      "operator": "eq",
+      "threshold_value": 0.0,
+      "unit": "status",
+      "duration_seconds": 30,
+      "severity": "critical",
+      "campus_id": null,
+      "sensor_id": null,
+      "channels": [
+        "chan_slack_noc",
+        "chan_teams_support"
+      ],
+      "autocapture_pcap": true,
+      "is_active": true,
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "rule_gateway_latency",
+      "name": "Campus WAN Gateway High Latency",
+      "probe_id": "dual_nic_ping",
+      "metric": "latency_ms",
+      "operator": "gt",
+      "threshold_value": 35.0,
+      "unit": "ms",
+      "duration_seconds": 45,
+      "severity": "warning",
+      "campus_id": null,
+      "sensor_id": null,
+      "channels": [
+        "chan_slack_noc"
+      ],
+      "autocapture_pcap": true,
+      "is_active": true,
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "rule_dns_lookup_sla",
+      "name": "Core DNS Multi-Resolver SLA Timeout",
+      "probe_id": "dns_multi_resolver",
+      "metric": "rtt_ms",
+      "operator": "gt",
+      "threshold_value": 500.0,
+      "unit": "ms",
+      "duration_seconds": 30,
+      "severity": "critical",
+      "campus_id": null,
+      "sensor_id": null,
+      "channels": [
+        "chan_slack_noc",
+        "chan_itsm_servicenow"
+      ],
+      "autocapture_pcap": true,
+      "is_active": true,
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "rule_voip_jitter_mos",
+      "name": "Classroom VoIP & Zoom RTP Jitter SLA",
+      "probe_id": "voip_jitter",
+      "metric": "mos_score",
+      "operator": "lt",
+      "threshold_value": 3.8,
+      "unit": "score",
+      "duration_seconds": 60,
+      "severity": "warning",
+      "campus_id": null,
+      "sensor_id": null,
+      "channels": [
+        "chan_teams_support"
+      ],
+      "autocapture_pcap": true,
+      "is_active": true,
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "rule_saas_lms_rtt",
+      "name": "Canvas LMS & Google Classroom Latency Spike",
+      "probe_id": "synthetic_web",
+      "metric": "response_time_ms",
+      "operator": "gt",
+      "threshold_value": 450.0,
+      "unit": "ms",
+      "duration_seconds": 120,
+      "severity": "warning",
+      "campus_id": null,
+      "sensor_id": null,
+      "channels": [],
+      "autocapture_pcap": false,
+      "is_active": true,
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "rule_wifi_flapping",
+      "name": "Wi-Fi AP Channel Hopping & Roam Storm",
+      "probe_id": "rrm_darrp",
+      "metric": "roams_per_minute",
+      "operator": "gt",
+      "threshold_value": 6.0,
+      "unit": "roams/min",
+      "duration_seconds": 60,
+      "severity": "critical",
+      "campus_id": null,
+      "sensor_id": null,
+      "channels": [
+        "chan_slack_noc"
+      ],
+      "autocapture_pcap": true,
+      "is_active": true,
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    }
+  ],
+  "notification_channels": [
+    {
+      "id": "chan_slack_noc",
+      "name": "Primary Slack #noc-critical",
+      "channel_type": "slack",
+      "endpoint_url": "https://hooks.slack.com/services/T00/B00/X00",
+      "auth_headers": {
+        "User-Agent": "ONE-CMP/1.0"
+      },
+      "min_severity": "warning",
+      "is_active": false,
+      "last_dispatched_at": null,
+      "last_status": "Ready",
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "chan_teams_support",
+      "name": "MS Teams Classroom Operations",
+      "channel_type": "teams",
+      "endpoint_url": "https://district.webhook.office.com/webhookb2/...",
+      "auth_headers": {},
+      "min_severity": "critical",
+      "is_active": false,
+      "last_dispatched_at": null,
+      "last_status": "Ready",
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "chan_itsm_servicenow",
+      "name": "District Helpdesk ITSM Webhook",
+      "channel_type": "webhook",
+      "endpoint_url": "https://helpdesk.district.edu/api/v1/incidents",
+      "auth_headers": {
+        "Authorization": "Bearer sample-token"
+      },
+      "min_severity": "critical",
+      "is_active": false,
+      "last_dispatched_at": null,
+      "last_status": "Ready",
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    },
+    {
+      "id": "chan_email_district",
+      "name": "District IT Distribution List",
+      "channel_type": "email",
+      "endpoint_url": "smtp-relay.gmail.com:587",
+      "auth_headers": {
+        "smtp_host": "smtp-relay.gmail.com",
+        "smtp_port": 587,
+        "security_mode": "starttls",
+        "from_email": "noc-alerts@district.edu",
+        "from_name": "ONE Platform Network Monitor",
+        "recipients": "noc@district.edu, helpdesk@district.edu",
+        "username": "",
+        "password": ""
+      },
+      "min_severity": "critical",
+      "is_active": false,
+      "last_dispatched_at": null,
+      "last_status": "Ready",
+      "created_at": 1788414240,
+      "updated_at": 1788414489
+    }
+  ],
+  "maintenance_windows": []
+}

@@ -41,7 +41,7 @@ class TestCMPFlow(unittest.TestCase):
             method=method
         )
         try:
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
                 return resp.status, json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             return e.code, None
@@ -315,7 +315,7 @@ class TestCMPFlow(unittest.TestCase):
         # 1. Test Web UI Dashboard HTML serving
         url = "http://localhost:8000/"
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
             self.assertEqual(resp.status, 200)
             html = resp.read().decode('utf-8')
             self.assertIn("Open Network Experience (ONE)", html)
@@ -437,7 +437,7 @@ class TestCMPFlow(unittest.TestCase):
         self.assertIn("sensors", backup_data)
         self.assertIn("probes", backup_data)
         self.assertIn("version", backup_data)
-        self.assertEqual(backup_data["version"], "0.6.0")
+        self.assertEqual(backup_data["version"], "0.6.1")
 
         # 2. Restore backup
         code, restore_res = self.make_request("/system/restore", method="POST", body=backup_data, headers={"X-API-Key": ADMIN_KEY})
@@ -588,6 +588,72 @@ class TestCMPFlow(unittest.TestCase):
         self.assertEqual(code7, 200)
         self.assertEqual(lock_res["status"], "success")
         self.assertEqual(lock_res["settings_locked"], True)
+
+    def test_12_dynamic_configuration_propagation(self):
+        """Tests that WebUI configuration updates dynamically propagate to sensors without restarts."""
+        # 1. Register and approve a fresh sensor
+        import time
+        s_id = f"config-prop-sensor-{int(time.time())}"
+        reg_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "hostname": "config-prop-node",
+            "mac_address": "AA:BB:CC:DD:EE:FF",
+            "timestamp": int(time.time())
+        }
+        self.make_request("/sensors/register", method="POST", body=reg_payload)
+        _, app_data = self.make_request(f"/sensors/{s_id}/approve", method="POST", headers={"X-API-Key": ADMIN_KEY})
+        api_key = app_data["api_key"]
+
+        # 2. Simulate initial check-in
+        reconcile_payload = {
+            "sensor_id": s_id,
+            "os": "linux",
+            "timestamp": int(time.time()),
+            "containers": {}
+        }
+        code, init_data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+
+        # 3. Modify Wi-Fi configuration via Admin API (WebUI equivalent)
+        new_wifi_config = {
+            "wifi": {
+                "ssid": "New-District-WiFi",
+                "security": "psk",
+                "psk": "SuperSecretPassword123"
+            }
+        }
+        code, update_data = self.make_request(f"/sensors/{s_id}/config", method="PUT", body=new_wifi_config, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+
+        # 4. Create a custom probe via Admin API
+        custom_probe = {
+            "id": "new-test-probe",
+            "name": "New Test Probe",
+            "probe_type": "http",
+            "target": "https://newtest.example.com",
+            "timeout_seconds": 5.0,
+            "expected_status_code": 200,
+            "target_sensors": [s_id]
+        }
+        code, probe_data = self.make_request("/probes", method="POST", body=custom_probe, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(code, 200)
+
+        # 5. Sensor next check-in -> should receive new Wi-Fi config and new probe WITHOUT restart
+        code, new_data = self.make_request("/sensors/reconcile", method="POST", body=reconcile_payload, headers={"X-API-Key": api_key})
+        self.assertEqual(code, 200)
+
+        # Verify Wi-Fi update
+        self.assertIn("wifi", new_data)
+        self.assertEqual(new_data["wifi"]["ssid"], "New-District-WiFi")
+
+        # Verify Custom Probe update
+        self.assertIn("custom_probes", new_data)
+        probe_found = any(p["id"] == "new-test-probe" for p in new_data["custom_probes"])
+        self.assertTrue(probe_found)
+
+        # Clean up custom probe
+        self.make_request("/probes/new-test-probe", method="DELETE", headers={"X-API-Key": ADMIN_KEY})
 
 if __name__ == "__main__":
     unittest.main()

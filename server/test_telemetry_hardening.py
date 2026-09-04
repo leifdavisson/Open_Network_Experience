@@ -27,9 +27,9 @@ def test_query_vm_instant_success(mock_urlopen):
     mock_urlopen.return_value = mock_resp
 
     res = query_vm_instant('probe_duration_seconds{job="blackbox-saas-apps"}')
-    assert len(res) == 1
-    assert res[0]["value"][1] == "0.105"
-    assert mock_urlopen.call_count == 1
+    assert len(res) == 1  # nosec B101
+    assert res[0]["value"][1] == "0.105"  # nosec B101
+    assert mock_urlopen.call_count == 1  # nosec B101
 
 @verifies("REQ-TEL-002")
 @patch("urllib.request.urlopen")
@@ -38,8 +38,8 @@ def test_query_vm_instant_fallback_and_failure(mock_urlopen):
     mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
 
     res = query_vm_instant('probe_duration_seconds')
-    assert len(res) == 0
-    assert mock_urlopen.call_count == 3
+    assert len(res) == 0  # nosec B101
+    assert mock_urlopen.call_count == 3  # nosec B101
 
 @verifies("REQ-TEL-002")
 @patch("urllib.request.urlopen")
@@ -51,8 +51,8 @@ def test_query_vm_instant_malformed_json(mock_urlopen):
     mock_urlopen.return_value = mock_resp
 
     res = query_vm_instant('probe_duration_seconds')
-    assert len(res) == 0
-    assert mock_urlopen.call_count == 3
+    assert len(res) == 0  # nosec B101
+    assert mock_urlopen.call_count == 3  # nosec B101
 
 @verifies("REQ-TEL-002")
 @patch("server.routers.telemetry.query_vm_instant")
@@ -69,14 +69,14 @@ def test_get_wallboard_live_stats_success(mock_query):
 
     start_time = time.time()
     resp = client.get("/api/v1/wallboard/live-stats")
-    assert resp.status_code == 200
+    assert resp.status_code == 200  # nosec B101
     duration = time.time() - start_time
-    assert duration <= 2.0
+    assert duration <= 2.0  # nosec B101
 
     data = resp.json()
-    assert "saas" in data
-    assert data["saas"]["canvas"]["rtt_ms"] == 80.0
-    assert data["saas"]["canvas"]["is_up"] is True
+    assert "saas" in data  # nosec B101
+    assert data["saas"]["canvas"]["rtt_ms"] == 80.0  # nosec B101
+    assert data["saas"]["canvas"]["is_up"] is True  # nosec B101
 
 @verifies("REQ-TEL-002")
 @patch("server.routers.telemetry.query_vm_instant")
@@ -85,12 +85,12 @@ def test_get_wallboard_live_stats_tsdb_unreachable(mock_query):
     mock_query.return_value = []
 
     resp = client.get("/api/v1/wallboard/live-stats")
-    assert resp.status_code == 200
+    assert resp.status_code == 200  # nosec B101
     data = resp.json()
 
-    assert "saas" in data
-    assert data["saas"]["canvas"]["rtt_ms"] == 105.0
-    assert data["slas"]["gateway_wired_ms"] == 1.18
+    assert "saas" in data  # nosec B101
+    assert data["saas"]["canvas"]["rtt_ms"] == 105.0  # nosec B101
+    assert data["slas"]["gateway_wired_ms"] == 1.18  # nosec B101
 
 @verifies("REQ-TEL-002")
 def test_health_endpoint():
@@ -101,24 +101,24 @@ def test_health_endpoint():
     state.SENSORS_DB["s3"] = {"last_seen": int(time.time()) - 10}
 
     resp = client.get("/api/v1/health")
-    assert resp.status_code == 200
+    assert resp.status_code == 200  # nosec B101
     data = resp.json()
 
-    assert data["status"] == "ok"
-    assert data["active_sensors"] == 3
-    assert data["version"] == "0.6.0"
+    assert data["status"] == "ok"  # nosec B101
+    assert data["active_sensors"] == 3  # nosec B101
+    assert data["version"] == "0.6.1"  # nosec B101
 
 @verifies("REQ-SEC-005")
 def test_evidence_vault_no_auth():
     """Verify GET /api/v1/evidence now requires auth after security fix."""
     # Unauthenticated request should be rejected
     resp = client.get("/api/v1/evidence")
-    assert resp.status_code == 401
+    assert resp.status_code == 401  # nosec B101
 
     # Authenticated request should succeed
     resp_auth = client.get("/api/v1/evidence", headers={"X-API-Key": "admin-noc-key-change-me"})
-    assert resp_auth.status_code == 200
-    assert isinstance(resp_auth.json(), list)
+    assert resp_auth.status_code == 200  # nosec B101
+    assert isinstance(resp_auth.json(), list)  # nosec B101
 
 @verifies("REQ-DB-001")
 @patch("urllib.request.urlopen")
@@ -134,7 +134,7 @@ def test_forward_chromebook_metrics_enqueue_when_unreachable(mock_enqueue, mock_
 
     forward_chromebook_metrics_to_tsdb(report)
     mock_enqueue.assert_called_once()
-    assert "chromebook_wifi_connected" in mock_enqueue.call_args[0][0]
+    assert "chromebook_wifi_connected" in mock_enqueue.call_args[0][0]  # nosec B101
 
 @verifies("REQ-DB-001")
 @patch("urllib.request.urlopen")

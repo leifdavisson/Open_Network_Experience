@@ -319,8 +319,8 @@ export async function resolveSensorIdentity() {
 
   return {
     sensor_id: storedUuid,
-    serial_number: "DEV-SIM-SERIAL",
-    asset_id: "DEV-SIM-ASSET",
+    serial_number: `SIM-SN-${storedUuid.slice(-8).toUpperCase()}`,
+    asset_id: `SIM-ASSET-${storedUuid.slice(0, 8).toUpperCase()}`,
     location: "Unmanaged ChromeOS Device",
     annotated_user: null,
     directory_device_id: null,
