@@ -58,3 +58,8 @@ wpa_supplicant.conf
 htmlcov/
 *.zip
 coverage.json
+
+# Local agent/tooling configuration
+.agents/
+.jules/
+.agy/

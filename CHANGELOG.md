@@ -2,7 +2,26 @@
 
 All notable changes to the Open Network Experience (OpenUX) platform will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+## [0.6.1] — 2026-09-04
+
+### Added
+- **Zero-Restart Configuration Propagation** (`sensor/reconciler/reconciler.py`, `server/routers/sensors.py`, `server/test_integration.py`):
+  - Synchronizes WebUI Custom Probe and Unified Schedule creations/edits/deletions immediately to downstream edge sensors without relying on periodic active probe rebuilds.
+  - Resolved background process tracking on edge sensor reconciler by terminating obsolete test runners prior to spawning updated processes.
+  - Added test suite `test_12_dynamic_configuration_propagation` to continuously verify Admin API changes rapidly flow through the pipeline to simulated endpoints.
+- **Dynamic Identity Strings & Chromebook Fleet Management** (`chromebook-sensor/src/background/service_worker.js`, `server/templates/dashboard.html`):
+  - Displays dynamic identity strings for Chromebook fleet devices.
+  - Refactored Chromebook settings lock re-evaluation logic to reliably enforce policy states.
+- **Pydantic Model Validation & V&V Hardening** (`server/schemas.py`, `server/routers/sensors.py`, `server/test_diagnostics_vv.py`, `server/test_security_hardening.py`):
+  - Added strict Pydantic model validators to probe and schedule schemas.
+  - Refactored dictionary `.get()` logic in `server/routers/sensors.py` to use type-safe Pydantic models.
+  - Resolved static typing violations, Bandit security checks (`B101`, `B310`), and branch coverage gaps across diagnostic and telemetry test suites.
+- **Dynamic Gateway Discovery** (`sensor/client_isolation_probe.py`, `server/routers/sensors.py`):
+  - Removed hardcoded fallback gateway IP (`10.98.2.1`), introducing dynamic routing table parsing and fallback ICMP target resolution.
+
+### Changed
+- **Alert Aggregation Query Performance**:
+  - Optimized `get_alerts_summary` aggregation query in server telemetry module for low-latency dashboard wallboard updates.
 
 ## [0.6.0] — 2026-09-02
 

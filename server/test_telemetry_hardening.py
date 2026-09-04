@@ -106,7 +106,7 @@ def test_health_endpoint():
 
     assert data["status"] == "ok"  # nosec B101
     assert data["active_sensors"] == 3  # nosec B101
-    assert data["version"] == "0.6.0"  # nosec B101
+    assert data["version"] == "0.6.1"  # nosec B101
 
 @verifies("REQ-SEC-005")
 def test_evidence_vault_no_auth():
