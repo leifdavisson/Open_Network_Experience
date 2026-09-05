@@ -1,65 +1,170 @@
-# Python caches
+# ==============================================================================
+# Open Network Experience (ONE) - Git Ignore Configuration
+# Framework: Python 3 / FastAPI Backend + Vanilla JS UI + Edge Sensor (Python/ChromeOS)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Python Bytecode, Caches & Virtual Environments
+# ------------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+env/
 venv/
 .venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Local databases and data volumes (docker-compose)
-server/deploy/vm-data/
-server/deploy/loki-data/
-server/deploy/grafana-data/
-server/deploy/am-data/
-server/data/
-*.db
-*.sqlite
-*.sqlite3
+# ------------------------------------------------------------------------------
+# 2. Testing, Code Quality & Mock Artifacts
+# ------------------------------------------------------------------------------
+.cache
+.pytest_cache/
+sensor/.pytest_cache/
+server/.pytest_cache/
+.coverage
+.coverage.*
+coverage.json
+htmlcov/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+# Accidentally created directories when unittest MagicMock was evaluated as path
+MagicMock/
+*/MagicMock/
 
-# Prometheus metric collectors
-*.prom
-*.prom.tmp
-failed_transaction.png
+# ------------------------------------------------------------------------------
+# 3. AI Coding Agent & Automation Tooling Artifacts
+# ------------------------------------------------------------------------------
+.agents/
+.jules/
+.agy/
 
-# System/IDE files
-.DS_Store
-.idea/
-.vscode/
-
-# !! SECRETS — NEVER COMMIT THESE !!
-# Environment files (often contain API keys, DB passwords)
+# ------------------------------------------------------------------------------
+# 4. Secrets, Credentials & Local Configuration (CRITICAL)
+# ------------------------------------------------------------------------------
 .env
 .env.*
 !.env.example
 
-# Private keys and certificates
+# Ad-hoc deployment scripts with hardcoded credentials
+deploy_tests.py
+
+# Private keys, certificates, and auth tokens
 *.pem
 *.key
 *.p12
 *.pfx
+*.pkcs12
 id_rsa*
 id_ed25519*
 
-# Sensor configs with real API keys (only the .example is safe)
+# Live sensor runtime configs with actual API keys (keep .example committed)
 sensor/reconciler/reconciler.json
 reconciler.json
 !reconciler.json.example
 
-# Wi-Fi credentials
+# Wi-Fi credentials & shell history
 wpa_supplicant.conf
-
-# Shell history (may contain pasted secrets)
 .bash_history
+.zsh_history
 .python_history
 
-# Test and coverage artifacts
-.coverage
-.pytest_cache/
-.mypy_cache/
-htmlcov/
-*.zip
-coverage.json
+# ------------------------------------------------------------------------------
+# 5. Local Databases, Runtime Volumes & State Backups
+# ------------------------------------------------------------------------------
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+one_state.db
+data/backups/
+*.bak
+*.dump
 
-# Local agent/tooling configuration
-.agents/
-.jules/
-.agy/
+# Docker Compose runtime persistence volumes
+server/deploy/vm-data/
+server/deploy/loki-data/
+server/deploy/grafana-data/
+server/deploy/grafana/
+server/deploy/am-data/
+server/data/
+
+# ------------------------------------------------------------------------------
+# 6. Build Packages, Compressed Archives & Prometheus Spool Files
+# ------------------------------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+bench-staging-kit.zip
+dist/one-chromebook-sensor-*.zip
+
+# Metric collector spooling & temporary test snapshots
+*.prom
+*.prom.tmp
+failed_transaction.png
+
+# ------------------------------------------------------------------------------
+# 7. Loose Draft Documents & Unreferenced Reference Images
+# ------------------------------------------------------------------------------
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
+*.ppt
+device_monitoring_ref.png
+
+# ------------------------------------------------------------------------------
+# 8. Node.js & Chromebook Extension Dependencies
+# ------------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ------------------------------------------------------------------------------
+# 9. Operating System & IDE Files
+# ------------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+
+# Linux / Editors
+*~
+*.swp
+*.swo
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
