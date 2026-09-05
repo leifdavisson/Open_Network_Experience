@@ -5,9 +5,10 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from server.common.errors import NotFoundException
+from fastapi import APIRouter, Depends
 from server.schemas import CustomProbeSpec
-from server.security import verify_admin_key
+from server.common.auth import verify_admin_key
 from server.state import PROBES_DB
 import server.db as db
 
@@ -53,7 +54,7 @@ async def save_custom_probe(probe: CustomProbeSpec):
                 if is_targeted and probe_dict.get("enabled", True):
                     s_data["target_config"]["custom_probes"].append(probe_dict)
             modified_sensors.append(s_data)
-            
+
     if modified_sensors:
         db.batch_save_sensors(modified_sensors)
 
@@ -85,4 +86,4 @@ async def delete_custom_probe(probe_id: str):
             db.batch_save_sensors(modified_sensors)
 
         return {"status": "success", "message": f"Probe '{probe_id}' deleted."}
-    raise HTTPException(status_code=404, detail="Probe not found")
+    raise NotFoundException(detail="Probe not found")

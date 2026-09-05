@@ -13,7 +13,8 @@
     "title": "Custom Probe Execution via ID Match",
     "safety_level": "STANDARD",
     "verifying_tests": [
-      "test_custom_probe_failure_degrades_status"
+      "test_custom_probe_failure_degrades_status",
+      "test_tcp_probe_malformed_port"
     ],
     "status": "VERIFIED"
   },
@@ -32,6 +33,33 @@
     "safety_level": "CRITICAL",
     "verifying_tests": [
       "test_custom_probe_failure_degrades_status"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-DIAG-005",
+    "title": "DNS Custom Probe Resolution",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_dns_probe_fallback"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-DIAG-006",
+    "title": "TCP Custom Probe Execution and Port Parsing",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_tcp_probe_valid_port"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-DIAG-007",
+    "title": "Fallback Probe Protocol Handling",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_other_probe_fallback"
     ],
     "status": "VERIFIED"
   },

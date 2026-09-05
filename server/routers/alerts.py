@@ -17,6 +17,7 @@ from email.mime.text import MIMEText
 from typing import List, Optional, Dict, Any
 
 import httpx
+from server.common.errors import NotFoundException, BadRequestException
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
 import server.db as db
@@ -36,7 +37,7 @@ from server.schemas import (
 router = APIRouter(tags=["Alerts & Alertmanager"])
 
 
-def _parse_iso_timestamp(ts_str: Optional[str]) -> Optional[int]:
+def parse_iso_timestamp(ts_str: Optional[str]) -> Optional[int]:
     """Parses ISO8601 datetime string to UTC epoch timestamp."""
     if not ts_str or ts_str.startswith("0001-01-01"):
         return None
@@ -410,7 +411,7 @@ async def alertmanager_webhook(request: Request) -> Dict[str, Any]:
             return {"status": "ignored", "reason": "empty body"}
         payload_data = json.loads(raw_body.decode("utf-8"))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON payload: {e}")
+        raise BadRequestException(detail=f"Invalid JSON payload: {e}")
 
     alerts_list = payload_data.get("alerts", [])
     now = int(time.time())
@@ -424,7 +425,7 @@ async def alertmanager_webhook(request: Request) -> Dict[str, Any]:
         item_status = item.get("status", payload_data.get("status", "firing")).lower()
         fp = item.get("fingerprint") or _compute_alert_fingerprint(labels)
 
-        starts_at = _parse_iso_timestamp(item.get("startsAt")) or now
+        starts_at = parse_iso_timestamp(item.get("startsAt")) or now
         alertname = labels.get("alertname", "NetworkAlarm")
         title = annotations.get("summary") or annotations.get("title") or alertname
         description = annotations.get("description") or annotations.get("summary") or ""
@@ -585,7 +586,7 @@ async def get_alert_rule(rule_id: str) -> dict:
     """Fetches a single custom alert rule by ID."""
     rule = db.load_alert_rule_by_id(rule_id)
     if not rule:
-        raise HTTPException(status_code=404, detail=f"Alert rule '{rule_id}' not found.")
+        raise NotFoundException(detail=f"Alert rule '{rule_id}' not found.")
     return rule
 
 
@@ -598,7 +599,7 @@ async def toggle_rule_state(rule_id: str) -> dict:
     """Toggles active/paused state of a custom alert rule."""
     updated = db.toggle_alert_rule(rule_id)
     if not updated:
-        raise HTTPException(status_code=404, detail=f"Alert rule '{rule_id}' not found.")
+        raise NotFoundException(detail=f"Alert rule '{rule_id}' not found.")
     return updated
 
 
@@ -610,7 +611,7 @@ async def delete_rule(rule_id: str) -> Dict[str, Any]:
     """Removes a custom alert rule."""
     deleted = db.delete_alert_rule(rule_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Alert rule '{rule_id}' not found.")
+        raise NotFoundException(detail=f"Alert rule '{rule_id}' not found.")
     return {"status": "success", "message": f"Alert rule '{rule_id}' deleted."}
 
 
@@ -650,7 +651,7 @@ async def get_notification_channel(channel_id: str) -> dict:
     """Fetches a single notification channel configuration."""
     chan = db.load_notification_channel_by_id(channel_id)
     if not chan:
-        raise HTTPException(status_code=404, detail=f"Notification channel '{channel_id}' not found.")
+        raise NotFoundException(detail=f"Notification channel '{channel_id}' not found.")
     return chan
 
 
@@ -662,7 +663,7 @@ async def test_notification_channel(channel_id: str, req: ChannelTestRequest = C
     """Dispatches a test notification message to verify webhook connectivity."""
     chan = db.load_notification_channel_by_id(channel_id)
     if not chan:
-        raise HTTPException(status_code=404, detail=f"Notification channel '{channel_id}' not found.")
+        raise NotFoundException(detail=f"Notification channel '{channel_id}' not found.")
 
     test_alert = {
         "id": f"alt-test-{int(time.time())}",
@@ -694,7 +695,7 @@ async def delete_channel_endpoint(channel_id: str) -> Dict[str, Any]:
     """Deletes a notification channel configuration."""
     deleted = db.delete_notification_channel(channel_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Notification channel '{channel_id}' not found.")
+        raise NotFoundException(detail=f"Notification channel '{channel_id}' not found.")
     return {"status": "success", "message": f"Notification channel '{channel_id}' deleted."}
 
 
@@ -746,7 +747,7 @@ async def get_maintenance_window(window_id: str) -> dict:
     """Fetches a single maintenance window configuration."""
     w = db.load_maintenance_window_by_id(window_id)
     if not w:
-        raise HTTPException(status_code=404, detail=f"Maintenance window '{window_id}' not found.")
+        raise NotFoundException(detail=f"Maintenance window '{window_id}' not found.")
     return w
 
 
@@ -759,7 +760,7 @@ async def toggle_maintenance_window_state(window_id: str) -> dict:
     """Toggles active/disabled state of a maintenance window."""
     updated = db.toggle_maintenance_window(window_id)
     if not updated:
-        raise HTTPException(status_code=404, detail=f"Maintenance window '{window_id}' not found.")
+        raise NotFoundException(detail=f"Maintenance window '{window_id}' not found.")
     return updated
 
 
@@ -771,7 +772,7 @@ async def delete_maintenance_window_endpoint(window_id: str) -> Dict[str, Any]:
     """Removes a maintenance window configuration."""
     deleted = db.delete_maintenance_window(window_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Maintenance window '{window_id}' not found.")
+        raise NotFoundException(detail=f"Maintenance window '{window_id}' not found.")
     return {"status": "success", "message": f"Maintenance window '{window_id}' deleted."}
 
 
@@ -841,7 +842,7 @@ async def get_alert(alert_id: str) -> dict:
     """Fetches a single alert record with complete raw annotations and evidence bindings."""
     alert = db.load_alert_by_id(alert_id)
     if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
+        raise NotFoundException(detail=f"Alert '{alert_id}' not found.")
     return alert
 
 
@@ -853,11 +854,11 @@ async def get_alert_evidence(alert_id: str) -> dict:
     """Fetches the detailed PCAP and packet forensic bundle bound to an alert."""
     alert = db.load_alert_by_id(alert_id)
     if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
+        raise NotFoundException(detail=f"Alert '{alert_id}' not found.")
 
     evidence_id = alert.get("evidence_id")
     if not evidence_id:
-        raise HTTPException(status_code=404, detail=f"No forensic evidence bundle attached to alert '{alert_id}'.")
+        raise NotFoundException(detail=f"No forensic evidence bundle attached to alert '{alert_id}'.")
 
     evidence = db.load_evidence_by_id(evidence_id)
     if not evidence:
@@ -865,7 +866,7 @@ async def get_alert_evidence(alert_id: str) -> dict:
             for b in s_list:
                 if b.get("id") == evidence_id or b.get("bundle_id") == evidence_id:
                     return b
-        raise HTTPException(status_code=404, detail=f"Evidence bundle '{evidence_id}' not found.")
+        raise NotFoundException(detail=f"Evidence bundle '{evidence_id}' not found.")
     return evidence
 
 
@@ -877,7 +878,7 @@ async def capture_alert_pcap(alert_id: str) -> dict:
     """Triggers an immediate ring-buffer packet freeze on the sensor and binds evidence to the alert."""
     alert = db.load_alert_by_id(alert_id)
     if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
+        raise NotFoundException(detail=f"Alert '{alert_id}' not found.")
 
     bundle = _generate_pcap_evidence_bundle(
         alert.get("sensor_id"),
@@ -906,7 +907,7 @@ async def acknowledge_alert(alert_id: str, payload: AlertAcknowledgeRequest = Al
     """Transitions an alert from firing to acknowledged, capturing operator ID and timestamp."""
     updated = db.acknowledge_alert(alert_id, acknowledged_by=payload.acknowledged_by or "NOC Operator")
     if not updated:
-        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
+        raise NotFoundException(detail=f"Alert '{alert_id}' not found.")
     return updated
 
 
@@ -919,7 +920,7 @@ async def resolve_alert(alert_id: str, payload: AlertResolveRequest = AlertResol
     """Closes an active alarm with operator resolution notes and notifies outbound webhooks."""
     updated = db.resolve_alert(alert_id, resolution_notes=payload.resolution_notes or "Resolved via CMP Console")
     if not updated:
-        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
+        raise NotFoundException(detail=f"Alert '{alert_id}' not found.")
     await dispatch_alert_notifications(updated)
     return updated
 
@@ -997,5 +998,5 @@ async def delete_alert_record(alert_id: str) -> Dict[str, Any]:
     """Removes an alert record from the database."""
     deleted = db.delete_alert(alert_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
+        raise NotFoundException(detail=f"Alert '{alert_id}' not found.")
     return {"status": "success", "message": f"Alert '{alert_id}' deleted."}

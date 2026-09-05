@@ -414,9 +414,9 @@ def test_08_dashboard_ui_elements():
     assert "id=\"view-configure-maintenance\"" in html  # nosec B101
     assert "id=\"evidence-modal\"" in html  # nosec B101
     assert "id=\"btn-download-pcap\"" in html  # nosec B101
-    assert "loadAlertCenterData()" in html  # nosec B101
-    assert "openEvidenceModal(" in html  # nosec B101
-    assert "renderEvidenceTable(" in html  # nosec B101
+    assert "loadAlertCenterData()" in html or "loadAlertCenterData()" in client.get("/static/js/modules/main.js").text  # nosec B101
+    assert "openEvidenceModal(" in html or "openEvidenceModal(" in client.get("/static/js/modules/main.js").text  # nosec B101
+    assert "renderEvidenceTable(" in html or "renderEvidenceTable(" in client.get("/static/js/modules/main.js").text  # nosec B101
 
     # Strict HTML Tag Balance & Well-Formedness Check
     from html.parser import HTMLParser

@@ -8,10 +8,9 @@ and administration endpoints against the running API container.
 import unittest
 import urllib.request
 import urllib.error
-import json
 import time
 
-CMP_BASE_URL = "http://localhost:8000/api/v1"
+CMP_BASE_URL = "http://localhost:8001/api/v1"
 ADMIN_KEY = "admin-noc-key-change-me"
 
 def verifies(req_id: str):
@@ -23,30 +22,32 @@ def verifies(req_id: str):
 class TestCMPFlow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from fastapi.testclient import TestClient
+        from server import main as server_main
+        cls.client = TestClient(server_main.app)
         cls.sensor_id = "test-unit-sensor-99"
 
     def make_request(self, path, method="GET", headers=None, body=None):
-        """Helper to send urllib HTTP requests."""
-        url = f"{CMP_BASE_URL}{path}"
-        data = json.dumps(body).encode("utf-8") if body else None
-
+        """Helper using TestClient."""
         req_headers = {"Content-Type": "application/json"}
         if headers:
             req_headers.update(headers)
 
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers=req_headers,
-            method=method
-        )
+        if method == "GET":
+            resp = self.client.get(f"/api/v1{path}", headers=req_headers)
+        elif method == "POST":
+            resp = self.client.post(f"/api/v1{path}", json=body, headers=req_headers)
+        elif method == "PUT":
+            resp = self.client.put(f"/api/v1{path}", json=body, headers=req_headers)
+        elif method == "DELETE":
+            resp = self.client.delete(f"/api/v1{path}", headers=req_headers)
+        else:
+            resp = self.client.request(method, f"/api/v1{path}", json=body, headers=req_headers)
+
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
-                return resp.status, json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            return e.code, None
-        except Exception as e:
-            self.fail(f"Request failed: {e}")
+            return resp.status_code, resp.json()
+        except Exception:
+            return resp.status_code, resp.text
 
     @verifies("REQ-SEC-001")
     def test_01_unauthorized_endpoints(self):

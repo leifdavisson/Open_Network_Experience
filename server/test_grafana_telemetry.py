@@ -115,10 +115,13 @@ def test_04_dashboards_json_schema_and_queries():
 def test_05_dashboard_template_grafana_embed_alignment():
     """Verify that the CMP Web UI dashboard embedding matches provisioned Grafana dashboard UIDs."""
     dash_html_path = TEMPLATES_DIR / "dashboard.html"
+    main_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "main.js"
     assert dash_html_path.exists(), f"dashboard.html not found at {dash_html_path}"  # nosec B101
 
     with open(dash_html_path, "r", encoding="utf-8") as f:
         html_content = f.read()
+    with open(main_js_path, "r", encoding="utf-8") as f:
+        html_content += f.read()
 
     # Verify that the slide rotation links reference the provisioned Grafana dashboards with kiosk mode
     assert "/d/openux-noc/" in html_content  # nosec B101

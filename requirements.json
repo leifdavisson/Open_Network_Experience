@@ -22,6 +22,24 @@
     "title": "Overall Status Degradation",
     "safety_level": "CRITICAL",
     "description": "If any individual diagnostic probe step fails (passed=False), the final payload status MUST be 'FAIL' and the log output MUST record 'State: RED (FAIL)'."
+  },
+  {
+    "id": "REQ-DIAG-005",
+    "title": "DNS Custom Probe Resolution",
+    "safety_level": "STANDARD",
+    "description": "When a custom probe with probe_type 'dns' is specified, it MUST execute DNS resolution verification for the target host."
+  },
+  {
+    "id": "REQ-DIAG-006",
+    "title": "TCP Custom Probe Execution and Port Parsing",
+    "safety_level": "STANDARD",
+    "description": "When a custom probe with probe_type 'tcp' is specified, it MUST parse port configuration and execute TCP socket connection verification."
+  },
+  {
+    "id": "REQ-DIAG-007",
+    "title": "Fallback Probe Protocol Handling",
+    "safety_level": "STANDARD",
+    "description": "When a custom probe with unrecognized probe_type is specified, it MUST fall back to default HTTP or TCP probe execution."
   }
 ,
   {

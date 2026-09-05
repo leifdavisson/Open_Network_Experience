@@ -37,8 +37,9 @@ ADMIN_HEADERS = {"X-API-Key": ADMIN_KEY}
 @pytest.fixture(autouse=True)
 def setup_test_db(tmp_path, monkeypatch):
     """Initializes a temporary database for test isolation."""
-    db_file = str(tmp_path / "test_cmp.db")
-    monkeypatch.setattr(db, "DB_PATH", db_file)
+    temp_db = str(tmp_path / "test_scaling.db")
+    monkeypatch.setenv("DB_PATH", temp_db)
+    monkeypatch.setattr(db, "DB_PATH", temp_db)
     db.init_db()
     main.SENSORS_DB.clear()
     main.PROBES_DB.clear()

@@ -5,9 +5,10 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from server.common.errors import NotFoundException
+from fastapi import APIRouter, Depends
 from server.schemas import UnifiedScheduleSpec
-from server.security import verify_admin_key
+from server.common.auth import verify_admin_key
 from server.state import SCHEDULES_DB
 import server.db as db
 
@@ -52,7 +53,7 @@ async def save_schedule_endpoint(schedule: UnifiedScheduleSpec):
                 if is_targeted and sch_dict.get("is_active", True):
                     s_data["target_config"]["unified_schedules"].append(sch_dict)
             modified_sensors.append(s_data)
-            
+
     if modified_sensors:
         db.batch_save_sensors(modified_sensors)
 
@@ -84,7 +85,7 @@ async def delete_schedule_endpoint(schedule_id: str):
             db.batch_save_sensors(modified_sensors)
 
         return {"status": "success", "message": f"Schedule '{schedule_id}' deleted."}
-    raise HTTPException(status_code=404, detail="Schedule not found")
+    raise NotFoundException(detail="Schedule not found")
 
 @router.put(
     "/{schedule_id}/toggle",
@@ -131,4 +132,4 @@ async def toggle_schedule_endpoint(schedule_id: str):
             "is_active": new_state,
             "message": f"Schedule '{schedule_id}' is now {'active' if new_state else 'paused'}."
         }
-    raise HTTPException(status_code=404, detail="Schedule not found")
+    raise NotFoundException(detail="Schedule not found")

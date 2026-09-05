@@ -622,3 +622,11 @@ class MaintenanceWindowSpec(BaseModel):
     created_by: Optional[str] = Field("NOC Admin", description="Creator identity")
     created_at: Optional[int] = None
     updated_at: Optional[int] = None
+
+    @model_validator(mode='after')
+    def check_ends_after_starts(self):
+        if self.ends_at <= self.starts_at:
+            raise ValueError("ends_at must be strictly greater than starts_at")
+        return self
+
+MaintenanceWindowPayload = MaintenanceWindowSpec

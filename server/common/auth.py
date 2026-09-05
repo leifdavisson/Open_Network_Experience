@@ -16,7 +16,7 @@ import hmac
 import hashlib
 import time
 from typing import Optional
-from fastapi import Header, HTTPException, Request, Depends
+from fastapi import Header, HTTPException, Request
 
 ENV = os.environ.get("ENV", os.environ.get("ENVIRONMENT", "development")).lower()
 _RAW_ADMIN_KEY = os.environ.get("ADMIN_API_KEY")

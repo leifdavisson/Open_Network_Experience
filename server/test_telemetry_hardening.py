@@ -7,7 +7,7 @@ import urllib.error
 from fastapi.testclient import TestClient
 from server.main import app
 from server.routers.telemetry import query_vm_instant
-from server.routers.sensors import forward_chromebook_metrics_to_tsdb
+from server.routers.sensor_telemetry import forward_chromebook_metrics_to_tsdb
 import server.state as state
 
 verifies = pytest.mark.verifies

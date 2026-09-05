@@ -31,7 +31,9 @@ db.init_db()
 from server.routers import (
     auth,
     onboarding,
-    sensors,
+    sensor_crud,
+    sensor_diagnostics,
+    sensor_telemetry,
     campuses,
     probes,
     schedules,
@@ -279,7 +281,17 @@ app.add_middleware(
 
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
 if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    class NoCacheStaticFiles(StaticFiles):
+        def is_not_modified(self, response_headers, request_headers):
+            return False
+        async def get_response(self, path, scope):
+            response = await super().get_response(path, scope)
+            response.headers["Cache-Control"] = "no-cache"
+            if path.endswith('.js'):
+                response.headers["Content-Type"] = "application/javascript"
+            return response
+
+    app.mount("/static", NoCacheStaticFiles(directory=static_dir), name="static")
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon_endpoint() -> Response:
@@ -290,7 +302,9 @@ async def favicon_endpoint() -> Response:
 
 app.include_router(auth.router)
 app.include_router(onboarding.router)
-app.include_router(sensors.router)
+app.include_router(sensor_crud.router)
+app.include_router(sensor_diagnostics.router)
+app.include_router(sensor_telemetry.router)
 app.include_router(campuses.router)
 app.include_router(probes.router)
 app.include_router(schedules.router)
