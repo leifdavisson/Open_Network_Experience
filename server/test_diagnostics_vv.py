@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from hypothesis import given, strategies as st, settings
 
-from server.routers.sensors import run_sensor_diagnostics, DiagnosticRunRequest
+from server.routers.sensor_diagnostics import run_sensor_diagnostics, DiagnosticRunRequest
 from server.state import PROBES_DB
 
 @pytest.fixture(autouse=True)

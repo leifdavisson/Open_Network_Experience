@@ -2,6 +2,21 @@
 
 All notable changes to the Open Network Experience (OpenUX) platform will be documented in this file.
 
+## [0.7.0] — 2026-09-05
+
+### Added & Refactored
+- **Architectural Restructuring (Monolith to Modular)**:
+  - **Frontend Asset Decoupling**: Extracted 4,000+ lines of inline CSS and JavaScript from `server/templates/dashboard.html` into static assets (`server/static/css/dashboard.css` and native ES6 modules in `server/static/js/modules/`: `modals.js`, `alerts.js`, `sensors.js`, `charts.js`, and `main.js`).
+  - **Shared Common Layer**: Created `server/common/` (`auth.py`, `errors.py`, `utils.py`) to isolate authentication guards, standardized HTTP exceptions, and utility functions.
+  - **API Router Deconstruction**: Split monolithic `server/routers/sensors.py` into dedicated sub-routers: `sensor_crud.py`, `sensor_diagnostics.py`, and `sensor_telemetry.py`.
+  - **Database Domain Decomposition**: Split raw SQL queries into domain-specific repositories (`server/db/sensors.py`, `server/db/alerts.py`, `server/db/campuses.py`, `server/db/probes.py`, `server/db/schedules.py`) and cross-domain join handlers in `server/db/queries/aggregates.py`.
+- **UI Validation & Stream Annotations**:
+  - Added interactive validation error and warning feedback on modal dialog forms.
+  - Annotated UI telemetry streams using `sensor_id` badges: `[NODE: <hostname>]` for individual sensor streams vs `[AGGREGATE: <CampusName>]` for aggregated group metrics.
+- **Staging Automation & Test Verification**:
+  - Created executable environment reset script `server/deploy/bench_reset.sh` for live staging setup.
+  - Updated test suite helpers to run deterministically against in-memory `TestClient`, achieving 100% green test assertions (134/134 tests passed).
+
 ## [0.6.1] — 2026-09-04
 
 ### Added

@@ -5,10 +5,9 @@ Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
 """
 
 import time
-from typing import List, Dict, Any
 from fastapi import APIRouter, Depends
 from server.schemas import CampusCreate, SubnetAutoEnrollRule, BatchApprovalRequest
-from server.security import verify_admin_key
+from server.common.auth import verify_admin_key
 from server.state import SENSORS_DB
 import server.db as db
 

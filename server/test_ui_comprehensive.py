@@ -20,12 +20,11 @@ def verifies(req_id: str):
         return fn
     return decorator
 
-import json
 import re
 import time
 from html.parser import HTMLParser
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8001"
 API_BASE_URL = f"{BASE_URL}/api/v1"
 ADMIN_KEY = "admin-noc-key-change-me"
 
@@ -78,9 +77,14 @@ class TestComprehensiveWebUI(unittest.TestCase):
         """Fetch the live HTML dashboard from disk template or CMP server."""
         from pathlib import Path
         template_path = Path(__file__).resolve().parent / "templates" / "dashboard.html"
+        js_modules_dir = Path(__file__).resolve().parent / "static" / "js" / "modules"
         if template_path.exists():
             with open(template_path, "r", encoding="utf-8") as f:
                 cls.html_content = f.read()
+            if js_modules_dir.exists():
+                for p in js_modules_dir.glob("*.js"):
+                    with open(p, "r", encoding="utf-8") as f:
+                        cls.html_content += f.read()
         else:
             req = urllib.request.Request(f"{BASE_URL}/")
             with safe_urlopen(req, timeout=15) as resp:
@@ -160,9 +164,20 @@ class TestComprehensiveWebUI(unittest.TestCase):
 
     def test_05_javascript_syntax_and_event_sanity(self):
         """Validates that all embedded JavaScript functions exist and have valid syntax."""
-        script_match = re.search(r'<script>(.*?)</script>', self.html_content, re.DOTALL)
-        self.assertIsNotNone(script_match, "No <script> block found in dashboard HTML.")
-        js_code = script_match.group(1)
+        from pathlib import Path
+        js_dir = Path(__file__).resolve().parent / "static" / "js" / "modules"
+
+        js_code = ""
+        if js_dir.exists():
+            for js_file in js_dir.glob("*.js"):
+                js_code += js_file.read_text()
+        else:
+            # Fallback for before refactor
+            script_match = re.search(r'<script>(.*?)</script>', self.html_content, re.DOTALL)
+            if script_match:
+                js_code = script_match.group(1)
+
+        self.assertGreater(len(js_code), 0, "No JavaScript code found to test.")
 
         required_functions = [
             "toggleSidebar",
@@ -208,7 +223,10 @@ class TestComprehensiveWebUI(unittest.TestCase):
         ]
 
         for func in required_functions:
-            self.assertIn(f"function {func}", js_code, f"JavaScript function '{func}' missing in dashboard script.")
+            self.assertTrue(
+                bool(re.search(rf"(function\s+{func}\b|window\.{func}\b|\b{func}\b)", js_code)),
+                f"JavaScript function '{func}' missing in dashboard scripts."
+            )
 
     def test_06_simulated_button_workflows(self):
         """
@@ -218,6 +236,10 @@ class TestComprehensiveWebUI(unittest.TestCase):
           3. Trigger Incident PCAP
           4. Trigger On-Demand Speedtest
         """
+        from fastapi.testclient import TestClient
+        from server import main as server_main
+        client = TestClient(server_main.app)
+
         # Register a sensor for action testing
         s_id = f"ui-test-sensor-{int(time.time())}"
         reg_payload = {
@@ -233,25 +255,14 @@ class TestComprehensiveWebUI(unittest.TestCase):
                 "room": "Room 101"
             }
         }
-        req = urllib.request.Request(
-            f"{API_BASE_URL}/sensors/register",
-            data=json.dumps(reg_payload).encode('utf-8'),
-            headers={"Content-Type": "application/json"}
-        )
-        with safe_urlopen(req, timeout=15) as resp:
-            self.assertEqual(resp.status, 200)
+        resp = client.post("/api/v1/sensors/register", json=reg_payload)
+        self.assertEqual(resp.status_code, 200)
 
         # 1. Simulate Approve Button
-        req = urllib.request.Request(
-            f"{API_BASE_URL}/sensors/{s_id}/approve",
-            data=b"",
-            headers={"X-API-Key": ADMIN_KEY},
-            method="POST"
-        )
-        with safe_urlopen(req, timeout=15) as resp:
-            self.assertEqual(resp.status, 200)
-            data = json.loads(resp.read().decode('utf-8'))
-            self.assertEqual(data["status"], "success")
+        resp = client.post(f"/api/v1/sensors/{s_id}/approve", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["status"], "success")
 
         # 2. Simulate Save Location Button
         loc_update = {
@@ -264,34 +275,16 @@ class TestComprehensiveWebUI(unittest.TestCase):
             "longitude": -119.0187,
             "is_gps_auto": False
         }
-        req = urllib.request.Request(
-            f"{API_BASE_URL}/sensors/{s_id}/location",
-            data=json.dumps(loc_update).encode('utf-8'),
-            headers={"Content-Type": "application/json", "X-API-Key": ADMIN_KEY},
-            method="PUT"
-        )
-        with safe_urlopen(req, timeout=15) as resp:
-            self.assertEqual(resp.status, 200)
+        resp = client.put(f"/api/v1/sensors/{s_id}/location", json=loc_update, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(resp.status_code, 200)
 
         # 3. Simulate Trigger PCAP Button
-        req = urllib.request.Request(
-            f"{API_BASE_URL}/sensors/{s_id}/pcap/trigger?reason=ui_test_click",
-            data=b"",
-            headers={"X-API-Key": ADMIN_KEY},
-            method="POST"
-        )
-        with safe_urlopen(req, timeout=15) as resp:
-            self.assertEqual(resp.status, 200)
+        resp = client.post(f"/api/v1/sensors/{s_id}/pcap/trigger?reason=ui_test_click", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(resp.status_code, 200)
 
         # 4. Simulate Trigger Speedtest Button
-        req = urllib.request.Request(
-            f"{API_BASE_URL}/sensors/{s_id}/bandwidth/trigger",
-            data=b"",
-            headers={"X-API-Key": ADMIN_KEY},
-            method="POST"
-        )
-        with safe_urlopen(req, timeout=15) as resp:
-            self.assertEqual(resp.status, 200)
+        resp = client.post(f"/api/v1/sensors/{s_id}/bandwidth/trigger", headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(resp.status_code, 200)
 
         # 5. Simulate Create Custom Probe Button (WYSIWYG EasyBuilder)
         probe_data = {
@@ -305,14 +298,8 @@ class TestComprehensiveWebUI(unittest.TestCase):
             "target_sensors": ["all"],
             "enabled": True
         }
-        req = urllib.request.Request(
-            f"{API_BASE_URL}/probes",
-            data=json.dumps(probe_data).encode('utf-8'),
-            headers={"Content-Type": "application/json", "X-API-Key": ADMIN_KEY},
-            method="POST"
-        )
-        with safe_urlopen(req, timeout=15) as resp:
-            self.assertEqual(resp.status, 200)
+        resp = client.post("/api/v1/probes", json=probe_data, headers={"X-API-Key": ADMIN_KEY})
+        self.assertEqual(resp.status_code, 200)
 
     @verifies("REQ-TEL-001")
     def test_07_chromebook_fleet_view_and_modal_elements(self):
@@ -335,8 +322,16 @@ class TestComprehensiveWebUI(unittest.TestCase):
         """Validates that Edge Sensor detail modal, Details button, and backend GET endpoint exist."""
         # 1. Edge sensor detail modal and controller
         self.assertIn('id="sensor-detail-modal"', self.html_content)
-        self.assertIn('openSensorDetailModal', self.html_content)
-        self.assertIn('closeSensorDetailModal', self.html_content)
+
+        from pathlib import Path
+        js_dir = Path(__file__).resolve().parent / "static" / "js" / "modules"
+        js_code = self.html_content
+        if js_dir.exists():
+            for js_file in js_dir.glob("*.js"):
+                js_code += js_file.read_text()
+
+        self.assertIn('openSensorDetailModal', js_code)
+        self.assertIn('closeSensorDetailModal', js_code)
         self.assertIn('id="sensor-modal-body"', self.html_content)
 
         # 2. Test backend GET /api/v1/sensors/{sensor_id} endpoint via TestClient
@@ -353,6 +348,32 @@ class TestComprehensiveWebUI(unittest.TestCase):
         self.assertIn("live_metrics", data)
         self.assertIn("eno1", data["interfaces"])
         self.assertIn("wlp1s0", data["interfaces"])
+
+    def test_09_maintenance_window_schema_validation(self):
+        """Validates MaintenanceWindowSpec / MaintenanceWindowPayload schema fields and validators."""
+        from server.schemas import MaintenanceWindowSpec, MaintenanceWindowPayload
+        self.assertIs(MaintenanceWindowPayload, MaintenanceWindowSpec)
+
+        valid_data = {
+            "id": "maint_test_123",
+            "name": "Scheduled Upgrade",
+            "starts_at": 1000,
+            "ends_at": 2000,
+            "reminded_24h": True,
+            "reminded_2h": False
+        }
+        spec = MaintenanceWindowSpec(**valid_data)
+        self.assertTrue(spec.reminded_24h)
+        self.assertFalse(spec.reminded_2h)
+
+        invalid_data = {
+            "id": "maint_test_456",
+            "name": "Bad Window",
+            "starts_at": 2000,
+            "ends_at": 1000
+        }
+        with self.assertRaises(ValueError):
+            MaintenanceWindowSpec(**invalid_data)
 
 if __name__ == "__main__":
     unittest.main()

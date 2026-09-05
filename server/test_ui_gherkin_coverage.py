@@ -1,5 +1,4 @@
 import unittest
-import urllib.request
 import re
 import sys
 from pathlib import Path
@@ -17,13 +16,19 @@ def verifies(req_id: str):
 class TestDashboardUIGherkinCoverage(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from fastapi.testclient import TestClient
+        from server import main as server_main
+        client = TestClient(server_main.app)
         try:
-            req = urllib.request.Request(f"{BASE_URL}/")
-            with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
-                cls.html_content = resp.read().decode('utf-8')
+            resp = client.get("/")
+            cls.html_content = resp.text
+            for mod in ["main.js", "sensors.js", "modals.js", "alerts.js", "charts.js"]:
+                js_resp = client.get(f"/static/js/modules/{mod}")
+                if js_resp.status_code == 200:
+                    cls.html_content += js_resp.text
         except Exception as e:
             cls.html_content = ""
-            print(f"Failed to fetch dashboard.html: {e}")
+            print(f"Failed to fetch dashboard content: {e}")
 
     @verifies("REQ-UI-001")
     def test_live_diagnostics_dropdown_population(self):

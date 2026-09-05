@@ -55,8 +55,13 @@ def test_02_offline_sensor_data_masking_in_schema_and_ui():
 
     # Verify that JavaScript UI rendering masks offline metrics
     dash_html_path = TEMPLATES_DIR / "dashboard.html"
+    js_modules_dir = TEMPLATES_DIR.parent / "static" / "js" / "modules"
     with open(dash_html_path, "r", encoding="utf-8") as f:
         js_code = f.read()
+    if js_modules_dir.exists():
+        for p in js_modules_dir.glob("*.js"):
+            with open(p, "r", encoding="utf-8") as f:
+                js_code += f.read()
 
     # Assert JavaScript checks isOnline before displaying active RSSI & MOS
     assert "const isOnline = Boolean(cb.is_online);" in js_code  # nosec B101
@@ -151,11 +156,16 @@ def test_06_data_truthfulness_oracle_matrix(is_online, rssi, mos, expected_kpi_s
 
     assert kpi_sub == expected_kpi_sub  # nosec B101
 
-def test_07_modal_offline_stale_warning_banner():
+def test_07_offline_device_modal_stale_warning_and_real_data():
     """Verify that inspecting an offline device renders an explicit stale warning banner."""
     dash_html_path = TEMPLATES_DIR / "dashboard.html"
+    js_modules_dir = TEMPLATES_DIR.parent / "static" / "js" / "modules"
     with open(dash_html_path, "r", encoding="utf-8") as f:
         js_code = f.read()
+    if js_modules_dir.exists():
+        for p in js_modules_dir.glob("*.js"):
+            with open(p, "r", encoding="utf-8") as f:
+                js_code += f.read()
 
     # Assert offline warning banner is rendered
     assert "⚠️ Device Offline — Stale Telemetry Warning" in js_code  # nosec B101
@@ -173,8 +183,13 @@ def test_07_modal_offline_stale_warning_banner():
 def test_08_slide_level_fleet_offline_warning_banner():
     """Verify that Slide 6 includes a top-level warning banner when all Chromebooks are offline."""
     dash_html_path = TEMPLATES_DIR / "dashboard.html"
+    js_modules_dir = TEMPLATES_DIR.parent / "static" / "js" / "modules"
     with open(dash_html_path, "r", encoding="utf-8") as f:
         html_code = f.read()
+    if js_modules_dir.exists():
+        for p in js_modules_dir.glob("*.js"):
+            with open(p, "r", encoding="utf-8") as f:
+                html_code += f.read()
 
     assert '<div id="cb-fleet-offline-banner"></div>' in html_code  # nosec B101
     assert "⚠️ Chromebook Fleet Offline" in html_code  # nosec B101
@@ -183,8 +198,13 @@ def test_08_slide_level_fleet_offline_warning_banner():
 def test_09_dedicated_chromebook_fleet_view_and_lock_controls():
     """Verify that dedicated Chromebook management view exists with full lock and PIN controls."""
     dash_html_path = TEMPLATES_DIR / "dashboard.html"
+    js_modules_dir = TEMPLATES_DIR.parent / "static" / "js" / "modules"
     with open(dash_html_path, "r", encoding="utf-8") as f:
         html_code = f.read()
+    if js_modules_dir.exists():
+        for p in js_modules_dir.glob("*.js"):
+            with open(p, "r", encoding="utf-8") as f:
+                html_code += f.read()
 
     # Sidebar navigation verification
     assert 'id="nav-manage-chromebooks"' in html_code  # nosec B101

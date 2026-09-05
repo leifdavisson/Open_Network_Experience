@@ -10,7 +10,8 @@ import json
 import shlex
 import zipfile
 from typing import Optional
-from fastapi import APIRouter, Request, Query, HTTPException, Response
+from server.common.errors import NotFoundException
+from fastapi import APIRouter, Request, Query, Response
 from fastapi.responses import PlainTextResponse
 
 router = APIRouter(tags=["Onboarding & Provisioning"])
@@ -78,7 +79,7 @@ async def get_install_script(
             if force is True:
                 content = content.replace('FORCE_INSTALL=0', 'FORCE_INSTALL=1')
             return PlainTextResponse(content, media_type="text/x-shellscript")
-    raise HTTPException(status_code=404, detail="install.sh not found on server")
+    raise NotFoundException(detail="install.sh not found on server")
 
 @router.get("/sensor/scripts/{script_name}", summary="Download Edge Sensor Probe Script")
 async def get_sensor_script(script_name: str):
@@ -104,7 +105,7 @@ async def get_sensor_script(script_name: str):
             with open(target_path, "r", encoding="utf-8", errors="ignore") as f:
                 return PlainTextResponse(f.read(), media_type="text/plain")
 
-    raise HTTPException(status_code=404, detail=f"Script '{script_name}' not found")
+    raise NotFoundException(detail=f"Script '{script_name}' not found")
 
 @router.get("/api/v1/onboarding/usb-kit.zip", summary="Generate & Download USB Flash Drive Staging Kit (.zip)")
 @router.get("/download/usb-kit.zip", summary="Generate & Download USB Flash Drive Staging Kit (.zip)")
@@ -216,7 +217,7 @@ async def build_chromebook_package():
 
     cb_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "chromebook-sensor"))
     if not os.path.exists(cb_dir):
-        raise HTTPException(status_code=404, detail="Chromebook source not found")
+        raise NotFoundException(detail="Chromebook source not found")
 
     memory_file = io.BytesIO()
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:

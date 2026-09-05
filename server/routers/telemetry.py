@@ -11,9 +11,10 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timezone
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request
+from server.common.errors import BadRequestException
+from fastapi import APIRouter, Depends, Request
 from server.schemas import EvidenceBundleInfo
-from server.security import verify_admin_key
+from server.common.auth import verify_admin_key
 from server.state import SENSORS_DB, EVIDENCE_DB
 import server.db as db
 
@@ -27,6 +28,8 @@ def query_vm_instant(query_str: str) -> List[dict]:
     for base in urls:
         try:
             url = f"{base}/api/v1/query?query={urllib.parse.quote(query_str)}"
+            if not url.startswith(("http://", "https://")):
+                raise ValueError(f"Invalid URL scheme: {url}")
             req = urllib.request.Request(url, headers={"User-Agent": "ONE-CMP-Wallboard/1.0"})
             with urllib.request.urlopen(req, timeout=1.5) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
@@ -282,4 +285,4 @@ async def restore_system_backup(request: Request):
             SENSORS_DB[s_id] = s_data
         return {"status": "success", "message": "System state restored successfully from backup."}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to restore backup: {e}")
+        raise BadRequestException(detail=f"Failed to restore backup: {e}")

@@ -38,6 +38,7 @@ client = TestClient(main.app)
 def setup_isolated_db(tmp_path, monkeypatch):
     """Isolates each test in a clean temporary SQLite database."""
     temp_db = str(tmp_path / "test_schedules.db")
+    monkeypatch.setenv("DB_PATH", temp_db)
     monkeypatch.setattr(db, "DB_PATH", temp_db)
     db.init_db()
     main.SENSORS_DB.clear()

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 # Ensure the server directory is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from server.security import (
+from server.common.auth import (
     verify_api_key_constant_time,
     create_session_token,
     verify_session_token,
@@ -37,7 +37,7 @@ def test_verify_api_key_constant_time():
 @verifies("REQ-SEC-002")
 def test_create_session_token():
     """Verify session token structure and HMAC-SHA256 signature."""
-    with patch("server.security.SESSION_SECRET", "test-secret"):
+    with patch("server.common.auth.SESSION_SECRET", "test-secret"):
         token = create_session_token("admin", 3600)
         parts = token.split(":")
         assert len(parts) == 3  # nosec B101
@@ -49,7 +49,7 @@ def test_create_session_token():
 @verifies("REQ-SEC-002")
 def test_verify_session_token():
     """Verify session token validation handles valid, expired, tampered, and malformed tokens."""
-    with patch("server.security.SESSION_SECRET", "test-secret"):
+    with patch("server.common.auth.SESSION_SECRET", "test-secret"):
         # Valid token
         valid_token = create_session_token("admin", 3600)
         assert verify_session_token(valid_token) is True  # nosec B101
@@ -75,8 +75,8 @@ def test_verify_session_token():
 def test_verify_dashboard_auth():
     """Verify Dashboard UI authentication across headers, query params, and cookies."""
     import asyncio
-    with patch("server.security.ADMIN_API_KEY", "secure-key"), \
-         patch("server.security.ENV", "production"):
+    with patch("server.common.auth.ADMIN_API_KEY", "secure-key"), \
+         patch("server.common.auth.ENV", "production"):
 
         # Valid header
         req = MagicMock(spec=Request)
@@ -93,7 +93,7 @@ def test_verify_dashboard_auth():
         req = MagicMock(spec=Request)
         req.headers.get.return_value = None
         req.query_params.get.return_value = None
-        with patch("server.security.SESSION_SECRET", "test-secret"):
+        with patch("server.common.auth.SESSION_SECRET", "test-secret"):
             token = create_session_token("admin", 3600)
             req.cookies.get.side_effect = lambda k: token if k == "one_session" else None
             assert asyncio.run(verify_dashboard_auth(req)) is True  # nosec B101
@@ -105,8 +105,8 @@ def test_verify_dashboard_auth():
         req.cookies.get.return_value = None
         assert asyncio.run(verify_dashboard_auth(req)) is False  # nosec B101
 
-    with patch("server.security.ADMIN_API_KEY", DEFAULT_INSECURE_KEY), \
-         patch("server.security.ENV", "development"):
+    with patch("server.common.auth.ADMIN_API_KEY", DEFAULT_INSECURE_KEY), \
+         patch("server.common.auth.ENV", "development"):
         # Dev mode bypass
         req = MagicMock(spec=Request)
         req.headers.get.return_value = None
@@ -122,7 +122,7 @@ def test_production_fail_fast():
     env["ENV"] = "production"
     env["ADMIN_API_KEY"] = DEFAULT_INSECURE_KEY
 
-    cmd = [sys.executable, "-c", "import server.security"]
+    cmd = [sys.executable, "-c", "import server.common.auth"]
     result = subprocess.run(cmd, env=env, capture_output=True, text=True, cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
     assert result.returncode != 0  # nosec B101
