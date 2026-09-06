@@ -64,6 +64,33 @@
     "status": "VERIFIED"
   },
   {
+    "requirement_id": "REQ-DIAG-008",
+    "title": "Dynamic Default Gateway Derivation",
+    "safety_level": "CRITICAL",
+    "verifying_tests": [
+      "test_dynamic_gateway_derivation"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-DIAG-009",
+    "title": "Wi-Fi RF Flapping and DARRP Probe Execution",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_wifi_flapping_probe_execution"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-DIAG-010",
+    "title": "Accurate Probe Attribution String Formatting",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_accurate_attribution_string_formatting"
+    ],
+    "status": "VERIFIED"
+  },
+  {
     "requirement_id": "REQ-UI-001",
     "title": "Live Diagnostics Custom Probe Propagation",
     "safety_level": "STANDARD",

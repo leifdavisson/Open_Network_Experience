@@ -40,8 +40,25 @@
     "title": "Fallback Probe Protocol Handling",
     "safety_level": "STANDARD",
     "description": "When a custom probe with unrecognized probe_type is specified, it MUST fall back to default HTTP or TCP probe execution."
-  }
-,
+  },
+  {
+    "id": "REQ-DIAG-008",
+    "title": "Dynamic Default Gateway Derivation",
+    "safety_level": "CRITICAL",
+    "description": "When running diagnostic probes against a sensor without an explicit gateway override, the system MUST dynamically calculate the target gateway IP from the sensor's registered IP address subnet (e.g., 10.98.2.1 for 10.98.2.141/24) or target_config.gateway, completely avoiding static 10.0.0.1 fallbacks."
+  },
+  {
+    "id": "REQ-DIAG-009",
+    "title": "Wi-Fi RF Flapping and DARRP Probe Execution",
+    "safety_level": "STANDARD",
+    "description": "When 'wifi_flapping' or 'rrm_darrp' diagnostic test types are requested, the system MUST execute the dedicated Wi-Fi RF flapping and DARRP channel monitoring suite rather than falling back to the generic 7-Layer OSI suite."
+  },
+  {
+    "id": "REQ-DIAG-010",
+    "title": "Accurate Probe Attribution String Formatting",
+    "safety_level": "STANDARD",
+    "description": "Diagnostic probe attribution strings MUST accurately reflect the probe result status, displaying failure or unreachable status rather than misleading success messages when probes fail."
+  },
   {
     "id": "REQ-UI-001",
     "title": "Live Diagnostics Custom Probe Propagation",

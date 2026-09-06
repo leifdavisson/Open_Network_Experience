@@ -2,11 +2,13 @@ import pytest
 import asyncio
 from hypothesis import given, strategies as st, settings
 
+from server import db
 from server.routers.sensor_diagnostics import run_sensor_diagnostics, DiagnosticRunRequest
-from server.state import PROBES_DB
+from server.state import PROBES_DB, SENSORS_DB, get_or_create_sensor
 
 @pytest.fixture(autouse=True)
 def setup_mock_probes():
+    db.init_db()
     PROBES_DB["taco-bell"] = {
         "id": "taco-bell",
         "name": "Taco Bell Order API",
@@ -17,7 +19,7 @@ def setup_mock_probes():
     if "taco-bell" in PROBES_DB:
         del PROBES_DB["taco-bell"]
 
-@given(test_type=st.text(min_size=1).filter(lambda x: x not in ["speedtest", "iperf3", "canvas", "pcap", "taco-bell", "classroom", "google", "iready", "ringcentral", "rc_voip", "zoom", "voip", "jitter", "client_isolation", "intra_bss", "guest_isolation", "vlan_isolation", "segmentation", "caaspp", "dns", "gateway", "all"]))
+@given(test_type=st.text(min_size=1).filter(lambda x: x not in ["speedtest", "iperf3", "canvas", "pcap", "taco-bell", "classroom", "google", "iready", "ringcentral", "rc_voip", "zoom", "voip", "jitter", "client_isolation", "intra_bss", "guest_isolation", "vlan_isolation", "segmentation", "caaspp", "dns", "gateway", "all", "wifi_flapping", "rrm_darrp"]))
 @settings(deadline=None)
 @pytest.mark.verifies("REQ-DIAG-003")
 def test_fuzz_unknown_test_type_fallback(test_type):
@@ -67,7 +69,6 @@ def test_tcp_probe_malformed_port():
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     if not any("Bad TCP Probe" in d["name"] for d in res["details"]):
         raise AssertionError()
-    # It should fallback to port 80 and probably pass if it's google.com, or fail depending on _live_probe_tcp
     del PROBES_DB["bad-tcp"]
 
 
@@ -81,8 +82,8 @@ def test_dns_probe_fallback():
     }
     req = DiagnosticRunRequest(test_type="good-dns")
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
-    assert any("Good DNS Probe" in d["name"] for d in res["details"])  # nosec B101
-    assert res["status"] in ["PASS", "FAIL"]  # nosec B101
+    assert any("Good DNS Probe" in d["name"] for d in res["details"])
+    assert res["status"] in ["PASS", "FAIL"]
     del PROBES_DB["good-dns"]
 
 @pytest.mark.verifies("REQ-DIAG-006")
@@ -95,8 +96,8 @@ def test_tcp_probe_valid_port():
     }
     req = DiagnosticRunRequest(test_type="good-tcp")
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
-    assert any("Good TCP Probe" in d["name"] for d in res["details"])  # nosec B101
-    assert res["status"] in ["PASS", "FAIL"]  # nosec B101
+    assert any("Good TCP Probe" in d["name"] for d in res["details"])
+    assert res["status"] in ["PASS", "FAIL"]
     del PROBES_DB["good-tcp"]
 
 @pytest.mark.verifies("REQ-DIAG-007")
@@ -109,6 +110,43 @@ def test_other_probe_fallback():
     }
     req = DiagnosticRunRequest(test_type="other-probe")
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
-    assert any("Other Probe" in d["name"] for d in res["details"])  # nosec B101
-    assert res["status"] in ["PASS", "FAIL"]  # nosec B101
+    assert any("Other Probe" in d["name"] for d in res["details"])
+    assert res["status"] in ["PASS", "FAIL"]
     del PROBES_DB["other-probe"]
+
+@pytest.mark.verifies("REQ-DIAG-008")
+def test_dynamic_gateway_derivation():
+    # Setup sensor with specific subnet IP 10.98.2.141
+    sensor = get_or_create_sensor("sensor-141")
+    sensor["ip_address"] = "10.98.2.141"
+
+    req = DiagnosticRunRequest(test_type="gateway")
+    res = asyncio.run(run_sensor_diagnostics("sensor-141", req))
+
+    gw_detail = next(d for d in res["details"] if "Default" in d["name"])
+    assert "10.98.2.1" in gw_detail["target"]
+    assert "10.0.0.1" not in gw_detail["target"]
+
+    # Test default/all suite as well
+    req_all = DiagnosticRunRequest(test_type="all")
+    res_all = asyncio.run(run_sensor_diagnostics("sensor-141", req_all))
+    gw_all_detail = next(d for d in res_all["details"] if "Default Gateway" in d["name"])
+    assert gw_all_detail["target"] == "10.98.2.1"
+
+@pytest.mark.verifies("REQ-DIAG-009")
+def test_wifi_flapping_probe_execution():
+    req = DiagnosticRunRequest(test_type="wifi_flapping")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+
+    assert any("Wi-Fi" in d["name"] or "DARRP" in d["name"] for d in res["details"])
+    assert "Default Gateway ICMP Ping" not in [d["name"] for d in res["details"]]
+
+@pytest.mark.verifies("REQ-DIAG-010")
+def test_accurate_attribution_string_formatting():
+    # Force an unreachable target override on HTTP probe
+    req = DiagnosticRunRequest(test_type="all", custom_target="http://10.255.255.1:59999")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+
+    failed_http = next(d for d in res["details"] if d["type"] == "HTTP 2XX" and not d["passed"])
+    assert "valid SSL cert" not in failed_http["info"]
+    assert ("Unreachable" in failed_http["info"] or "HTTP" in failed_http["info"] or "failed" in failed_http["info"].lower())
