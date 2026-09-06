@@ -2,6 +2,25 @@
 
 All notable changes to the Open Network Experience (OpenUX) platform will be documented in this file.
 
+## [0.7.1] — 2026-09-05
+
+### Added & Refactored
+- **Security & CI Pipeline Automation**:
+  - Calibrated TruffleHog OSS scanner and Gitleaks rules with dedicated exclusion patterns (`.trufflehog-exclude.txt`) and allowlists (`.gitleaks.toml`), eliminating false positives on git history and test fixtures.
+  - Expanded Bandit SAST security audit to explicitly analyze `scripts/` orchestration tools.
+- **Frontend Architecture & Event Delegation**:
+  - Centralized frontend network operations and credential handling into a dedicated `server/static/js/modules/api.js` client module.
+  - Migrated legacy inline HTML `onclick`/`onsubmit` handlers in `dashboard.html` to declarative `data-action` and `data-submit` delegations via `server/static/js/modules/events.js`.
+  - Resolved `ReferenceError: ADMIN_KEY is not defined` across on-demand diagnostic probe actions.
+- **Edge Sensor Fleet & Test Bench Reliability**:
+  - Added multi-sensor staging, automated SSH-based container image compilation for `open-ux/playwright-runner`, and metrics polling retry loops with exponential backoff in `scripts/deploy_bench.sh` and `scripts/reset_bench.sh`.
+  - Added dynamic CMP URL resolution from incoming `SSH_CONNECTION` in `sensor/install.sh`.
+  - Standardized explicit `__all__` exports across modular database repositories in `server/db/__init__.py`.
+  - Enforced SQLite test isolation across pytest fixtures via `server/conftest.py`.
+- **Documentation**:
+  - Added comprehensive repository markdown index across all 26 documentation files to `README.md`.
+  - Added centralized engineering backlog and tracking in `docs/JULES_TODO.md`.
+
 ## [0.7.0] — 2026-09-05
 
 ### Added & Refactored
