@@ -34,7 +34,7 @@ jobs:
 
       - name: Security SAST Scan with Bandit
         run: |
-          bandit -r server/ sensor/ -lll
+          bandit -r server/ sensor/ scripts/ -lll
 
       - name: Validate shell scripts
         run: |

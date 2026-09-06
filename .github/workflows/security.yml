@@ -61,3 +61,8 @@ jobs:
       - name: Scan with Gitleaks
         run: |
           gitleaks detect --config .gitleaks.toml --verbose --redact
+
+      - name: Scan with TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified=false

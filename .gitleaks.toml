@@ -1,25 +1,44 @@
-# Gitleaks Configuration & Allowlist
-# Configures Gitleaks to ignore public test tokens, documentation examples, and unit test keys.
+# ==============================================================================
+# Open Network Experience (ONE) - Gitleaks Secret Detection Configuration
+# ==============================================================================
 
 [extend]
-# Inherits default Gitleaks secret detection rules
+# Inherits standard Gitleaks secret detection rule suite
 
+# ------------------------------------------------------------------------------
+# Custom Project Rules: Specific to ONE Architecture & Credential Formats
+# ------------------------------------------------------------------------------
+[[rules]]
+id = "one-sensor-api-key"
+description = "Detected Open Network Experience (ONE) Sensor API Key"
+regex = '''sensor-key-[0-9a-f]{32}'''
+keywords = ["sensor-key-"]
+
+[[rules]]
+id = "hardcoded-plaintext-password"
+description = "Detected hardcoded plaintext password variable assignment"
+regex = '''(?i)(?:password|passwd|pwd)\s*=\s*['"][^'"]{6,}['"]'''
+keywords = ["password", "passwd", "pwd"]
+
+# ------------------------------------------------------------------------------
+# Scoped Allowlists: ONLY Specific Benign Test Placeholders
+# ------------------------------------------------------------------------------
 [allowlist]
 description = "Allowlist for public test verification tokens and benign doc placeholders"
 paths = [
-    '''Open-Source Aruba UXI Alternative\.docx''',
     '''sensor/cipa_compliance\.py''',
     '''GETTING_STARTED\.md''',
     '''README\.md''',
     '''sensor/README\.md''',
     '''server/README\.md''',
     '''server/main\.py''',
-    '''server/test_integration\.py'''
+    '''server/test_integration\.py''',
+    '''server/test_security_hardening\.py'''
 ]
 regexes = [
     '''admin-noc-key-change-me''',
     '''sensor-edge-key-change-me''',
-    '''sensor-key-''',
+    '''test-noc-key''',
     '''nowifiyet''',
     '''SFf84Q2LRDkv02bVB7KYmvF9mPbO27IZnsueXWxeo5KE174T25Y7ybeaof851oyK''',
     '''3MIN0HYnHWTQF4uJDkOpOm0YVB809JGgTaH94P10ge9lKLDf7E8lFZDTm3qU81Ud''',
