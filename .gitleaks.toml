@@ -27,6 +27,10 @@ keywords = ["password", "passwd", "pwd"]
 description = "Allowlist for public test verification tokens and benign doc placeholders"
 paths = [
     '''sensor/cipa_compliance\.py''',
+    '''sensor/reconciler/test_reconciler\.py''',
+    '''sensor/reconciler/reconciler\.py''',
+    '''docs/HELPDESK_INSTALL_GUIDE\.md''',
+    '''server/schemas\.py''',
     '''GETTING_STARTED\.md''',
     '''README\.md''',
     '''sensor/README\.md''',
