@@ -64,3 +64,6 @@ jobs:
 
       - name: Scan with TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --exclude-paths=.trufflehog-exclude.txt
+

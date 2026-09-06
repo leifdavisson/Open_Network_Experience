@@ -118,7 +118,13 @@ done
 
 # If CMP_URL not passed, attempt to extract from download origin or use default
 if [[ -z "$CMP_URL" ]]; then
-    CMP_URL="http://central-monitoring-platform.local/api/v1"
+    if [[ -n "${SSH_CONNECTION:-}" ]]; then
+        # When deploying remotely via SSH pipe, extract the remote client IP
+        CLIENT_IP=$(echo $SSH_CONNECTION | awk '{print $1}')
+        CMP_URL="http://${CLIENT_IP}:8000/api/v1"
+    else
+        CMP_URL="http://central-monitoring-platform.local/api/v1"
+    fi
 fi
 
 # If run interactively on a TTY without explicit site/room args, ask if technician wants the wizard

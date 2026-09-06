@@ -159,7 +159,7 @@ def test_08_reconcile_wifi_eap_peap_network(tmp_path):
         "ssid": "District-Secure-EAP",
         "security": "eap-peap",
         "username": "sensor_svc_account",
-        "password": "EapRadiusPassword88"
+        "password": "wifi_pwd_test"
     }
 
     with patch("reconciler.run_cmd", return_value=True):
@@ -172,7 +172,7 @@ def test_08_reconcile_wifi_eap_peap_network(tmp_path):
         assert "key_mgmt=WPA-EAP" in content
         assert "eap=PEAP" in content
         assert 'identity="sensor_svc_account"' in content
-        assert 'password="EapRadiusPassword88"' in content
+        assert 'password="wifi_pwd_test"' in content
         assert 'phase2="auth=MSCHAPV2"' in content
 
 # --- 4. Container Management & Safety Tests ---

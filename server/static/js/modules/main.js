@@ -1,3 +1,4 @@
+import { apiClient } from "./api.js";
 import { loadCustomAlertRules, showFormError, clearFormError, openAlertRuleModal, closeAlertRuleModal, editAlertRule, handleSaveAlertRule, toggleRuleActive, deleteAlertRule, loadMaintenanceWindows, openMaintenanceModal, closeMaintenanceModal, setMaintDurationPreset, editMaintenanceWindow, handleSaveMaintenance, quickCreateMuteWindow, quickCreateConstructionWindow, toggleMaintenanceWindow, deleteMaintenanceWindow, loadNotificationChannels, handleChannelTypeChange, applyEmailPreset, openChannelModal, editChannel, closeChannelModal, handleSaveChannel, testChannel, testCurrentChannel, deleteChannel, setAlertStatusFilter, loadAlertCenterData, updateAlertBadgeAndBanner, renderAlertsTable, openSimulateAlertModal, closeSimulateAlertModal, applySimulatePreset, handleSimulateAlert, handleAcknowledgeAlert, openResolveAlertModal, closeResolveAlertModal, handleConfirmResolveAlert, viewAlertDetails, closeAlertDetailModal, openEvidenceModal, closeEvidenceModal, downloadCurrentPcap, triggerManualPcap, launchSensorDiag } from './alerts.js';
 import { handleBackdropClick } from './modals.js';
 import { renderAnalyticsCharts, chartFault, chartTrend, chartAlarm } from './charts.js';
@@ -93,7 +94,7 @@ window.formatDuration = formatDuration;
 window.formatTimeAgo = formatTimeAgo;
 window.initCharts = initCharts;
 
-export const ADMIN_KEY = "admin-noc-key-change-me";
+import { ADMIN_KEY } from "./api.js";
 window.ADMIN_KEY = ADMIN_KEY;
 let SENSORS_CACHE = [];
 let mapInstance = null;
@@ -568,7 +569,7 @@ async function handleSaveSchedule(e) {
     }
 
     try {
-        const res = await fetch('/api/v1/schedules', {
+        const res = await apiClient('/api/v1/schedules', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
             body: JSON.stringify(payload)
@@ -593,13 +594,13 @@ async function handleSaveSchedule(e) {
 
 async function deleteSchedule(scheduleId) {
     if (confirm(`Delete probe schedule '${scheduleId}'?`)) {
-        await fetch(`/api/v1/schedules/${scheduleId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
+        await apiClient(`/api/v1/schedules/${scheduleId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
         loadDashboardData();
     }
 }
 
 async function toggleSchedule(scheduleId) {
-    await fetch(`/api/v1/schedules/${scheduleId}/toggle`, { method: 'PUT', headers: { 'X-API-Key': ADMIN_KEY } });
+    await apiClient(`/api/v1/schedules/${scheduleId}/toggle`, { method: 'PUT', headers: { 'X-API-Key': ADMIN_KEY } });
     loadDashboardData();
 }
 
@@ -720,7 +721,7 @@ async function openCbDetailModal(sensorId) {
     if (body) body.innerHTML = `<p style="color:var(--text-muted);">Fetching dynamic telemetry for <code>${sensorId}</code>...</p>`;
 
     try {
-        const res = await fetch(`/api/v1/chromebooks/${sensorId}`);
+        const res = await apiClient(`/api/v1/chromebooks/${sensorId}`);
         if (!res.ok) throw new Error("Sensor not found");
         const data = await res.json();
         const isOnline = Boolean(data.is_online);
@@ -847,7 +848,7 @@ async function openSensorDetailModal(sensorId) {
     if (body) body.innerHTML = `<p style="color:var(--text-muted);">Fetching complete telemetry and diagnostic matrix for <code>${sensorId}</code>...</p>`;
 
     try {
-        const res = await fetch(`/api/v1/sensors/${sensorId}`, { headers: { 'X-API-Key': ADMIN_KEY } });
+        const res = await apiClient(`/api/v1/sensors/${sensorId}`, { headers: { 'X-API-Key': ADMIN_KEY } });
         if (!res.ok) throw new Error("Edge sensor not found");
         const data = await res.json();
         const isOnline = Boolean(data.is_online);
@@ -970,13 +971,13 @@ function closeSensorDetailModal() {
 
 async function loadDashboardData() {
     try {
-        const resSensors = await fetch('/api/v1/sensors', { headers: { 'X-API-Key': ADMIN_KEY } });
+        const resSensors = await apiClient('/api/v1/sensors', { headers: { 'X-API-Key': ADMIN_KEY } });
         SENSORS_CACHE = await resSensors.json();
 
-        const resProbes = await fetch('/api/v1/probes', { headers: { 'X-API-Key': ADMIN_KEY } });
+        const resProbes = await apiClient('/api/v1/probes', { headers: { 'X-API-Key': ADMIN_KEY } });
         const probes = await resProbes.json();
 
-        const resSchedules = await fetch('/api/v1/schedules', { headers: { 'X-API-Key': ADMIN_KEY } });
+        const resSchedules = await apiClient('/api/v1/schedules', { headers: { 'X-API-Key': ADMIN_KEY } });
         const schedules = await resSchedules.json();
         SCHEDULES_CACHE = schedules;
         renderSchedulesTable(schedules);
@@ -993,23 +994,23 @@ async function loadDashboardData() {
 
         let liveStats = null;
         try {
-            const resStats = await fetch('/api/v1/wallboard/live-stats');
+            const resStats = await apiClient('/api/v1/wallboard/live-stats');
             liveStats = await resStats.json();
         } catch (e) {
             console.warn("Could not load live wallboard stats:", e);
         }
 
         try {
-            const resCb = await fetch('/api/v1/chromebooks');
+            const resCb = await apiClient('/api/v1/chromebooks');
             CHROMEBOOKS_CACHE = await resCb.json();
-            const resRoam = await fetch('/api/v1/chromebooks/roaming-trail');
+            const resRoam = await apiClient('/api/v1/chromebooks/roaming-trail');
             ROAMING_TRAIL_CACHE = await resRoam.json();
         } catch (e) {
             console.warn("Could not load Chromebook fleet data:", e);
         }
 
         try {
-            const resEv = await fetch('/api/v1/evidence');
+            const resEv = await apiClient('/api/v1/evidence');
             if (resEv.ok) {
                 const evData = await resEv.json();
                 renderEvidenceTable(evData);
@@ -1058,7 +1059,7 @@ function renderEvidenceTable(evidenceList) {
 }
 
 async function downloadSystemBackup() {
-    const res = await fetch('/api/v1/system/backup', { headers: { 'X-API-Key': ADMIN_KEY } });
+    const res = await apiClient('/api/v1/system/backup', { headers: { 'X-API-Key': ADMIN_KEY } });
     const data = await res.json();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
@@ -1079,7 +1080,7 @@ async function handleRestoreBackupFile(e) {
     reader.onload = async (ev) => {
         try {
             const backupJson = JSON.parse(ev.target.result);
-            const res = await fetch('/api/v1/system/restore', {
+            const res = await apiClient('/api/v1/system/restore', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
                 body: JSON.stringify(backupJson)
@@ -1159,7 +1160,7 @@ function downloadUsbKit() {
 
 async function fetchFleetSettings() {
     try {
-        const res = await fetch('/api/v1/chromebooks/fleet-settings');
+        const res = await apiClient('/api/v1/chromebooks/fleet-settings');
         if (res.ok) {
             const data = await res.json();
             const badge = document.getElementById('fleet-lock-status-badge');
@@ -1181,7 +1182,7 @@ async function fetchFleetSettings() {
 async function setFleetLock(locked) {
     try {
         const pin = document.getElementById('fleet-helpdesk-pin')?.value || '4357';
-        const res = await fetch('/api/v1/chromebooks/fleet-settings', {
+        const res = await apiClient('/api/v1/chromebooks/fleet-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
             body: JSON.stringify({ locked: locked, helpdesk_pin: pin })
@@ -1202,7 +1203,7 @@ async function saveFleetPin() {
     try {
         const pin = document.getElementById('fleet-helpdesk-pin')?.value || '4357';
         const isLocked = document.getElementById('fleet-lock-status-badge')?.innerText.includes('Locked');
-        const res = await fetch('/api/v1/chromebooks/fleet-settings', {
+        const res = await apiClient('/api/v1/chromebooks/fleet-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
             body: JSON.stringify({ locked: isLocked, helpdesk_pin: pin })
@@ -1223,7 +1224,7 @@ async function toggleDeviceLock(sensorId) {
         const cb = (CHROMEBOOKS_CACHE || []).find(c => c.sensor_id === sensorId);
         const currentLocked = cb ? (cb.settings_locked !== false) : true;
         const newLock = !currentLocked;
-        const res = await fetch(`/api/v1/chromebooks/${sensorId}/lock`, {
+        const res = await apiClient(`/api/v1/chromebooks/${sensorId}/lock`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
             body: JSON.stringify({ locked: newLock })
@@ -1270,7 +1271,7 @@ async function promptDownloadChromebookZip() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-        const res = await fetch(`${normalizedUrl}/api/v1/health`, {
+        const res = await apiClient(`${normalizedUrl}/api/v1/health`, {
             signal: controller.signal,
             headers: { 'Accept': 'application/json' }
         });
@@ -1429,3 +1430,104 @@ window.setFleetLock = setFleetLock;
 window.saveFleetPin = saveFleetPin;
 window.toggleDeviceLock = toggleDeviceLock;
 window.promptDownloadChromebookZip = promptDownloadChromebookZip;
+
+document.addEventListener('click', (e) => {
+    let target = e.target;
+    while (target && target !== document.body) {
+        if (target.hasAttribute('data-action')) {
+            const action = target.getAttribute('data-action');
+            try {
+                const match = action.match(/^([a-zA-Z0-9_]+)\((.*)\)$/);
+                if (match) {
+                    const funcName = match[1];
+                    const argsStr = match[2];
+                    let args = [];
+                    if (argsStr) {
+                         args = argsStr.split(',').map(s => {
+                            s = s.trim();
+                            if (s.startsWith("'") && s.endsWith("'")) return s.slice(1, -1);
+                            if (s.startsWith('"') && s.endsWith('"')) return s.slice(1, -1);
+                            if (s === 'true') return true;
+                            if (s === 'false') return false;
+                            if (s === 'this') return target;
+                            if (s === 'event') return e;
+                            if (s === 'this.value') return target.value;
+                            if (!isNaN(s) && s !== '') return Number(s);
+                            // try to resolve window variables
+                            return window[s];
+                         });
+                    }
+                    if (window[funcName] && typeof window[funcName] === 'function') {
+                        window[funcName](...args);
+                        if (target.tagName.toLowerCase() === 'button' || target.tagName.toLowerCase() === 'a' && target.getAttribute('href') === '#') {
+                             e.preventDefault();
+                        }
+                    } else {
+                         console.warn("Function not found on window:", funcName);
+                    }
+                } else if (action) {
+                     // Check if it's just a variable or something else
+                     // Could be something like "promptDownloadChromebookZip(); return false;"
+                     if (action.includes(";")) {
+                          // Try to evaluate it if it contains multiple statements...
+                          // This is a bit unsafe but since we controlled the migration:
+                          new Function('event', action).bind(target)(e);
+                          e.preventDefault();
+                     }
+                }
+            } catch (err) {
+                 console.error("Error executing data-action", action, err);
+            }
+            return;
+        }
+        target = target.parentElement;
+    }
+});
+
+// Handle other events using delegation
+['change', 'submit', 'keyup', 'input'].forEach(eventType => {
+    document.addEventListener(eventType, (e) => {
+        let target = e.target;
+        while (target && target !== document.body) {
+            const attrName = `data-${eventType}`;
+            if (target.hasAttribute(attrName)) {
+                const action = target.getAttribute(attrName);
+                try {
+                    const match = action.match(/^([a-zA-Z0-9_]+)\((.*)\)$/);
+                    if (match) {
+                        const funcName = match[1];
+                        const argsStr = match[2];
+                        let args = [];
+                        if (argsStr) {
+                            args = argsStr.split(',').map(s => {
+                                s = s.trim();
+                                if (s.startsWith("'") && s.endsWith("'")) return s.slice(1, -1);
+                                if (s.startsWith('"') && s.endsWith('"')) return s.slice(1, -1);
+                                if (s === 'true') return true;
+                                if (s === 'false') return false;
+                                if (s === 'this') return target;
+                                if (s === 'event') return e;
+                                if (s === 'this.value') return target.value;
+                                if (!isNaN(s) && s !== '') return Number(s);
+                                return window[s];
+                            });
+                        }
+                        if (window[funcName] && typeof window[funcName] === 'function') {
+                            window[funcName](...args);
+                        } else {
+                            console.warn("Function not found on window:", funcName);
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Error executing ${attrName}`, action, err);
+                }
+
+                if (eventType === 'submit') {
+                     e.preventDefault();
+                }
+                return;
+            }
+            target = target.parentElement;
+        }
+    });
+});

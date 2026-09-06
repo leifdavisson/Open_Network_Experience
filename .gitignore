@@ -95,6 +95,7 @@ wpa_supplicant.conf
 *.sqlite3
 one_state.db
 data/backups/
+backups/
 *.bak
 *.dump
 

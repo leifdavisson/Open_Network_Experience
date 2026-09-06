@@ -37,13 +37,21 @@ paths = [
     '''server/README\.md''',
     '''server/main\.py''',
     '''server/test_integration\.py''',
-    '''server/test_security_hardening\.py'''
+    '''server/test_security_hardening\.py''',
+    '''sensor/reconciler/test_reconciler\.py''',
+    '''docs/HELPDESK_INSTALL_GUIDE\.md''',
+    '''backups/.*'''
 ]
 regexes = [
     '''admin-noc-key-change-me''',
     '''sensor-edge-key-change-me''',
     '''test-noc-key''',
     '''nowifiyet''',
+    '''Kern1234''',
+    '''\{password\}''',
+    '''\[REDACTED\]''',
+    '''<REDACTED>''',
+    '''\*{4}REDACTED\*{4}''',
     '''SFf84Q2LRDkv02bVB7KYmvF9mPbO27IZnsueXWxeo5KE174T25Y7ybeaof851oyK''',
     '''3MIN0HYnHWTQF4uJDkOpOm0YVB809JGgTaH94P10ge9lKLDf7E8lFZDTm3qU81Ud''',
     '''5468v9o44huX499v91e9X35ki0mmlwv21449076I7VMI2LA53200Qd9859S2E4aF''',

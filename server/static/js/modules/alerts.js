@@ -1,3 +1,4 @@
+import { apiClient } from "./api.js";
 export function formatDuration(startsAt, endsAt) {
     const diffMs = (endsAt - startsAt) * 1000;
     if (diffMs <= 0) return '0m';
@@ -21,7 +22,7 @@ export async function loadCustomAlertRules() {
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading…</td></tr>';
     try {
-        const res = await fetch('/api/v1/alerts/rules');
+        const res = await apiClient('/api/v1/alerts/rules');
         const rules = res.ok ? await res.json() : [];
         // Update KPIs
         const active = rules.filter(r => r.is_active).length;
@@ -164,7 +165,7 @@ export async function handleSaveAlertRule(e) {
     }
 
     try {
-        const res = await fetch('/api/v1/alerts/rules', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+        const res = await apiClient('/api/v1/alerts/rules', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
         if (!res.ok) {
             const err = await res.json();
             alert("Error saving alert rule: " + (err.detail || JSON.stringify(err)));
@@ -184,13 +185,13 @@ export async function handleSaveAlertRule(e) {
 }
 
 export async function toggleRuleActive(ruleId) {
-    await fetch(`/api/v1/alerts/rules/${ruleId}/toggle`, { method: 'POST' });
+    await apiClient(`/api/v1/alerts/rules/${ruleId}/toggle`, { method: 'POST' });
     loadCustomAlertRules();
 }
 
 export async function deleteAlertRule(ruleId) {
     if (!confirm('Delete this alert rule?')) return;
-    await fetch(`/api/v1/alerts/rules/${ruleId}`, { method: 'DELETE' });
+    await apiClient(`/api/v1/alerts/rules/${ruleId}`, { method: 'DELETE' });
     loadCustomAlertRules();
 }
 
@@ -210,7 +211,7 @@ export async function loadMaintenanceWindows() {
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Loading maintenance windows…</td></tr>';
     try {
-        const res = await fetch('/api/v1/alerts/maintenance-windows');
+        const res = await apiClient('/api/v1/alerts/maintenance-windows');
         const windows = res.ok ? await res.json() : [];
         MAINTENANCE_WINDOWS_CACHE = windows;
         const now = Math.floor(Date.now() / 1000);
@@ -223,7 +224,7 @@ export async function loadMaintenanceWindows() {
         // Fetch 24h muted alerts count
         let mutedCount = 0;
         try {
-            const altRes = await fetch('/api/v1/alerts?limit=500');
+            const altRes = await apiClient('/api/v1/alerts?limit=500');
             if (altRes.ok) {
                 const alerts = await altRes.json();
                 mutedCount = alerts.filter(a => a.is_muted).length;
@@ -430,7 +431,7 @@ export async function handleSaveMaintenance(e) {
     }
 
     try {
-        const res = await fetch('/api/v1/alerts/maintenance-windows', {
+        const res = await apiClient('/api/v1/alerts/maintenance-windows', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -472,7 +473,7 @@ export async function quickCreateMuteWindow(durationMinutes, title) {
     };
 
     try {
-        const res = await fetch('/api/v1/alerts/maintenance-windows', {
+        const res = await apiClient('/api/v1/alerts/maintenance-windows', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -505,7 +506,7 @@ export async function quickCreateConstructionWindow(days, title) {
     };
 
     try {
-        const res = await fetch('/api/v1/alerts/maintenance-windows', {
+        const res = await apiClient('/api/v1/alerts/maintenance-windows', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -521,7 +522,7 @@ export async function quickCreateConstructionWindow(days, title) {
 
 export async function toggleMaintenanceWindow(winId) {
     try {
-        const res = await fetch(`/api/v1/alerts/maintenance-windows/${winId}/toggle`, { method: 'POST' });
+        const res = await apiClient(`/api/v1/alerts/maintenance-windows/${winId}/toggle`, { method: 'POST' });
         if (res.ok) {
             loadMaintenanceWindows();
             loadAlertCenterData();
@@ -534,7 +535,7 @@ export async function toggleMaintenanceWindow(winId) {
 export async function deleteMaintenanceWindow(winId) {
     if (!confirm(`Delete maintenance window '${winId}'? Outbound notification suppression will cease immediately.`)) return;
     try {
-        const res = await fetch(`/api/v1/alerts/maintenance-windows/${winId}`, { method: 'DELETE' });
+        const res = await apiClient(`/api/v1/alerts/maintenance-windows/${winId}`, { method: 'DELETE' });
         if (res.ok) {
             loadMaintenanceWindows();
             loadAlertCenterData();
@@ -551,7 +552,7 @@ export async function loadNotificationChannels() {
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading…</td></tr>';
     try {
-        const res = await fetch('/api/v1/alerts/channels');
+        const res = await apiClient('/api/v1/alerts/channels');
         const channels = res.ok ? await res.json() : [];
         const active = channels.filter(c => c.is_active).length;
         const types  = new Set(channels.map(c => c.channel_type)).size;
@@ -746,7 +747,7 @@ export async function handleSaveChannel(e) {
     }
 
     try {
-        const res = await fetch('/api/v1/alerts/channels', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+        const res = await apiClient('/api/v1/alerts/channels', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
         if (!res.ok) {
             const err = await res.json();
             alert("Error saving channel: " + (err.detail || JSON.stringify(err)));
@@ -766,7 +767,7 @@ export async function handleSaveChannel(e) {
 }
 
 export async function testChannel(channelId) {
-    const res = await fetch(`/api/v1/alerts/channels/${channelId}/test`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) });
+    const res = await apiClient(`/api/v1/alerts/channels/${channelId}/test`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) });
     const data = res.ok ? await res.json() : null;
     alert(data && data.delivered ? `✅ Test notification delivered!\nLast status: ${data.channel?.last_status}` : `⚠️ Delivery attempted.\nStatus: ${data?.channel?.last_status || 'Unknown'}`);
     loadNotificationChannels();
@@ -778,7 +779,7 @@ export async function testCurrentChannel() {
 
 export async function deleteChannel(channelId) {
     if (!confirm('Delete this notification channel?')) return;
-    await fetch(`/api/v1/alerts/channels/${channelId}`, { method: 'DELETE' });
+    await apiClient(`/api/v1/alerts/channels/${channelId}`, { method: 'DELETE' });
     loadNotificationChannels();
 }
 
@@ -798,7 +799,7 @@ export async function loadAlertCenterData() {
     try {
         // Check active maintenance windows
         try {
-            const maintRes = await fetch('/api/v1/alerts/maintenance-windows/active-now');
+            const maintRes = await apiClient('/api/v1/alerts/maintenance-windows/active-now');
             const activeMaint = maintRes.ok ? await maintRes.json() : [];
             const maintBanner = document.getElementById('alt-maint-active-banner');
             const maintName = document.getElementById('alt-maint-active-name');
@@ -829,7 +830,7 @@ export async function loadAlertCenterData() {
         }
 
         // Fetch summary metrics
-        const summaryRes = await fetch('/api/v1/alerts/summary');
+        const summaryRes = await apiClient('/api/v1/alerts/summary');
         if (summaryRes.ok) {
             const summary = await summaryRes.json();
             const kpiFir = document.getElementById('alt-kpi-firing');
@@ -1082,7 +1083,7 @@ export async function handleSimulateAlert(e) {
     };
 
     try {
-        const res = await fetch('/api/v1/alerts/simulate', {
+        const res = await apiClient('/api/v1/alerts/simulate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -1101,7 +1102,7 @@ export async function handleSimulateAlert(e) {
 
 export async function handleAcknowledgeAlert(alertId) {
     try {
-        const res = await fetch(`/api/v1/alerts/${alertId}/acknowledge`, {
+        const res = await apiClient(`/api/v1/alerts/${alertId}/acknowledge`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ acknowledged_by: "NOC Operator" })
@@ -1136,7 +1137,7 @@ export async function handleConfirmResolveAlert(e) {
     const notes = document.getElementById('resolve-notes').value.trim();
 
     try {
-        const res = await fetch(`/api/v1/alerts/${alertId}/resolve`, {
+        const res = await apiClient(`/api/v1/alerts/${alertId}/resolve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ resolution_notes: notes })
@@ -1228,7 +1229,7 @@ let CURRENT_ACTIVE_EVIDENCE = null;
 export async function openEvidenceModal(evidenceId) {
     try {
         let evidence = null;
-        const res = await fetch('/api/v1/evidence');
+        const res = await apiClient('/api/v1/evidence');
         if (res.ok) {
             const allEv = await res.json();
             evidence = allEv.find(e => e.id === evidenceId || e.bundle_id === evidenceId);
@@ -1326,7 +1327,7 @@ export function downloadCurrentPcap() {
 
 export async function triggerManualPcap(alertId) {
     try {
-        const res = await fetch(`/api/v1/alerts/${alertId}/capture-pcap`, { method: 'POST' });
+        const res = await apiClient(`/api/v1/alerts/${alertId}/capture-pcap`, { method: 'POST' });
         if (res.ok) {
             const data = await res.json();
             alert(`📸 Fresh PCAP ring-buffer capture frozen and bound to alert!\nEvidence ID: ${data.evidence_id}`);
