@@ -50,8 +50,8 @@ class DOMStructureParser(HTMLParser):
         attrs_dict = dict(attrs)
         el_id = attrs_dict.get('id')
         el_class = attrs_dict.get('class', '')
-        el_onclick = attrs_dict.get('onclick')
-        el_onsubmit = attrs_dict.get('onsubmit')
+        el_onclick = attrs_dict.get('data-action') or attrs_dict.get('onclick')
+        el_onsubmit = attrs_dict.get('data-submit') or attrs_dict.get('onsubmit')
 
         if 'nav-item' in el_class:
             self.nav_items.append((el_id, el_onclick))

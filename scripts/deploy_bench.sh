@@ -136,8 +136,10 @@ for sensor in "${SENSOR_HOSTS[@]}"; do
              echo '${SSH_PASS}' | sudo -S sed -i 's|\"cmp_url\": \".*\"|\"cmp_url\": \"http://${CMP_HOST}:8000/api/v1\"|g' /etc/sensor/reconciler.json 2>/dev/null || true; \
          fi && \
          echo '${SSH_PASS}' | sudo -S systemctl enable sensor-reconciler 2>/dev/null || true && \
+         echo 'Building open-ux/playwright-runner:latest locally on sensor...' && \
+         echo '${SSH_PASS}' | sudo -S docker build -t open-ux/playwright-runner:latest /tmp/sensor/playwright-runner/ 2>/dev/null || true && \
          echo '${SSH_PASS}' | sudo -S systemctl restart sensor-reconciler"
-    echo "   ✓ Sensor ${sensor} updated and sensor-reconciler restarted."
+    echo "   ✓ Sensor ${sensor} updated, playwright runner built, and sensor-reconciler restarted."
 done
 
 echo "=== 6. End-to-End Live Health Smoke Test ==="
@@ -173,10 +175,23 @@ fi
 echo -n " - Checking VictoriaMetrics TSDB (http://${CMP_HOST}:8428)... "
 curl -sf "http://${CMP_HOST}:8428/api/v1/query?query=cipa_compliance_status" | grep -q "result" && echo "✓ OK" || echo "✗ FAIL"
 
-# TODO (Jules): Implement backoff retry polling on sensor port 9100 metrics endpoint
+# Wait and retry for Node Exporter metrics to propagate
 for sensor in "${SENSOR_HOSTS[@]}"; do
     echo -n " - Checking Sensor Metrics on ${sensor} (http://${sensor}:9100)... "
-    curl -sf "http://${sensor}:9100/metrics" | grep -q "wifi_rrm_rssi_dbm" && echo "✓ OK" || echo "✗ FAIL (probe running, waiting for metrics cycle)"
+    MAX_RETRIES=5
+    RETRY_DELAY=5
+    SUCCESS=0
+    for ((i=1; i<=MAX_RETRIES; i++)); do
+        if curl -sf "http://${sensor}:9100/metrics" | grep -q "wifi_rrm_rssi_dbm"; then
+            SUCCESS=1
+            echo "✓ OK"
+            break
+        fi
+        sleep $RETRY_DELAY
+    done
+    if [ $SUCCESS -eq 0 ]; then
+        echo "✗ FAIL (probe running, waiting for metrics cycle timeout)"
+    fi
 done
 
 echo "=== Bench Staging & Verification Complete ==="

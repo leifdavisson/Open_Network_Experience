@@ -1,7 +1,8 @@
+import { apiClient } from "./api.js";
 import { showFormError, clearFormError } from './alerts.js';
 import { clearModalDirty } from './modals.js';
 
-export const ADMIN_KEY = window.ADMIN_KEY || "admin-noc-key-change-me";
+import { ADMIN_KEY } from "./api.js";
 export function formatTimeAgo(ts) {
     if (!ts) return 'Never';
     const diff = Math.floor(Date.now() / 1000) - ts;
@@ -610,13 +611,13 @@ export function zoomToSensor(lat, lon) {
 }
 
 export async function approveSensor(sensorId) {
-    await fetch(`/api/v1/sensors/${sensorId}/approve`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
+    await apiClient(`/api/v1/sensors/${sensorId}/approve`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
     loadDashboardData();
 }
 
 export async function rejectSensor(sensorId) {
     if (confirm(`Are you sure you want to revoke/reject sensor ${sensorId}?`)) {
-        await fetch(`/api/v1/sensors/${sensorId}/reject`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
+        await apiClient(`/api/v1/sensors/${sensorId}/reject`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } });
         loadDashboardData();
     }
 }
@@ -624,7 +625,7 @@ export async function rejectSensor(sensorId) {
 export async function triggerOTAUpgrade(sensorId) {
     if (!confirm(`Are you sure you want to trigger an OTA upgrade for sensor ${sensorId}? The sensor will download the latest codebase and restart.`)) return;
     try {
-        const res = await fetch(`/api/v1/sensors/${sensorId}/upgrade`, {
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/upgrade`, {
             method: 'POST',
             headers: { 'X-API-Key': ADMIN_KEY }
         });
@@ -643,7 +644,7 @@ export async function triggerPcap(sensorId) {
     // 1. Trigger PCAP on backend
     let estSeconds = 10;
     try {
-        const res = await fetch(`/api/v1/sensors/${sensorId}/pcap/trigger?reason=manual_web_ui`, {
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/pcap/trigger?reason=manual_web_ui`, {
             method: 'POST',
             headers: { 'X-API-Key': ADMIN_KEY }
         });
@@ -699,7 +700,7 @@ export async function triggerPcap(sensorId) {
 
 export async function downloadLatestPcap(sensorId) {
     try {
-        const res = await fetch(`/api/v1/sensors/${sensorId}/evidence`, { headers: { 'X-API-Key': ADMIN_KEY } });
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/evidence`, { headers: { 'X-API-Key': ADMIN_KEY } });
         const list = await res.json();
         if (list && list.length > 0) {
             const latest = list[list.length - 1];
@@ -929,7 +930,7 @@ export async function executeSelectedDiagnostic() {
     tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--text-muted);">⏳ Streaming live probe execution from <strong>${sensorId}</strong>...</td></tr>`;
 
     try {
-        const res = await fetch(`/api/v1/sensors/${sensorId}/diagnostics/run`, {
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/diagnostics/run`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
             body: JSON.stringify({ test_type: testType, custom_target: customTarget })
@@ -1061,7 +1062,7 @@ export async function handleSaveLocation(e) {
     }
 
     try {
-        const res = await fetch(`/api/v1/sensors/${sensorId}/location`, {
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/location`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
             body: JSON.stringify(payload)
@@ -1160,7 +1161,7 @@ export async function handleSaveProbe(e) {
     }
 
     try {
-        const res = await fetch('/api/v1/probes', {
+        const res = await apiClient('/api/v1/probes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
             body: JSON.stringify(probe)
@@ -1185,7 +1186,7 @@ export async function handleSaveProbe(e) {
 
 export async function deleteProbe(probeId) {
     if (confirm(`Delete probe ${probeId}?`)) {
-        await fetch(`/api/v1/probes/${probeId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
+        await apiClient(`/api/v1/probes/${probeId}`, { method: 'DELETE', headers: { 'X-API-Key': ADMIN_KEY } });
         loadDashboardData();
     }
 }

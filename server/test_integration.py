@@ -23,6 +23,8 @@ class TestCMPFlow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from fastapi.testclient import TestClient
+        import sys, os
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
         from server import main as server_main
         cls.client = TestClient(server_main.app)
         cls.sensor_id = "test-unit-sensor-99"
