@@ -99,6 +99,12 @@ If a server update causes temporary network unreachability:
 - The sensor's built-in **Network Safety Guardrails** (`sensor/safety_guardrails.py`) activate.
 - Edge testing pauses gracefully without triggering false-positive alerts, buffering diagnostic data locally until CMP connectivity resumes.
 
+#### 3. Automated Sensor Offboarding & De-provisioning
+When an edge sensor needs to be decommissioned or moved, the ONE platform provides an automated, idempotent offboarding script (`scripts/offboard.sh`).
+- **Secure De-provisioning**: Connects via SSH to safely stop services, kill lingering prober processes, and tear down test containers (e.g. `playwright-runner`).
+- **Data Archival & Cleanup**: Supports an `--archive` mode to backup state (`/etc/sensor`, `/var/lib/sensor`) before securely shredding credentials and removing diagnostic binaries, restoring the device to its pre-onboard baseline.
+- **Reference Specification**: Detailed architectural goals are specified in [`docs/TECH_SPEC_SENSOR_OFFBOARDING.md`](../docs/TECH_SPEC_SENSOR_OFFBOARDING.md) (SPEC-OPS-001).
+
 ---
 
 ### Part B: 1:1 Chromebook Sensor Fleet (ChromeOS)

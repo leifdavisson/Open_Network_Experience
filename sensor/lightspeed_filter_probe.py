@@ -11,14 +11,11 @@ Tests full-spectrum Lightspeed ecosystem:
 """
 
 import os
-import sys
 import time
 import socket
 import ssl
-import urllib.request
-import urllib.error
 import argparse
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, List, Tuple
 
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/lightspeed.prom"
 

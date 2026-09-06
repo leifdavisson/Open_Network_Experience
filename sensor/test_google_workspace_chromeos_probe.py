@@ -12,7 +12,6 @@ Tests:
 import os
 import sys
 import socket
-import pytest
 from unittest.mock import patch, MagicMock
 
 # Ensure sensor directory is in sys.path

@@ -171,26 +171,26 @@ def main():
     # Generate Prometheus metrics
     prom_lines = [
         f'# HELP browser_transaction_success Status of transaction to {target_url}. 1 = Success, 0 = Fail',
-        f'# TYPE browser_transaction_success gauge',
+        '# TYPE browser_transaction_success gauge',
         f'browser_transaction_success{{url="{target_url}",type="{test_type}"}} {results["success"]}',
 
-        f'# HELP browser_transaction_duration_seconds Total transaction time in seconds',
-        f'# TYPE browser_transaction_duration_seconds gauge',
+        '# HELP browser_transaction_duration_seconds Total transaction time in seconds',
+        '# TYPE browser_transaction_duration_seconds gauge',
         f'browser_transaction_duration_seconds{{url="{target_url}",type="{test_type}"}} {results["duration_seconds"]:.4f}',
 
-        f'# HELP browser_transaction_status_code HTTP status code or -1 on network failure',
-        f'# TYPE browser_transaction_status_code gauge',
+        '# HELP browser_transaction_status_code HTTP status code or -1 on network failure',
+        '# TYPE browser_transaction_status_code gauge',
         f'browser_transaction_status_code{{url="{target_url}",type="{test_type}"}} {results["status_code"]}'
     ]
 
     if test_type == "page":
         prom_lines.extend([
-            f'# HELP browser_page_dom_content_loaded_seconds DOMContentLoaded timing in seconds',
-            f'# TYPE browser_page_dom_content_loaded_seconds gauge',
+            '# HELP browser_page_dom_content_loaded_seconds DOMContentLoaded timing in seconds',
+            '# TYPE browser_page_dom_content_loaded_seconds gauge',
             f'browser_page_dom_content_loaded_seconds{{url="{target_url}"}} {results["dcl_seconds"]:.4f}',
 
-            f'# HELP browser_page_load_seconds Full window load event timing in seconds',
-            f'# TYPE browser_page_load_seconds gauge',
+            '# HELP browser_page_load_seconds Full window load event timing in seconds',
+            '# TYPE browser_page_load_seconds gauge',
             f'browser_page_load_seconds{{url="{target_url}"}} {results["load_seconds"]:.4f}'
         ])
 

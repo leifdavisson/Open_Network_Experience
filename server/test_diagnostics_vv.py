@@ -4,7 +4,7 @@ from hypothesis import given, strategies as st, settings
 
 from server import db
 from server.routers.sensor_diagnostics import run_sensor_diagnostics, DiagnosticRunRequest
-from server.state import PROBES_DB, SENSORS_DB, get_or_create_sensor
+from server.state import PROBES_DB, get_or_create_sensor
 
 @pytest.fixture(autouse=True)
 def setup_mock_probes():

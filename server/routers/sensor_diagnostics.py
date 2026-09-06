@@ -247,7 +247,7 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
         log_lines.extend([
             f"[INFO] Initializing Wi-Fi RF Flapping & DARRP channel monitoring suite via {src}...",
             f"[OK] RF Roam Cadence: {roam_cnt} roams/min | Channel Flaps: {chan_flaps}.",
-            f"[OK] RRM/DARRP spectrum health nominal.",
+            "[OK] RRM/DARRP spectrum health nominal.",
             "[OK] Wi-Fi RF Flapping & Dwell test completed."
         ])
     elif tt in ("pcap", "capture"):

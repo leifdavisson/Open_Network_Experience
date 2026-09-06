@@ -4,8 +4,7 @@ import os
 import sys
 import unittest
 import tempfile
-import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 def verifies(req_id: str):
     def decorator(fn):

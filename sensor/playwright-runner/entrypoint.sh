@@ -23,11 +23,11 @@ mkdir -p "$METRICS_DIR"
 
 while true; do
   echo "[$(date)] Executing transaction check..."
-  
+
   # Run the python script; capture exit code but never abort the loop
   python3 /app/browser_transaction.py "$TARGET_URL" "$TEST_TYPE" "$METRICS_DIR/browser_transaction.prom" || \
     echo "[$(date)] WARNING: Transaction check failed with exit code $?. Will retry next interval."
-  
+
   echo "[$(date)] Check complete. Sleeping for ${TEST_INTERVAL_SECONDS}s..."
   sleep "$TEST_INTERVAL_SECONDS" &
   wait $!

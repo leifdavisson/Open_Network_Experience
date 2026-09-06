@@ -11,7 +11,6 @@ Outputs metrics in Prometheus format for Node Exporter textfile collector.
 import os
 import sys
 import re
-import time
 import subprocess
 
 # Output Prometheus metrics path
@@ -22,7 +21,7 @@ PATTERNS = {
     "wifi_assoc_start": re.compile(r"wpa_supplicant.*Trying to associate with SSID '(?P<ssid>[^']+)'"),
     "wifi_assoc_end": re.compile(r"wpa_supplicant.*Associated with (?P<bssid>[0-9a-fA-F:]{17})"),
     "wifi_auth_complete": re.compile(r"wpa_supplicant.*CTRL-EVENT-CONNECTED"),
-    
+
     # DHCP triggers (dhclient, dhcpcd, NetworkManager)
     "dhcp_start": re.compile(
         r"(dhclient.*DHCPDISCOVER|dhcpcd.*soliciting a DHCP lease|NetworkManager.*DHCP.*state.*changed.*select|systemd-networkd.*DHCPv4.*request)"
@@ -132,7 +131,7 @@ def calculate_timings(log_lines):
 
 def main():
     output_file = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_OUTPUT_FILE
-    
+
     print("Parsing system log events for L2/L3 onboarding timing...")
     log_lines = parse_journal()
     metrics = calculate_timings(log_lines)
@@ -141,15 +140,15 @@ def main():
         "# HELP wifi_association_duration_seconds Time taken to associate with the AP",
         "# TYPE wifi_association_duration_seconds gauge",
         f'wifi_association_duration_seconds{{ssid="{metrics["ssid"]}",bssid="{metrics["bssid"]}"}} {metrics["wifi_association_seconds"]:.4f}',
-        
+
         "# HELP wifi_authentication_duration_seconds Time taken to complete WPA/EAP authentication",
         "# TYPE wifi_authentication_duration_seconds gauge",
         f'wifi_authentication_duration_seconds{{ssid="{metrics["ssid"]}",bssid="{metrics["bssid"]}"}} {metrics["wifi_authentication_seconds"]:.4f}',
-        
+
         "# HELP wifi_dhcp_lease_duration_seconds Time taken to obtain a DHCP lease",
         "# TYPE wifi_dhcp_lease_duration_seconds gauge",
         f'wifi_dhcp_lease_duration_seconds{{ssid="{metrics["ssid"]}",bssid="{metrics["bssid"]}"}} {metrics["dhcp_lease_seconds"]:.4f}',
-        
+
         "# HELP wifi_onboarding_success Indicates if the onboarding handshake completed successfully. 1 = Success, 0 = Failure/Incomplete",
         "# TYPE wifi_onboarding_success gauge",
         f'wifi_onboarding_success{{ssid="{metrics["ssid"]}"}} {metrics["onboarding_success"]}'

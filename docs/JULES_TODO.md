@@ -102,5 +102,3 @@ This backlog documents identified technical debt, refactoring targets, and optim
 - **Resolution**:
   - [x] Centralized API calls into `server/static/js/modules/api.js` handling authentication headers and error dispatching (Resolved in PR #12).
   - [ ] Implement dynamic API key configuration retrieved from user session/cookie rather than constants.
-
-

@@ -9,14 +9,12 @@ Tests full-spectrum update infrastructure:
 """
 
 import os
-import sys
 import time
 import socket
-import ssl
 import urllib.request
 import urllib.error
 import argparse
-from typing import Dict, Any, List, Tuple, Optional
+from typing import List, Tuple
 
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/windows_update.prom"
 
