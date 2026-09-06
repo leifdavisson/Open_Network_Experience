@@ -59,14 +59,20 @@ jobs:
           pip install pytest pytest-cov hypothesis httpx
 
       - name: Run Unit & Property Test Suite
+        env:
+          PYTHONPATH: .
         run: |
           pytest --ignore=server/test_integration.py --ignore=server/test_ui_comprehensive.py --cov=server --cov=sensor --cov-report=term-missing
 
       - name: Verify DO-178C Level A MC/DC Truth Tables
+        env:
+          PYTHONPATH: .
         run: |
           python scripts/verify_mcdc.py
 
       - name: Audit AST Requirements Traceability Matrix (RTM)
+        env:
+          PYTHONPATH: .
         run: |
           python scripts/generate_rtm.py
 
@@ -121,6 +127,8 @@ jobs:
           curl --retry 5 --retry-delay 2 --retry-connrefused -s http://localhost:8000/docs > /dev/null
 
       - name: Run Integration & Web UI Test Suites
+        env:
+          PYTHONPATH: .
         run: |
           python server/test_integration.py
           python server/test_ui_comprehensive.py
