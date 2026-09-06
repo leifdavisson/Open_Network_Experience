@@ -416,9 +416,9 @@ class WifiSpecSafe(BaseModel):
         return cls(
             ssid=spec.ssid,
             security=spec.security,
-            psk="[REDACTED]" if spec.psk else None,
-            username="[REDACTED]" if spec.username else None,
-            password="[REDACTED]" if spec.password else None
+            psk="<REDACTED>" if spec.psk else None,
+            username="<REDACTED>" if spec.username else None,
+            password="<REDACTED>" if spec.password else None
         )
 
 class SensorReconcileResponseSafe(BaseModel):

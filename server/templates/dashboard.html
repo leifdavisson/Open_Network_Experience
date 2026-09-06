@@ -22,64 +22,64 @@
             <div class="brand" style="display: flex; align-items: center; gap: 8px;">
                 <img src="/static/logo-animated.svg" alt="ONE" style="width: 26px; height: 26px; display: inline-block;"> <span class="brand-text" style="font-weight: 800; letter-spacing: 0.5px;">ONE Platform</span>
             </div>
-            <button class="toggle-btn" id="btn-toggle-sidebar" onclick="toggleSidebar()" aria-label="Toggle Navigation" title="Toggle Navigation">≡</button>
+            <button class="toggle-btn" id="btn-toggle-sidebar" data-action="toggleSidebar()" aria-label="Toggle Navigation" title="Toggle Navigation">≡</button>
         </div>
         <nav class="nav-menu">
             <!-- 1. MONITOR BUCKET -->
             <div class="bucket-label">1. Monitor</div>
-            <a class="nav-item active" id="nav-monitor-noc" onclick="switchView('monitor-noc')" title="NOC Live Operations Wallboard">
+            <a class="nav-item active" id="nav-monitor-noc" data-action="switchView('monitor-noc')" title="NOC Live Operations Wallboard">
                 <span class="nav-icon">📊</span> <span class="nav-text">NOC Overview</span>
             </a>
-            <a class="nav-item" id="nav-monitor-map" onclick="switchView('monitor-map')" title="GIS Campus Geolocation">
+            <a class="nav-item" id="nav-monitor-map" data-action="switchView('monitor-map')" title="GIS Campus Geolocation">
                 <span class="nav-icon">🗺️</span> <span class="nav-text">GIS Campus Map</span>
             </a>
-            <a class="nav-item" id="nav-monitor-ondemand" onclick="switchView('monitor-ondemand')" title="On-Demand Diagnostic Action Center">
+            <a class="nav-item" id="nav-monitor-ondemand" data-action="switchView('monitor-ondemand')" title="On-Demand Diagnostic Action Center">
                 <span class="nav-icon">⚡</span> <span class="nav-text">Live Diagnostics</span>
             </a>
-            <a class="nav-item" id="nav-monitor-reports" onclick="switchView('monitor-reports')" title="Forensics & SLA Reports">
+            <a class="nav-item" id="nav-monitor-reports" data-action="switchView('monitor-reports')" title="Forensics & SLA Reports">
                 <span class="nav-icon">📋</span> <span class="nav-text">Reports & Forensics</span>
             </a>
-            <a class="nav-item" id="nav-monitor-alerts" onclick="switchView('monitor-alerts')" title="Active Alarms & Alert Lifecycle Center">
+            <a class="nav-item" id="nav-monitor-alerts" data-action="switchView('monitor-alerts')" title="Active Alarms & Alert Lifecycle Center">
                 <span class="nav-icon">🚨</span> <span class="nav-text">Alert Center</span>
                 <span id="sidebar-alert-badge" style="display:none; margin-left:auto; background:var(--danger); color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
             </a>
 
             <!-- 2. FLEET & REGISTRATION BUCKET -->
             <div class="bucket-label">2. Fleet & Registration</div>
-            <a class="nav-item" id="nav-manage-fleet" onclick="switchView('manage-fleet')" title="Fixed Hardware Edge Sensors & Onboarding">
+            <a class="nav-item" id="nav-manage-fleet" data-action="switchView('manage-fleet')" title="Fixed Hardware Edge Sensors & Onboarding">
                 <span class="nav-icon">📡</span> <span class="nav-text">Fixed Edge Sensors</span>
             </a>
-            <a class="nav-item" id="nav-manage-chromebooks" onclick="switchView('manage-chromebooks')" title="1:1 Student Chromebook Fleet & Security Lock">
+            <a class="nav-item" id="nav-manage-chromebooks" data-action="switchView('manage-chromebooks')" title="1:1 Student Chromebook Fleet & Security Lock">
                 <span class="nav-icon">💻</span> <span class="nav-text">1:1 Chromebooks</span>
             </a>
-            <a class="nav-item" id="nav-manage-locations" onclick="switchView('manage-locations')" title="Campus & Room Hierarchy">
+            <a class="nav-item" id="nav-manage-locations" data-action="switchView('manage-locations')" title="Campus & Room Hierarchy">
                 <span class="nav-icon">📍</span> <span class="nav-text">Campus Hierarchy</span>
             </a>
 
             <!-- 3. CONFIGURE BUCKET -->
             <div class="bucket-label">3. Configure</div>
-            <a class="nav-item" id="nav-configure-schedules" onclick="switchView('configure-schedules')" title="Visual Probe & Test Scheduler">
+            <a class="nav-item" id="nav-configure-schedules" data-action="switchView('configure-schedules')" title="Visual Probe & Test Scheduler">
                 <span class="nav-icon">📅</span> <span class="nav-text">Probe Scheduler</span>
             </a>
-            <a class="nav-item" id="nav-configure-alerts" onclick="switchView('configure-alerts')" title="Custom Alert Rules & Metric Thresholds">
+            <a class="nav-item" id="nav-configure-alerts" data-action="switchView('configure-alerts')" title="Custom Alert Rules & Metric Thresholds">
                 <span class="nav-icon">🚨</span> <span class="nav-text">Alert Thresholds</span>
             </a>
-            <a class="nav-item" id="nav-configure-maintenance" onclick="switchView('configure-maintenance')" title="Scheduled IT Maintenance & Muting Windows">
+            <a class="nav-item" id="nav-configure-maintenance" data-action="switchView('configure-maintenance')" title="Scheduled IT Maintenance & Muting Windows">
                 <span class="nav-icon">🔕</span> <span class="nav-text">Muting Windows</span>
             </a>
-            <a class="nav-item" id="nav-configure-probes" onclick="switchView('configure-probes')" title="WYSIWYG Custom Probes">
+            <a class="nav-item" id="nav-configure-probes" data-action="switchView('configure-probes')" title="WYSIWYG Custom Probes">
                 <span class="nav-icon">🛠️</span> <span class="nav-text">EasyBuilder Tests</span>
             </a>
-            <a class="nav-item" id="nav-configure-osi" onclick="switchView('configure-osi')" title="OSI Diagnostic Matrix">
+            <a class="nav-item" id="nav-configure-osi" data-action="switchView('configure-osi')" title="OSI Diagnostic Matrix">
                 <span class="nav-icon">🔬</span> <span class="nav-text">OSI Layer Suite</span>
             </a>
 
             <!-- 4. SETUP BUCKET -->
             <div class="bucket-label">4. Setup</div>
-            <a class="nav-item" id="nav-setup-server" onclick="switchView('setup-server')" title="Server & TSDB Health">
+            <a class="nav-item" id="nav-setup-server" data-action="switchView('setup-server')" title="Server & TSDB Health">
                 <span class="nav-icon">🖥️</span> <span class="nav-text">Server & TSDB</span>
             </a>
-            <a class="nav-item" id="nav-setup-integrations" onclick="switchView('setup-integrations')" title="Push Alerts & Webhooks">
+            <a class="nav-item" id="nav-setup-integrations" data-action="switchView('setup-integrations')" title="Push Alerts & Webhooks">
                 <span class="nav-icon">⚙️</span> <span class="nav-text">Alerts & Webhooks</span>
             </a>
         </nav>
@@ -91,10 +91,10 @@
         <header class="topbar">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="global-search" placeholder="Search sensors by Room, School, MAC, or IP..." onkeyup="handleGlobalSearch()">
+                <input type="text" id="global-search" placeholder="Search sensors by Room, School, MAC, or IP..." data-keyup="handleGlobalSearch()">
             </div>
             <div class="topbar-actions">
-                <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">☀️ Light Mode</button>
+                <button class="theme-btn" data-action="toggleTheme()" id="theme-btn">☀️ Light Mode</button>
                 <a href="#" id="grafana-link" target="_blank" class="btn btn-outline btn-sm">📊 Grafana ↗</a>
                 <a href="/docs" target="_blank" class="btn btn-outline btn-sm">📖 Swagger ↗</a>
             </div>
@@ -109,18 +109,18 @@
                 <!-- Slideshow Navigation & Controls Bar -->
                 <div class="slide-controls-bar">
                     <div class="slide-nav-tabs">
-                        <button class="slide-tab-btn active-tab" onclick="goToSlide(0)" id="tab-slide-0">📊 1. Executive SLA Wallboard</button>
-                        <button class="slide-tab-btn" onclick="goToSlide(1)" id="tab-slide-1">🗺️ 2. GIS Campus Map</button>
-                        <button class="slide-tab-btn" onclick="goToSlide(2)" id="tab-slide-2">📚 3. Classroom SaaS SLAs</button>
-                        <button class="slide-tab-btn" onclick="goToSlide(3)" id="tab-slide-3">👨‍🏫 4. Helpdesk & Teacher View</button>
-                        <button class="slide-tab-btn" onclick="goToSlide(4)" id="tab-slide-4">📈 5. Live Grafana Metrics</button>
-                        <button class="slide-tab-btn" onclick="goToSlide(5)" id="tab-slide-5">💻 6. Chromebook Fleet</button>
+                        <button class="slide-tab-btn active-tab" data-action="goToSlide(0)" id="tab-slide-0">📊 1. Executive SLA Wallboard</button>
+                        <button class="slide-tab-btn" data-action="goToSlide(1)" id="tab-slide-1">🗺️ 2. GIS Campus Map</button>
+                        <button class="slide-tab-btn" data-action="goToSlide(2)" id="tab-slide-2">📚 3. Classroom SaaS SLAs</button>
+                        <button class="slide-tab-btn" data-action="goToSlide(3)" id="tab-slide-3">👨‍🏫 4. Helpdesk & Teacher View</button>
+                        <button class="slide-tab-btn" data-action="goToSlide(4)" id="tab-slide-4">📈 5. Live Grafana Metrics</button>
+                        <button class="slide-tab-btn" data-action="goToSlide(5)" id="tab-slide-5">💻 6. Chromebook Fleet</button>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-outline btn-sm" onclick="togglePlayPause()" id="btn-play-pause" aria-label="Pause Slideshow">⏸ Pause</button>
-                        <button class="btn btn-outline btn-sm" onclick="prevSlide()" aria-label="Previous Slide" title="Previous Slide">◀</button>
-                        <button class="btn btn-outline btn-sm" onclick="nextSlide()" aria-label="Next Slide" title="Next Slide">▶</button>
-                        <button class="btn btn-sm" onclick="toggleFullscreenMode()" id="btn-fullscreen">⛶ 72" Display Mode</button>
+                        <button class="btn btn-outline btn-sm" data-action="togglePlayPause()" id="btn-play-pause" aria-label="Pause Slideshow">⏸ Pause</button>
+                        <button class="btn btn-outline btn-sm" data-action="prevSlide()" aria-label="Previous Slide" title="Previous Slide">◀</button>
+                        <button class="btn btn-outline btn-sm" data-action="nextSlide()" aria-label="Next Slide" title="Next Slide">▶</button>
+                        <button class="btn btn-sm" data-action="toggleFullscreenMode()" id="btn-fullscreen">⛶ 72" Display Mode</button>
                     </div>
                     <div class="progress-track">
                         <div class="progress-fill" id="slide-progress-fill"></div>
@@ -139,7 +139,7 @@
                                 <div style="font-size: 12px; color: var(--text-muted);" id="noc-alarms-banner-desc">Requires NOC operator review</div>
                             </div>
                         </div>
-                        <button class="btn btn-sm" onclick="switchView('monitor-alerts')" style="background: var(--danger); color: #fff; border: none; font-weight: 700; cursor: pointer; white-space: nowrap;">🚨 Triage in Alert Center ➔</button>
+                        <button class="btn btn-sm" data-action="switchView('monitor-alerts')" style="background: var(--danger); color: #fff; border: none; font-weight: 700; cursor: pointer; white-space: nowrap;">🚨 Triage in Alert Center ➔</button>
                     </div>
 
                     <!-- 4 GDC-Inspired Fleet KPI Cards -->
@@ -171,7 +171,7 @@
                             <div class="metric-footer"><span>Problems: None</span><span>0 Flapping</span></div>
                         </div>
 
-                        <div class="metric-card" style="border-left: 4px solid var(--purple); cursor: pointer; transition: transform 0.15s ease;" onclick="switchView('monitor-alerts')" title="Click to view Active Alert Center">
+                        <div class="metric-card" style="border-left: 4px solid var(--purple); cursor: pointer; transition: transform 0.15s ease;" data-action="switchView('monitor-alerts')" title="Click to view Active Alert Center">
                             <div class="metric-card-top">
                                 <div class="metric-title">Open Alarms</div>
                                 <div class="metric-icon-badge" style="background: rgba(139,92,246,0.15); color: var(--purple);">🔔</div>
@@ -281,7 +281,7 @@
                                 <div class="section-title">🚨 Active Incidents & Live Operational Ticker</div>
                                 <span class="badge" id="incident-count-badge" style="background:rgba(245,158,11,0.15); color:var(--warning); border:1px solid var(--warning); font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700;">Live Feed</span>
                             </div>
-                            <button class="btn btn-outline btn-sm" onclick="loadDashboardData()">🔄 Refresh</button>
+                            <button class="btn btn-outline btn-sm" data-action="loadDashboardData()">🔄 Refresh</button>
                         </div>
                         <div class="incident-scroll-container" id="incident-feed">
                             <div class="incident-item severity-green">
@@ -410,7 +410,7 @@
                                 <strong style="font-size: 15px;">Need Assistance or Experiencing Network Issues?</strong>
                                 <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Contact the District IT Operations Helpdesk or trigger an on-demand diagnostic test on your room's sensor.</p>
                             </div>
-                            <button class="btn" onclick="switchView('monitor-ondemand')">⚡ Open Live Diagnostics Console</button>
+                            <button class="btn" data-action="switchView('monitor-ondemand')">⚡ Open Live Diagnostics Console</button>
                         </div>
                     </div>
                 </div>
@@ -426,18 +426,18 @@
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <button class="btn btn-outline btn-sm" onclick="prevGrafanaSub()">◀ Prev Dash</button>
-                                <button class="btn btn-outline btn-sm" onclick="nextGrafanaSub()">Next Dash ▶</button>
+                                <button class="btn btn-outline btn-sm" data-action="prevGrafanaSub()">◀ Prev Dash</button>
+                                <button class="btn btn-outline btn-sm" data-action="nextGrafanaSub()">Next Dash ▶</button>
                                 <a id="grafana-open-current-btn" href="#" target="_blank" class="btn btn-outline btn-sm">↗ Open Standalone</a>
                             </div>
                         </div>
 
                         <!-- 4 Grafana Sub-Nav Pills -->
                         <div class="grafana-sub-nav">
-                            <button class="grafana-sub-btn active-sub" onclick="goToGrafanaSub(0)" id="graf-sub-0">📊 1. NOC Overview</button>
-                            <button class="grafana-sub-btn" onclick="goToGrafanaSub(1)" id="graf-sub-1">🎓 2. CAASPP Testing Readiness</button>
-                            <button class="grafana-sub-btn" onclick="goToGrafanaSub(2)" id="graf-sub-2">📶 3. Wi-Fi RF & Spectrum</button>
-                            <button class="grafana-sub-btn" onclick="goToGrafanaSub(3)" id="graf-sub-3">🛡️ 4. CIPA Policy Drill-Down</button>
+                            <button class="grafana-sub-btn active-sub" data-action="goToGrafanaSub(0)" id="graf-sub-0">📊 1. NOC Overview</button>
+                            <button class="grafana-sub-btn" data-action="goToGrafanaSub(1)" id="graf-sub-1">🎓 2. CAASPP Testing Readiness</button>
+                            <button class="grafana-sub-btn" data-action="goToGrafanaSub(2)" id="graf-sub-2">📶 3. Wi-Fi RF & Spectrum</button>
+                            <button class="grafana-sub-btn" data-action="goToGrafanaSub(3)" id="graf-sub-3">🛡️ 4. CIPA Policy Drill-Down</button>
                         </div>
 
                         <iframe id="grafana-embed-frame" src="about:blank" style="width: 100%; height: 520px; border: 1px solid var(--border); border-radius: 8px;"></iframe>
@@ -555,7 +555,7 @@
                         </div>
                         <div class="form-group">
                             <label>2. Diagnostic Probe / Action</label>
-                            <select id="diag-test-select" onchange="updateDiagTargetHint()">
+                            <select id="diag-test-select" data-change="updateDiagTargetHint()">
                                 <optgroup label="Built-in Standard Tests">
                                     <option value="all">🚀 Run Full 7-Layer OSI & SaaS Diagnostic Suite</option>
                                     <option value="speedtest">📊 iPerf3 Bandwidth Throughput Test</option>
@@ -590,12 +590,12 @@
                             <div id="diag-target-presets" style="margin-top: 6px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                 <span>💡 Safe Presets:</span>
                                 <span id="diag-presets-container" style="display: flex; gap: 6px; flex-wrap: wrap;">
-                                    <button type="button" class="btn btn-outline btn-sm" style="padding: 1px 7px; font-size: 10px; border-radius: 4px;" onclick="setDiagTarget('')">Full 7-Layer Suite</button>
+                                    <button type="button" class="btn btn-outline btn-sm" style="padding: 1px 7px; font-size: 10px; border-radius: 4px;" data-action="setDiagTarget('')">Full 7-Layer Suite</button>
                                 </span>
                             </div>
                         </div>
                         <div class="form-group" style="display: flex; align-items: flex-end; flex: 1;">
-                            <button class="btn" style="width: 100%; padding: 11px;" id="btn-run-diag" onclick="executeSelectedDiagnostic()">▶ Run Diagnostic On Sensor</button>
+                            <button class="btn" style="width: 100%; padding: 11px;" id="btn-run-diag" data-action="executeSelectedDiagnostic()">▶ Run Diagnostic On Sensor</button>
                         </div>
                     </div>
 
@@ -627,8 +627,8 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
                             <div class="section-title" style="font-size: 13px;">Live Output & Forensics Stream</div>
                             <div class="btn-group">
-                                <button class="btn btn-outline btn-sm" onclick="copyDiagLog()">📋 Copy Log</button>
-                                <button class="btn btn-outline btn-sm" onclick="downloadDiagLog()">📥 Download Log</button>
+                                <button class="btn btn-outline btn-sm" data-action="copyDiagLog()">📋 Copy Log</button>
+                                <button class="btn btn-outline btn-sm" data-action="downloadDiagLog()">📥 Download Log</button>
                             </div>
                         </div>
                         <div class="console-box" id="diag-console">> Diagnostic execution ready.</div>
@@ -641,7 +641,7 @@
                 <div class="section-card">
                     <div class="section-header">
                         <div class="section-title">📄 Executive SLA Reports & Forensic Incident Bundles</div>
-                        <button class="btn btn-sm" onclick="downloadSlaCsv()">📥 Export SLA Summary (CSV)</button>
+                        <button class="btn btn-sm" data-action="downloadSlaCsv()">📥 Export SLA Summary (CSV)</button>
                     </div>
                     <div id="pcap-countdown-banner" style="display: none; margin-bottom: 16px; background: linear-gradient(90deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.05)); border: 1px solid var(--accent); border-radius: 8px; padding: 14px 18px; align-items: center; justify-content: space-between;"></div>
                     <table>
@@ -674,11 +674,11 @@
                             </p>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="btn btn-outline btn-sm" onclick="switchView('configure-alerts')">⚙️ Configure Rules ➔</button>
-                            <button class="btn btn-outline btn-sm" onclick="switchView('configure-maintenance')">🔕 Muting Windows ➔</button>
-                            <button class="btn btn-outline btn-sm" onclick="switchView('setup-integrations')">🔔 Webhooks ➔</button>
-                            <button class="btn btn-outline btn-sm" onclick="openSimulateAlertModal()">🧪 Simulate Test Alert</button>
-                            <button class="btn btn-outline btn-sm" onclick="loadAlertCenterData()">🔄 Refresh</button>
+                            <button class="btn btn-outline btn-sm" data-action="switchView('configure-alerts')">⚙️ Configure Rules ➔</button>
+                            <button class="btn btn-outline btn-sm" data-action="switchView('configure-maintenance')">🔕 Muting Windows ➔</button>
+                            <button class="btn btn-outline btn-sm" data-action="switchView('setup-integrations')">🔔 Webhooks ➔</button>
+                            <button class="btn btn-outline btn-sm" data-action="openSimulateAlertModal()">🧪 Simulate Test Alert</button>
+                            <button class="btn btn-outline btn-sm" data-action="loadAlertCenterData()">🔄 Refresh</button>
                         </div>
                     </div>
 
@@ -688,7 +688,7 @@
                             <span style="font-size:16px;">🔕</span>
                             <span><strong>Active Maintenance Window in Effect:</strong> <span id="alt-maint-active-name" style="font-weight:700; color:#fff;">—</span>. Automated outbound notifications are currently suppressed for matching probes.</span>
                         </div>
-                        <button class="btn btn-outline btn-sm" onclick="switchView('configure-maintenance')" style="color:#c084fc; border-color:#c084fc; font-size:11px; padding:2px 8px; margin-left: 12px;">Manage Windows ➔</button>
+                        <button class="btn btn-outline btn-sm" data-action="switchView('configure-maintenance')" style="color:#c084fc; border-color:#c084fc; font-size:11px; padding:2px 8px; margin-left: 12px;">Manage Windows ➔</button>
                     </div>
 
                     <!-- 4 Alert Summary KPI Cards -->
@@ -735,14 +735,14 @@
                 <div class="section-card">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
                         <div class="slide-nav-tabs">
-                            <button class="alert-filter-btn active" id="alt-tab-active" onclick="setAlertStatusFilter('active')">🚨 Active (Firing & Ack) (<span id="alt-tab-count-active">0</span>)</button>
-                            <button class="alert-filter-btn" id="alt-tab-firing" onclick="setAlertStatusFilter('firing')">🔥 Firing (<span id="alt-tab-count-firing">0</span>)</button>
-                            <button class="alert-filter-btn" id="alt-tab-acknowledged" onclick="setAlertStatusFilter('acknowledged')">👁️ Acknowledged (<span id="alt-tab-count-ack">0</span>)</button>
-                            <button class="alert-filter-btn" id="alt-tab-resolved" onclick="setAlertStatusFilter('resolved')">✅ Resolved</button>
-                            <button class="alert-filter-btn" id="alt-tab-all" onclick="setAlertStatusFilter('all')">📑 All Records</button>
+                            <button class="alert-filter-btn active" id="alt-tab-active" data-action="setAlertStatusFilter('active')">🚨 Active (Firing & Ack) (<span id="alt-tab-count-active">0</span>)</button>
+                            <button class="alert-filter-btn" id="alt-tab-firing" data-action="setAlertStatusFilter('firing')">🔥 Firing (<span id="alt-tab-count-firing">0</span>)</button>
+                            <button class="alert-filter-btn" id="alt-tab-acknowledged" data-action="setAlertStatusFilter('acknowledged')">👁️ Acknowledged (<span id="alt-tab-count-ack">0</span>)</button>
+                            <button class="alert-filter-btn" id="alt-tab-resolved" data-action="setAlertStatusFilter('resolved')">✅ Resolved</button>
+                            <button class="alert-filter-btn" id="alt-tab-all" data-action="setAlertStatusFilter('all')">📑 All Records</button>
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <select id="alt-filter-severity" class="form-control" style="background:var(--bg-input); border:1px solid var(--border); color:var(--text-main); padding:6px 12px; border-radius:6px; font-size:12px;" onchange="loadAlertCenterData()">
+                            <select id="alt-filter-severity" class="form-control" style="background:var(--bg-input); border:1px solid var(--border); color:var(--text-main); padding:6px 12px; border-radius:6px; font-size:12px;" data-change="loadAlertCenterData()">
                                 <option value="all">All Severities</option>
                                 <option value="critical">🔴 Critical Only</option>
                                 <option value="warning">🟡 Warning Only</option>
@@ -786,27 +786,27 @@
                             </div>
                         </div>
                         <div class="btn-group">
-                            <button class="btn btn-outline btn-sm" onclick="downloadUsbKit()" title="Download ready-to-copy offline USB Staging Kit (.zip)">💾 Download USB Kit (.zip)</button>
-                            <button class="btn btn-outline btn-sm" onclick="toggleOnboardingDetails()">📖 Tech Cheat Sheet</button>
+                            <button class="btn btn-outline btn-sm" data-action="downloadUsbKit()" title="Download ready-to-copy offline USB Staging Kit (.zip)">💾 Download USB Kit (.zip)</button>
+                            <button class="btn btn-outline btn-sm" data-action="toggleOnboardingDetails()">📖 Tech Cheat Sheet</button>
                         </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Campus / School</label>
-                            <input type="text" id="ob-campus" value="West High School" placeholder="e.g. West High School" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                            <input type="text" id="ob-campus" value="West High School" placeholder="e.g. West High School" data-input="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Building / Wing</label>
-                            <input type="text" id="ob-building" value="Science Building" placeholder="e.g. Science Wing" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                            <input type="text" id="ob-building" value="Science Building" placeholder="e.g. Science Wing" data-input="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Room / Drop ID</label>
-                            <input type="text" id="ob-room" value="Room 204" placeholder="e.g. Room 204" oninput="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                            <input type="text" id="ob-room" value="Room 204" placeholder="e.g. Room 204" data-input="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Deployment Mode</label>
-                            <select id="ob-mode" onchange="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                            <select id="ob-mode" data-change="updateBootstrapCommand()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
                                 <option value="url-params">1-Line URL Presets (Recommended)</option>
                                 <option value="cli-flags">1-Line CLI Arguments</option>
                                 <option value="wizard">Interactive one-wizard CLI</option>
@@ -818,7 +818,7 @@
                     <div style="margin-top: 14px; background: #0b0f19; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px 14px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <div style="font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px;">⚡ Ready-To-Paste Field Command</div>
-                            <button class="btn btn-sm" id="btn-copy-bootstrap" onclick="copyBootstrapCommand()" style="background: var(--accent); color: white; padding: 4px 12px; font-size: 12px;">📋 Copy Command</button>
+                            <button class="btn btn-sm" id="btn-copy-bootstrap" data-action="copyBootstrapCommand()" style="background: var(--accent); color: white; padding: 4px 12px; font-size: 12px;">📋 Copy Command</button>
                         </div>
                         <pre id="ob-command-preview" style="margin: 0; padding: 10px; background: rgba(0,0,0,0.5); border-radius: 6px; font-family: monospace; font-size: 13px; color: #38bdf8; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">curl -sSL http://cmp-server:8000/install.sh?site=West+High+School&room=Room+204 | sudo bash</pre>
                     </div>
@@ -857,7 +857,7 @@
                 <div class="section-card">
                     <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
                         <div class="section-title">📡 Active Fixed Linux Edge Sensors (SBC / Raspberry Pi)</div>
-                        <button class="btn btn-outline btn-sm" onclick="loadDashboardData()">🔄 Refresh Sensors</button>
+                        <button class="btn btn-outline btn-sm" data-action="loadDashboardData()">🔄 Refresh Sensors</button>
                     </div>
                     <div id="fleet-edge-table-container">
                         <table>
@@ -894,7 +894,7 @@
                             </div>
                         </div>
                         <div class="btn-group">
-                            <a href="#" onclick="promptDownloadChromebookZip(); return false;" class="btn btn-sm" style="background: var(--accent); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">📦 Download Extension (.zip)</a>
+                            <a href="#" data-action="promptDownloadChromebookZip(); return false;" class="btn btn-sm" style="background: var(--accent); color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">📦 Download Extension (.zip)</a>
                             <a href="/api/v1/chromebooks/download/policy.json" class="btn btn-outline btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">📋 Download Policy (.json)</a>
                         </div>
                     </div>
@@ -911,8 +911,8 @@
                                 Prevents students from tampering with telemetry cadence, backend URLs, or disabling background synthetic tests.
                             </div>
                             <div style="display: flex; gap: 8px;">
-                                <button class="btn btn-sm" id="btn-fleet-lock" onclick="setFleetLock(true)" style="background: var(--success); color: white; padding: 4px 10px; font-size: 11px;">🔒 Lock All</button>
-                                <button class="btn btn-outline btn-sm" id="btn-fleet-unlock" onclick="setFleetLock(false)" style="color: var(--warning); border-color: var(--warning); padding: 4px 10px; font-size: 11px;">🔓 Unlock (Helpdesk Mode)</button>
+                                <button class="btn btn-sm" id="btn-fleet-lock" data-action="setFleetLock(true)" style="background: var(--success); color: white; padding: 4px 10px; font-size: 11px;">🔒 Lock All</button>
+                                <button class="btn btn-outline btn-sm" id="btn-fleet-unlock" data-action="setFleetLock(false)" style="color: var(--warning); border-color: var(--warning); padding: 4px 10px; font-size: 11px;">🔓 Unlock (Helpdesk Mode)</button>
                             </div>
                         </div>
 
@@ -927,7 +927,7 @@
                             </div>
                             <div style="display: flex; gap: 8px;">
                                 <input type="password" id="fleet-helpdesk-pin" maxlength="8" value="4357" placeholder="e.g. 4357" style="width: 110px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; font-family: monospace; letter-spacing: 2px;">
-                                <button class="btn btn-outline btn-sm" onclick="saveFleetPin()" style="padding: 4px 12px; font-size: 11px;">💾 Save PIN</button>
+                                <button class="btn btn-outline btn-sm" data-action="saveFleetPin()" style="padding: 4px 12px; font-size: 11px;">💾 Save PIN</button>
                             </div>
                         </div>
 
@@ -951,7 +951,7 @@
                 <div class="section-card">
                     <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
                         <div class="section-title">💻 Enrolled Student Chromebook Sensors</div>
-                        <button class="btn btn-outline btn-sm" onclick="loadDashboardData()">🔄 Refresh Fleet</button>
+                        <button class="btn btn-outline btn-sm" data-action="loadDashboardData()">🔄 Refresh Fleet</button>
                     </div>
                     <table>
                         <thead>
@@ -994,7 +994,7 @@
                                 Configure visual calendar days, instructional time windows, cadence intervals, and network safety guardrails for all edge diagnostic probes.
                             </p>
                         </div>
-                        <button class="btn" onclick="openScheduleModal()">+ Create New Schedule</button>
+                        <button class="btn" data-action="openScheduleModal()">+ Create New Schedule</button>
                     </div>
                     <table>
                         <thead>
@@ -1029,8 +1029,8 @@
                             </p>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="btn" onclick="openAlertRuleModal()">+ Create Alert Rule</button>
-                            <button class="btn btn-outline btn-sm" onclick="loadCustomAlertRules()">🔄 Refresh</button>
+                            <button class="btn" data-action="openAlertRuleModal()">+ Create Alert Rule</button>
+                            <button class="btn btn-outline btn-sm" data-action="loadCustomAlertRules()">🔄 Refresh</button>
                         </div>
                     </div>
 
@@ -1113,12 +1113,12 @@
                             </p>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="btn btn-outline btn-sm" onclick="quickCreateMuteWindow(60, '1-Hour Quick Mute')">⚡ + 1h Quick Mute</button>
-                            <button class="btn btn-outline btn-sm" onclick="quickCreateConstructionWindow(3, '3-Day Facility Construction Mute')">🏗️ + 3-Day Construction</button>
-                            <button class="btn btn-outline btn-sm" onclick="quickCreateConstructionWindow(7, '1-Week Campus Construction & Rewiring')">🏗️ + 7-Day (1 Wk)</button>
-                            <button class="btn btn-outline btn-sm" onclick="quickCreateConstructionWindow(14, '2-Week Multi-Building Renovation')">🏗️ + 14-Day (2 Wks)</button>
-                            <button class="btn" onclick="openMaintenanceModal()">+ Schedule Window</button>
-                            <button class="btn btn-outline btn-sm" onclick="loadMaintenanceWindows()">🔄 Refresh</button>
+                            <button class="btn btn-outline btn-sm" data-action="quickCreateMuteWindow(60, '1-Hour Quick Mute')">⚡ + 1h Quick Mute</button>
+                            <button class="btn btn-outline btn-sm" data-action="quickCreateConstructionWindow(3, '3-Day Facility Construction Mute')">🏗️ + 3-Day Construction</button>
+                            <button class="btn btn-outline btn-sm" data-action="quickCreateConstructionWindow(7, '1-Week Campus Construction & Rewiring')">🏗️ + 7-Day (1 Wk)</button>
+                            <button class="btn btn-outline btn-sm" data-action="quickCreateConstructionWindow(14, '2-Week Multi-Building Renovation')">🏗️ + 14-Day (2 Wks)</button>
+                            <button class="btn" data-action="openMaintenanceModal()">+ Schedule Window</button>
+                            <button class="btn btn-outline btn-sm" data-action="loadMaintenanceWindows()">🔄 Refresh</button>
                         </div>
                     </div>
 
@@ -1194,7 +1194,7 @@
                 <div class="section-card">
                     <div class="section-header">
                         <div class="section-title">🛠️ WYSIWYG EasyBuilder — Custom Synthetic Probes</div>
-                        <button class="btn" onclick="openProbeModal()">+ Create Custom Test</button>
+                        <button class="btn" data-action="openProbeModal()">+ Create Custom Test</button>
                     </div>
                     <table>
                         <thead>
@@ -1313,13 +1313,13 @@
                         <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
                             <strong>📥 Export Platform State Backup</strong>
                             <p style="color: var(--text-muted); font-size: 12px; margin: 6px 0 12px;">Download a complete JSON snapshot of all registered sensors, cryptographic keys, and synthetic probes.</p>
-                            <button class="btn btn-sm" onclick="downloadSystemBackup()">📥 Download JSON Backup</button>
+                            <button class="btn btn-sm" data-action="downloadSystemBackup()">📥 Download JSON Backup</button>
                         </div>
                         <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
                             <strong>📤 Restore from Backup File</strong>
                             <p style="color: var(--text-muted); font-size: 12px; margin: 6px 0 12px;">Re-hydrate all sensors and probes onto a clean server rebuild without re-approving hardware.</p>
-                            <input type="file" id="backup-file-input" accept=".json" style="display:none;" onchange="handleRestoreBackupFile(event)">
-                            <button class="btn btn-outline btn-sm" onclick="document.getElementById('backup-file-input').click()">📤 Select Backup JSON...</button>
+                            <input type="file" id="backup-file-input" accept=".json" style="display:none;" data-change="handleRestoreBackupFile(event)">
+                            <button class="btn btn-outline btn-sm" data-action="document.getElementById('backup-file-input').click()">📤 Select Backup JSON...</button>
                         </div>
                     </div>
                 </div>
@@ -1337,8 +1337,8 @@
                             </p>
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button class="btn" onclick="openChannelModal()">+ Add Notification Channel</button>
-                            <button class="btn btn-outline btn-sm" onclick="loadNotificationChannels()">🔄 Refresh</button>
+                            <button class="btn" data-action="openChannelModal()">+ Add Notification Channel</button>
+                            <button class="btn btn-outline btn-sm" data-action="loadNotificationChannels()">🔄 Refresh</button>
                         </div>
                     </div>
 
@@ -1550,13 +1550,13 @@
     </div>
 
     <!-- Maintenance / Muting Window Create/Edit Modal -->
-    <div class="modal-overlay" id="maintenance-modal" onclick="handleBackdropClick(event, 'maintenance-modal')">
+    <div class="modal-overlay" id="maintenance-modal" data-action="handleBackdropClick(event, 'maintenance-modal')">
         <div class="modal" style="max-width: 640px; width: 94vw;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🔕 Scheduled Maintenance & Construction Muting Window</h2>
-                <button type="button" class="close-btn" onclick="closeMaintenanceModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeMaintenanceModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="maintenance-form" onsubmit="handleSaveMaintenance(event)">
+            <form id="maintenance-form" data-submit="handleSaveMaintenance(event)">
                 <input type="hidden" id="maint-id">
 
                 <div class="form-row">
@@ -1610,12 +1610,12 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
                         <label style="font-weight:700; font-size:12px; margin:0;">⏰ Duration Presets</label>
                         <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" onclick="setMaintDurationPreset(60)">+1h</button>
-                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" onclick="setMaintDurationPreset(240)">+4h</button>
-                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" onclick="setMaintDurationPreset(1440)">+1 Day</button>
-                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" onclick="setMaintDurationPreset(4320)">+3 Days</button>
-                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" onclick="setMaintDurationPreset(10080)">+7 Days (1 Wk)</button>
-                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" onclick="setMaintDurationPreset(20160)">+14 Days (2 Wks)</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" data-action="setMaintDurationPreset(60)">+1h</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" data-action="setMaintDurationPreset(240)">+4h</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px;" data-action="setMaintDurationPreset(1440)">+1 Day</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" data-action="setMaintDurationPreset(4320)">+3 Days</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" data-action="setMaintDurationPreset(10080)">+7 Days (1 Wk)</button>
+                            <button type="button" class="btn btn-outline btn-sm" style="font-size:10px; padding:2px 6px; font-weight:700; color:var(--warning);" data-action="setMaintDurationPreset(20160)">+14 Days (2 Wks)</button>
                         </div>
                     </div>
                     <div class="form-row">
@@ -1641,7 +1641,7 @@
                     </label>
                 </div>
                 <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn btn-outline" onclick="closeMaintenanceModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" data-action="closeMaintenanceModal()">Cancel</button>
                     <button type="submit" class="btn">💾 Save Muting Window</button>
                 </div>
             </form>
@@ -1649,13 +1649,13 @@
     </div>
 
     <!-- Alert Rule Create/Edit Modal -->
-    <div class="modal-overlay" id="alert-rule-modal" onclick="handleBackdropClick(event, 'alert-rule-modal')">
+    <div class="modal-overlay" id="alert-rule-modal" data-action="handleBackdropClick(event, 'alert-rule-modal')">
         <div class="modal" style="max-width: 600px; width: 94vw;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🚨 Alert Detection Rule</h2>
-                <button type="button" class="close-btn" onclick="closeAlertRuleModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeAlertRuleModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="alert-rule-form" onsubmit="handleSaveAlertRule(event)">
+            <form id="alert-rule-form" data-submit="handleSaveAlertRule(event)">
                 <input type="hidden" id="rule-id">
                 <div class="form-group">
                     <label>Rule Name <span style="color:var(--danger)">*</span></label>
@@ -1749,7 +1749,7 @@
                     </label>
                 </div>
                 <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn btn-outline" onclick="closeAlertRuleModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" data-action="closeAlertRuleModal()">Cancel</button>
                     <button type="submit" class="btn">💾 Save Alert Rule</button>
                 </div>
             </form>
@@ -1757,13 +1757,13 @@
     </div>
 
     <!-- Notification Channel Create/Edit Modal -->
-    <div class="modal-overlay" id="channel-modal" onclick="handleBackdropClick(event, 'channel-modal')">
+    <div class="modal-overlay" id="channel-modal" data-action="handleBackdropClick(event, 'channel-modal')">
         <div class="modal" style="max-width: 560px; width: 94vw;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🔔 Notification Channel</h2>
-                <button type="button" class="close-btn" onclick="closeChannelModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeChannelModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="channel-form" onsubmit="handleSaveChannel(event)">
+            <form id="channel-form" data-submit="handleSaveChannel(event)">
                 <input type="hidden" id="chan-id">
                 <div class="form-group">
                     <label>Channel Name <span style="color:var(--danger)">*</span></label>
@@ -1772,7 +1772,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Channel Type <span style="color:var(--danger)">*</span></label>
-                        <select id="chan-type" onchange="handleChannelTypeChange()">
+                        <select id="chan-type" data-change="handleChannelTypeChange()">
                             <option value="slack">💬 Slack Incoming Webhook</option>
                             <option value="teams">🟦 MS Teams Connector</option>
                             <option value="email">📧 District Email (SMTP / Google / M365)</option>
@@ -1808,7 +1808,7 @@
                 <div id="email-config-panel" style="display:none; background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
                     <div style="font-weight: 700; font-size: 13px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
                         <span>📧 District SMTP Server Settings</span>
-                        <select id="email-preset-select" onchange="applyEmailPreset()" style="font-size:11px; padding:3px 8px; width:auto;">
+                        <select id="email-preset-select" data-change="applyEmailPreset()" style="font-size:11px; padding:3px 8px; width:auto;">
                             <option value="">⚡ Load K-12 Provider Preset...</option>
                             <option value="google_relay">Google Workspace SMTP Relay (Port 587)</option>
                             <option value="google_app_pw">Google Workspace App Password (Port 587)</option>
@@ -1871,8 +1871,8 @@
                     </label>
                 </div>
                 <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn btn-outline" onclick="closeChannelModal()">Cancel</button>
-                    <button type="button" class="btn btn-outline btn-sm" onclick="testCurrentChannel()" id="btn-test-channel" style="display:none;">🔔 Send Test</button>
+                    <button type="button" class="btn btn-outline" data-action="closeChannelModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline btn-sm" data-action="testCurrentChannel()" id="btn-test-channel" style="display:none;">🔔 Send Test</button>
                     <button type="submit" class="btn">💾 Save Channel</button>
                 </div>
             </form>
@@ -1880,13 +1880,13 @@
     </div>
 
     <!-- Location Edit Modal -->
-    <div class="modal-overlay" id="location-modal" onclick="handleBackdropClick(event, 'location-modal')">
+    <div class="modal-overlay" id="location-modal" data-action="handleBackdropClick(event, 'location-modal')">
         <div class="modal">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">📍 Edit Sensor Physical Location</h2>
-                <button type="button" class="close-btn" onclick="closeLocationModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeLocationModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="location-form" onsubmit="handleSaveLocation(event)">
+            <form id="location-form" data-submit="handleSaveLocation(event)">
                 <input type="hidden" id="loc-sensor-id">
                 <div class="form-group">
                     <label>School District / Org</label>
@@ -1923,7 +1923,7 @@
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn btn-outline" onclick="closeLocationModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" data-action="closeLocationModal()">Cancel</button>
                     <button type="submit" class="btn">Save Location</button>
                 </div>
             </form>
@@ -1931,16 +1931,16 @@
     </div>
 
     <!-- WYSIWYG EasyBuilder Modal -->
-    <div class="modal-overlay" id="probe-modal" onclick="handleBackdropClick(event, 'probe-modal')">
+    <div class="modal-overlay" id="probe-modal" data-action="handleBackdropClick(event, 'probe-modal')">
         <div class="modal">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">Create Custom Synthetic Probe</h2>
-                <button type="button" class="close-btn" onclick="closeProbeModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeProbeModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="probe-form" onsubmit="handleSaveProbe(event)">
+            <form id="probe-form" data-submit="handleSaveProbe(event)">
                 <div class="form-group" style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
                     <label style="color: var(--accent); font-weight: 700;">📋 Load Pre-Built K-12 Template (Optional)</label>
-                    <select id="p-template-preset" onchange="applyProbeTemplate(this.value)">
+                    <select id="p-template-preset" data-change="applyProbeTemplate(this.value)">
                         <option value="">-- Select a Pre-Configured District App --</option>
                         <option value="canvas">Canvas LMS Portal (Instructure)</option>
                         <option value="google_classroom">Google Classroom & Workspace</option>
@@ -2005,7 +2005,7 @@
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn btn-outline" onclick="closeProbeModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" data-action="closeProbeModal()">Cancel</button>
                     <button type="submit" class="btn">Deploy to Fleet</button>
                 </div>
             </form>
@@ -2013,13 +2013,13 @@
     </div>
 
     <!-- Unified Visual Probe Scheduler Modal -->
-    <div class="modal-overlay" id="schedule-modal" onclick="handleBackdropClick(event, 'schedule-modal')">
+    <div class="modal-overlay" id="schedule-modal" data-action="handleBackdropClick(event, 'schedule-modal')">
         <div class="modal" style="max-width: 680px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">📅 Configure Probe Schedule & Timing</h2>
-                <button type="button" class="close-btn" onclick="closeScheduleModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeScheduleModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="schedule-form" onsubmit="handleSaveSchedule(event)">
+            <form id="schedule-form" data-submit="handleSaveSchedule(event)">
                 <input type="hidden" id="sch-id">
 
                 <div class="form-group">
@@ -2029,7 +2029,7 @@
 
                 <div class="form-group">
                     <label>Target Diagnostic Probe</label>
-                    <select id="sch-probe" required onchange="handleProbeSelectionChange(this.value)">
+                    <select id="sch-probe" required data-change="handleProbeSelectionChange(this.value)">
                         <optgroup label="Core Built-In Diagnostic Probes">
                             <option value="caaspp_readiness">🎓 CAASPP / Cambium Testing Readiness (caaspp_readiness.py)</option>
                             <option value="m365_connectivity">☁️ Microsoft 365 & Office 365 A5 (m365_connectivity_probe.py)</option>
@@ -2056,19 +2056,19 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <label style="margin-bottom:0;">Active Days of the Week</label>
                         <div style="display:flex; gap:6px;">
-                            <button type="button" class="preset-btn" onclick="applyDayPreset('weekdays')">🎒 Weekdays (M-F)</button>
-                            <button type="button" class="preset-btn" onclick="applyDayPreset('everyday')">📆 Every Day</button>
-                            <button type="button" class="preset-btn" onclick="applyDayPreset('weekends')">🏖️ Weekends</button>
+                            <button type="button" class="preset-btn" data-action="applyDayPreset('weekdays')">🎒 Weekdays (M-F)</button>
+                            <button type="button" class="preset-btn" data-action="applyDayPreset('everyday')">📆 Every Day</button>
+                            <button type="button" class="preset-btn" data-action="applyDayPreset('weekends')">🏖️ Weekends</button>
                         </div>
                     </div>
                     <div class="day-pill-group" id="sch-day-pills">
-                        <div class="day-pill active" data-day="mon" onclick="toggleDayPill('mon')">Mon</div>
-                        <div class="day-pill active" data-day="tue" onclick="toggleDayPill('tue')">Tue</div>
-                        <div class="day-pill active" data-day="wed" onclick="toggleDayPill('wed')">Wed</div>
-                        <div class="day-pill active" data-day="thu" onclick="toggleDayPill('thu')">Thu</div>
-                        <div class="day-pill active" data-day="fri" onclick="toggleDayPill('fri')">Fri</div>
-                        <div class="day-pill" data-day="sat" onclick="toggleDayPill('sat')">Sat</div>
-                        <div class="day-pill" data-day="sun" onclick="toggleDayPill('sun')">Sun</div>
+                        <div class="day-pill active" data-day="mon" data-action="toggleDayPill('mon')">Mon</div>
+                        <div class="day-pill active" data-day="tue" data-action="toggleDayPill('tue')">Tue</div>
+                        <div class="day-pill active" data-day="wed" data-action="toggleDayPill('wed')">Wed</div>
+                        <div class="day-pill active" data-day="thu" data-action="toggleDayPill('thu')">Thu</div>
+                        <div class="day-pill active" data-day="fri" data-action="toggleDayPill('fri')">Fri</div>
+                        <div class="day-pill" data-day="sat" data-action="toggleDayPill('sat')">Sat</div>
+                        <div class="day-pill" data-day="sun" data-action="toggleDayPill('sun')">Sun</div>
                     </div>
                 </div>
 
@@ -2076,33 +2076,33 @@
                     <label>Execution Timing Mode</label>
 
                     <!-- Timing Mode 1: Daily Once -->
-                    <div class="timing-mode-card active-mode" id="card-mode-daily" onclick="setTimingMode('daily_once')">
+                    <div class="timing-mode-card active-mode" id="card-mode-daily" data-action="setTimingMode('daily_once')">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="radio" name="sch-timing-mode" id="mode-daily" value="daily_once" checked onchange="setTimingMode('daily_once')">
+                            <input type="radio" name="sch-timing-mode" id="mode-daily" value="daily_once" checked data-change="setTimingMode('daily_once')">
                             <strong>Run Once Daily</strong>
                             <span style="font-size:11px; color:var(--text-muted);">(e.g. Morning pre-flight before school starts)</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-left: 24px;">
                             <span style="font-size:13px; color:var(--text-muted);">Execute At:</span>
-                            <input type="time" id="sch-daily-time" value="07:15" style="max-width: 140px;" oninput="updateScheduleSummary()">
+                            <input type="time" id="sch-daily-time" value="07:15" style="max-width: 140px;" data-input="updateScheduleSummary()">
                         </div>
                     </div>
 
                     <!-- Timing Mode 2: Repeating Window -->
-                    <div class="timing-mode-card" id="card-mode-window" onclick="setTimingMode('window_repeat')">
+                    <div class="timing-mode-card" id="card-mode-window" data-action="setTimingMode('window_repeat')">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="radio" name="sch-timing-mode" id="mode-window" value="window_repeat" onchange="setTimingMode('window_repeat')">
+                            <input type="radio" name="sch-timing-mode" id="mode-window" value="window_repeat" data-change="setTimingMode('window_repeat')">
                             <strong>Instructional Repeating Time Window</strong>
                             <span style="font-size:11px; color:var(--text-muted);">(e.g. During school hours only)</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; margin-left: 24px;">
                             <span style="font-size:13px; color:var(--text-muted);">Between</span>
-                            <input type="time" id="sch-window-start" value="08:00" style="max-width: 130px;" oninput="updateScheduleSummary()">
+                            <input type="time" id="sch-window-start" value="08:00" style="max-width: 130px;" data-input="updateScheduleSummary()">
                             <span style="font-size:13px; color:var(--text-muted);">and</span>
-                            <input type="time" id="sch-window-end" value="16:00" style="max-width: 130px;" oninput="updateScheduleSummary()">
+                            <input type="time" id="sch-window-end" value="16:00" style="max-width: 130px;" data-input="updateScheduleSummary()">
                             <span style="font-size:13px; color:var(--text-muted); margin-left: 8px;">Repeat Every</span>
-                            <input type="number" min="1" max="1440" id="sch-window-val" value="15" style="max-width: 70px;" oninput="updateScheduleSummary()">
-                            <select id="sch-window-unit" style="max-width: 110px;" onchange="updateScheduleSummary()">
+                            <input type="number" min="1" max="1440" id="sch-window-val" value="15" style="max-width: 70px;" data-input="updateScheduleSummary()">
+                            <select id="sch-window-unit" style="max-width: 110px;" data-change="updateScheduleSummary()">
                                 <option value="minutes" selected>Minutes</option>
                                 <option value="hours">Hours</option>
                             </select>
@@ -2110,16 +2110,16 @@
                     </div>
 
                     <!-- Timing Mode 3: Continuous Interval -->
-                    <div class="timing-mode-card" id="card-mode-continuous" onclick="setTimingMode('continuous_interval')">
+                    <div class="timing-mode-card" id="card-mode-continuous" data-action="setTimingMode('continuous_interval')">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="radio" name="sch-timing-mode" id="mode-continuous" value="continuous_interval" onchange="setTimingMode('continuous_interval')">
+                            <input type="radio" name="sch-timing-mode" id="mode-continuous" value="continuous_interval" data-change="setTimingMode('continuous_interval')">
                             <strong>Continuous 24/7 Interval</strong>
                             <span style="font-size:11px; color:var(--text-muted);">(e.g. Round-the-clock gateway / DNS metrics)</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-left: 24px;">
                             <span style="font-size:13px; color:var(--text-muted);">Every</span>
-                            <input type="number" min="1" max="10000" id="sch-cont-val" value="15" style="max-width: 80px;" oninput="updateScheduleSummary()">
-                            <select id="sch-cont-unit" style="max-width: 120px;" onchange="updateScheduleSummary()">
+                            <input type="number" min="1" max="10000" id="sch-cont-val" value="15" style="max-width: 80px;" data-input="updateScheduleSummary()">
+                            <select id="sch-cont-unit" style="max-width: 120px;" data-change="updateScheduleSummary()">
                                 <option value="seconds">Seconds</option>
                                 <option value="minutes" selected>Minutes</option>
                                 <option value="hours">Hours</option>
@@ -2154,13 +2154,13 @@
                 <details style="margin-top: 14px; background: var(--bg-input); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border);">
                     <summary style="font-size: 12px; font-weight: 700; color: var(--text-muted); cursor: pointer;">⚙️ Advanced: View / Edit Raw Cron Expression</summary>
                     <div style="margin-top: 8px;">
-                        <input type="text" id="sch-cron-expr" placeholder="15 7 * * 1-5" style="font-family: monospace; font-size: 13px;" oninput="handleRawCronInput(this.value)">
+                        <input type="text" id="sch-cron-expr" placeholder="15 7 * * 1-5" style="font-family: monospace; font-size: 13px;" data-input="handleRawCronInput(this.value)">
                         <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Standard 5-field cron syntax (Minute Hour Day Month Day-of-Week).</span>
                     </div>
                 </details>
 
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn btn-outline" onclick="closeScheduleModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" data-action="closeScheduleModal()">Cancel</button>
                     <button type="submit" class="btn">💾 Save & Deploy Schedule</button>
                 </div>
             </form>
@@ -2168,49 +2168,49 @@
     </div>
 
     <!-- Chromebook Fleet Diagnostics Modal -->
-    <div class="modal-overlay" id="cb-detail-modal" onclick="handleBackdropClick(event, 'cb-detail-modal')">
+    <div class="modal-overlay" id="cb-detail-modal" data-action="handleBackdropClick(event, 'cb-detail-modal')">
         <div class="modal" style="max-width: 650px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="cb-modal-title">💻 Chromebook Diagnostic Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeCbDetailModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeCbDetailModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="cb-modal-body" style="padding: 10px 0;">
                 <p>Loading Chromebook telemetry...</p>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
-                <button type="button" class="btn btn-outline" onclick="closeCbDetailModal()">Close</button>
+                <button type="button" class="btn btn-outline" data-action="closeCbDetailModal()">Close</button>
             </div>
         </div>
     </div>
 
     <!-- Edge Sensor Fleet Diagnostic & Hardware Inspector Modal -->
-    <div class="modal-overlay" id="sensor-detail-modal" onclick="handleBackdropClick(event, 'sensor-detail-modal')">
+    <div class="modal-overlay" id="sensor-detail-modal" data-action="handleBackdropClick(event, 'sensor-detail-modal')">
         <div class="modal" style="max-width: 780px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="sensor-modal-title">📡 Edge Sensor Diagnostic & Hardware Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeSensorDetailModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeSensorDetailModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="sensor-modal-body" style="padding: 10px 0; max-height: 75vh; overflow-y: auto;">
                 <p>Loading Edge Sensor telemetry...</p>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
                 <div id="sensor-modal-actions" style="display: flex; gap: 8px;"></div>
-                <button type="button" class="btn btn-outline" onclick="closeSensorDetailModal()">Close</button>
+                <button type="button" class="btn btn-outline" data-action="closeSensorDetailModal()">Close</button>
             </div>
         </div>
     </div>
 
     <!-- Simulate Test Alert Modal -->
-    <div class="modal-overlay" id="simulate-alert-modal" onclick="handleBackdropClick(event, 'simulate-alert-modal')">
+    <div class="modal-overlay" id="simulate-alert-modal" data-action="handleBackdropClick(event, 'simulate-alert-modal')">
         <div class="modal" style="max-width: 600px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">🧪 Simulate & Ingest High-Assurance Test Alert</h2>
-                <button type="button" class="close-btn" onclick="closeSimulateAlertModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeSimulateAlertModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="simulate-alert-form" onsubmit="handleSimulateAlert(event)">
+            <form id="simulate-alert-form" data-submit="handleSimulateAlert(event)">
                 <div class="form-group" style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
                     <label style="color: var(--accent); font-weight: 700;">⚡ Alarm Scenario Preset</label>
-                    <select id="sim-preset" onchange="applySimulatePreset(this.value)">
+                    <select id="sim-preset" data-change="applySimulatePreset(this.value)">
                         <option value="caaspp_cert">🎓 CAASPP Untrusted SSL Certificate (Critical)</option>
                         <option value="wifi_flapping">📡 Wi-Fi 802.11 AP Flapping & Roam Degraded (Warning)</option>
                         <option value="dns_fail">🔍 Multi-Resolver DNS Resolution Failure (Critical)</option>
@@ -2261,7 +2261,7 @@
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
-                    <button type="button" class="btn btn-outline" onclick="closeSimulateAlertModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" data-action="closeSimulateAlertModal()">Cancel</button>
                     <button type="submit" class="btn" style="background: var(--danger);">🚨 Trigger Test Alarm</button>
                 </div>
             </form>
@@ -2269,13 +2269,13 @@
     </div>
 
     <!-- Resolve Alert Modal -->
-    <div class="modal-overlay" id="resolve-alert-modal" onclick="handleBackdropClick(event, 'resolve-alert-modal')">
+    <div class="modal-overlay" id="resolve-alert-modal" data-action="handleBackdropClick(event, 'resolve-alert-modal')">
         <div class="modal" style="max-width: 520px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;">✅ Resolve & Close Network Alarm</h2>
-                <button type="button" class="close-btn" onclick="closeResolveAlertModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeResolveAlertModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
-            <form id="resolve-alert-form" onsubmit="handleConfirmResolveAlert(event)">
+            <form id="resolve-alert-form" data-submit="handleConfirmResolveAlert(event)">
                 <input type="hidden" id="resolve-alert-id">
                 <p id="resolve-alert-prompt" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
                     Enter resolution details to record in the permanent NOC incident log.
@@ -2285,7 +2285,7 @@
                     <textarea id="resolve-notes" rows="3" style="width:100%; padding:8px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-main); font-size:13px;" placeholder="e.g. SSL inspection bypass exception provisioned on district firewall. Verified probe returned HTTP 200 OK." required>Verified nominal resolution. Alarm cleared by NOC operator.</textarea>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
-                    <button type="button" class="btn btn-outline" onclick="closeResolveAlertModal()">Cancel</button>
+                    <button type="button" class="btn btn-outline" data-action="closeResolveAlertModal()">Cancel</button>
                     <button type="submit" class="btn" style="background: var(--success);">Confirm Resolve</button>
                 </div>
             </form>
@@ -2293,34 +2293,34 @@
     </div>
 
     <!-- Alert Forensic Detail Modal -->
-    <div class="modal-overlay" id="alert-detail-modal" onclick="handleBackdropClick(event, 'alert-detail-modal')">
+    <div class="modal-overlay" id="alert-detail-modal" data-action="handleBackdropClick(event, 'alert-detail-modal')">
         <div class="modal" style="max-width: 680px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="alert-detail-title">🔍 Alert Forensic Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeAlertDetailModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeAlertDetailModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="alert-detail-body" style="padding: 10px 0;">
                 <p>Loading alert details...</p>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
-                <button type="button" class="btn btn-outline" onclick="closeAlertDetailModal()">Close</button>
+                <button type="button" class="btn btn-outline" data-action="closeAlertDetailModal()">Close</button>
             </div>
         </div>
     </div>
 
     <!-- PCAP Forensic Evidence Modal -->
-    <div class="modal-overlay" id="evidence-modal" onclick="handleBackdropClick(event, 'evidence-modal')">
+    <div class="modal-overlay" id="evidence-modal" data-action="handleBackdropClick(event, 'evidence-modal')">
         <div class="modal" style="max-width: 680px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="evidence-modal-title">📦 PCAP Packet Capture Forensic Inspector</h2>
-                <button type="button" class="close-btn" onclick="closeEvidenceModal()" aria-label="Close modal" title="Close">✕</button>
+                <button type="button" class="close-btn" data-action="closeEvidenceModal()" aria-label="Close modal" title="Close">✕</button>
             </div>
             <div id="evidence-modal-body" style="padding: 10px 0;">
                 <p>Loading packet capture forensic evidence...</p>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
-                <button type="button" class="btn btn-primary" id="btn-download-pcap" onclick="downloadCurrentPcap()">📥 Download .pcap Capture</button>
-                <button type="button" class="btn btn-outline" onclick="closeEvidenceModal()">Close</button>
+                <button type="button" class="btn btn-primary" id="btn-download-pcap" data-action="downloadCurrentPcap()">📥 Download .pcap Capture</button>
+                <button type="button" class="btn btn-outline" data-action="closeEvidenceModal()">Close</button>
             </div>
         </div>
     </div>
