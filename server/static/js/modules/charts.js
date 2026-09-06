@@ -1,3 +1,7 @@
+export let chartFault = null;
+export let chartTrend = null;
+export let chartAlarm = null;
+
 export function initCharts() {
     console.log("Charts initialized");
 }
@@ -101,3 +105,7 @@ export function renderAnalyticsCharts(liveStats) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } }
+            }
+        });
+    }
+}

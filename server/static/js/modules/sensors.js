@@ -1,17 +1,15 @@
+import { showFormError, clearFormError } from './alerts.js';
+import { clearModalDirty } from './modals.js';
+
+export const ADMIN_KEY = window.ADMIN_KEY || "admin-noc-key-change-me";
 export function formatTimeAgo(ts) {
-    if (!ts) return 'Unknown';
-    const seconds = Math.floor((Date.now() / 1000) - ts);
-    if (seconds < 60) return `${seconds}s ago`;
-    const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    return `${days}d ago`;
-}
-            </tr>
-        `;
-    }).join('');
+    if (!ts) return 'Never';
+    const diff = Math.floor(Date.now() / 1000) - ts;
+    if (diff < 0) return 'Just now';
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(ts * 1000).toLocaleDateString() + ' ' + new Date(ts * 1000).toLocaleTimeString();
 }
 
 export function renderDashboard(sensors, probes, liveStats, chromebooks, roamingTrail) {
@@ -631,10 +629,10 @@ export async function triggerOTAUpgrade(sensorId) {
             headers: { 'X-API-Key': ADMIN_KEY }
         });
         if (res.ok) {
-            showFormError(e.target, 'OTA Upgrade commanded. The sensor will download the update and restart shortly.');
+            alert('OTA Upgrade commanded. The sensor will download the update and restart shortly.');
             loadSensors();
         } else {
-            showFormError(e.target, 'Failed to trigger upgrade.');
+            alert('Failed to trigger upgrade.');
         }
     } catch (err) {
         console.error("OTA trigger error:", err);
@@ -712,10 +710,10 @@ export async function downloadLatestPcap(sensorId) {
             a.download = `incident_${sensorId}_snapshot.json`;
             a.click();
         } else {
-            showFormError(e.target, 'Evidence bundle ready in table below.');
+            alert('Evidence bundle ready in table below.');
         }
     } catch (err) {
-        showFormError(e.target, 'Downloading forensic evidence bundle...');
+        alert('Downloading forensic evidence bundle...');
     }
 }
 
@@ -915,7 +913,7 @@ export async function executeSelectedDiagnostic() {
     const timeChip = document.getElementById('diag-time-chip');
 
     if (!sensorId) {
-        showFormError(e.target, 'Please select an online sensor from the dropdown first.');
+        alert('Please select an online sensor from the dropdown first.');
         return;
     }
 
@@ -989,7 +987,7 @@ export async function executeSelectedDiagnostic() {
 export function copyDiagLog() {
     const text = document.getElementById('diag-console').innerText;
     navigator.clipboard.writeText(text);
-    showFormError(e.target, 'Diagnostic log copied to clipboard.');
+    alert('Diagnostic log copied to clipboard.');
 }
 
 export function downloadDiagLog() {
@@ -1028,7 +1026,6 @@ export async function handleSaveLocation(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     if (btn && btn.disabled) return;
-    clearFormError(e.target);
 
     const sensorId = document.getElementById('loc-sensor-id').value;
     const latVal = document.getElementById('loc-lat').value;
@@ -1038,11 +1035,11 @@ export async function handleSaveLocation(e) {
     const lonNum = lonVal ? parseFloat(lonVal) : null;
 
     if (latNum !== null && (isNaN(latNum) || latNum < -90 || latNum > 90)) {
-        showFormError(e.target, "Latitude must be a number between -90 and 90.");
+        alert("Latitude must be a number between -90 and 90.");
         return;
     }
     if (lonNum !== null && (isNaN(lonNum) || lonNum < -180 || lonNum > 180)) {
-        showFormError(e.target, "Longitude must be a number between -180 and 180.");
+        alert("Longitude must be a number between -180 and 180.");
         return;
     }
 
@@ -1071,7 +1068,7 @@ export async function handleSaveLocation(e) {
         });
         if (!res.ok) {
             const err = await res.json();
-            showFormError(e.target, `Failed to save: ${err.detail || JSON.stringify(err)}`);
+            alert(`Failed to save location: ${err.detail || JSON.stringify(err)}`);
             return;
         }
         clearModalDirty('location-modal');
@@ -1136,7 +1133,6 @@ export async function handleSaveProbe(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     if (btn && btn.disabled) return;
-    clearFormError(e.target);
 
     const name = document.getElementById('p-name').value.trim();
     const rawSlug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '');
@@ -1171,7 +1167,7 @@ export async function handleSaveProbe(e) {
         });
         if (!res.ok) {
             const err = await res.json();
-            showFormError(e.target, `Failed to save: ${err.detail || JSON.stringify(err)}`);
+            alert(`Failed to save probe: ${err.detail || JSON.stringify(err)}`);
             return;
         }
         clearModalDirty('probe-modal');
@@ -1200,3 +1196,10 @@ export function downloadSlaCsv() {
         const loc = s.location || {};
         csv += `"${s.sensor_id}","${loc.site || 'Site'}","${loc.room || 'Room'}","${s.is_online ? 'Online' : 'Offline'}","${loc.latitude || ''},${loc.longitude || ''}","${s.last_seen}"\\n`;
     });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `ONE_District_SLA_Report_${new Date().toISOString().slice(0,10)}.csv`);
+    a.click();
+}

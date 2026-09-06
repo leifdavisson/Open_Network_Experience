@@ -1,6 +1,6 @@
 import { loadCustomAlertRules, showFormError, clearFormError, openAlertRuleModal, closeAlertRuleModal, editAlertRule, handleSaveAlertRule, toggleRuleActive, deleteAlertRule, loadMaintenanceWindows, openMaintenanceModal, closeMaintenanceModal, setMaintDurationPreset, editMaintenanceWindow, handleSaveMaintenance, quickCreateMuteWindow, quickCreateConstructionWindow, toggleMaintenanceWindow, deleteMaintenanceWindow, loadNotificationChannels, handleChannelTypeChange, applyEmailPreset, openChannelModal, editChannel, closeChannelModal, handleSaveChannel, testChannel, testCurrentChannel, deleteChannel, setAlertStatusFilter, loadAlertCenterData, updateAlertBadgeAndBanner, renderAlertsTable, openSimulateAlertModal, closeSimulateAlertModal, applySimulatePreset, handleSimulateAlert, handleAcknowledgeAlert, openResolveAlertModal, closeResolveAlertModal, handleConfirmResolveAlert, viewAlertDetails, closeAlertDetailModal, openEvidenceModal, closeEvidenceModal, downloadCurrentPcap, triggerManualPcap, launchSensorDiag } from './alerts.js';
 import { handleBackdropClick } from './modals.js';
-import { renderAnalyticsCharts } from './charts.js';
+import { renderAnalyticsCharts, chartFault, chartTrend, chartAlarm } from './charts.js';
 import { renderDashboard, createCustomGlowMarker, initOrUpdateMap, initOrUpdateWallboardMap, zoomToSensor, approveSensor, rejectSensor, triggerOTAUpgrade, triggerPcap, downloadLatestPcap, updateDiagTargetHint, setDiagTarget, triggerSpeedtest, executeSelectedDiagnostic, copyDiagLog, downloadDiagLog, openLocationModal, closeLocationModal, handleSaveLocation, openProbeModal, closeProbeModal, applyProbeTemplate, handleSaveProbe, deleteProbe, downloadSlaCsv } from './sensors.js';
 
 window.loadCustomAlertRules = loadCustomAlertRules;
@@ -93,17 +93,15 @@ window.formatDuration = formatDuration;
 window.formatTimeAgo = formatTimeAgo;
 window.initCharts = initCharts;
 
-const ADMIN_KEY = "admin-noc-key-change-me";
+export const ADMIN_KEY = "admin-noc-key-change-me";
+window.ADMIN_KEY = ADMIN_KEY;
 let SENSORS_CACHE = [];
 let mapInstance = null;
 let wallboardMapInstance = null;
 let mapMarkers = [];
 let wallboardMapMarkers = [];
 
-// Chart.js Instances
-let chartFault = null;
-let chartTrend = null;
-let chartAlarm = null;
+
 
 // MAIN SLIDESHOW STATE & CONTROLS
 let currentSlideIndex = 0;
@@ -681,11 +679,6 @@ function handleGlobalSearch() {
     });
 }
 
-            }
-        });
-    }
-}
-
 let CHROMEBOOKS_CACHE = [];
 let ROAMING_TRAIL_CACHE = [];
 let currentFleetFilter = 'all';
@@ -1059,12 +1052,9 @@ function renderEvidenceTable(evidenceList) {
                 <td>
                     <button class="btn btn-outline btn-sm" onclick="openEvidenceModal('${ev.id || ev.bundle_id}')">🔍 Inspect PCAP</button>
                 </td>
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `ONE_District_SLA_Report_${new Date().toISOString().slice(0,10)}.csv`);
-    a.click();
+            </tr>
+        `;
+    }).join('');
 }
 
 async function downloadSystemBackup() {

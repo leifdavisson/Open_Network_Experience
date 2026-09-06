@@ -204,14 +204,17 @@ async def register_sensor(request: SensorRegisterRequest, req: Request):
     response_model=SensorReconcileResponse,
     include_in_schema=False
 )
-async def reconcile_sensor(report: SensorReportRequest, x_api_key: str = Header(..., alias="X-API-Key")):
+async def reconcile_sensor(report: SensorReportRequest, req: Request, x_api_key: str = Header(..., alias="X-API-Key")):
     """Edge sensor check-in and reconciliation endpoint."""
     sensor = SENSORS_DB.get(report.sensor_id)
     if not sensor or sensor["status"] != "approved" or sensor["api_key"] != x_api_key:
         raise UnauthorizedException(detail="Unauthorized or unapproved sensor check-in")
 
+    client_ip = req.headers.get("X-Forwarded-For", req.client.host if req.client else "unknown").split(",")[0].strip()
     sensor["last_seen"] = int(time.time())
     sensor["os"] = report.os
+    if client_ip and client_ip != "unknown":
+        sensor["ip_address"] = client_ip
     sensor["reported_containers"] = {k: v.model_dump() for k, v in report.containers.items()}
     if report.location:
         sensor["location"] = report.location

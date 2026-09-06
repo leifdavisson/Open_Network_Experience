@@ -1,5 +1,30 @@
-from .connection import get_connection
-from .alerts import _seed_default_alert_configs
+# TODO (Jules): Standardize modular database package interface with explicit __all__ and migration runner
+from .connection import get_connection, DB_PATH
+from .alerts import (
+    _seed_default_alert_configs, load_all_alerts, load_alert_by_id,
+    load_active_alert_by_fingerprint, save_alert, acknowledge_alert, resolve_alert,
+    delete_alert, get_alerts_summary, load_all_alert_rules, load_alert_rule_by_id,
+    save_alert_rule, toggle_alert_rule, delete_alert_rule, load_all_notification_channels,
+    load_notification_channel_by_id, save_notification_channel, update_channel_dispatch_status,
+    delete_notification_channel
+)
+from .maintenance import (
+    load_all_maintenance_windows, load_maintenance_window_by_id,
+    save_maintenance_window, toggle_maintenance_window, delete_maintenance_window,
+    get_maintenance_windows_needing_reminders, mark_maintenance_window_reminded,
+    get_active_maintenance_windows_for_alert
+)
+from .campuses import (
+    load_all_campuses, save_campus, delete_campus,
+    load_all_subnets, save_subnet_rule, delete_subnet_rule, match_subnet_auto_enroll
+)
+from .sensors import load_all_sensors, load_sensor, save_sensor, batch_save_sensors, batch_approve_sensors, delete_sensor
+from .probes import load_all_probes, save_probe, delete_probe
+from .schedules import load_all_schedules, save_schedule, delete_schedule, toggle_schedule
+from .evidence import load_all_evidence, save_evidence, load_evidence_by_id
+from .backup import export_backup_json, restore_backup_json
+from .tsdb import enqueue_tsdb_spool, dequeue_tsdb_spool, delete_tsdb_spool_entries, increment_tsdb_spool_attempts, get_tsdb_spool_count, clear_tsdb_spool_queue
+
 
 def init_db():
     """Initializes SQLite tables if they do not exist."""
@@ -33,6 +58,7 @@ def init_db():
                 status TEXT NOT NULL,
                 api_key TEXT,
                 hostname TEXT,
+                ip_address TEXT,
                 mac_address TEXT,
                 os TEXT,
                 last_seen INTEGER,
@@ -45,13 +71,17 @@ def init_db():
                 updated_at INTEGER
             );
         """)
-        # Run schema migration for existing DBs that might lack campus_id or probing_state
+        # Run schema migration for existing DBs that might lack campus_id, probing_state, or ip_address
         try:
             conn.execute("ALTER TABLE sensors ADD COLUMN campus_id TEXT;")
         except Exception:
             pass
         try:
             conn.execute("ALTER TABLE sensors ADD COLUMN probing_state TEXT DEFAULT 'GREEN';")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE sensors ADD COLUMN ip_address TEXT;")
         except Exception:
             pass
         conn.execute("""

@@ -313,14 +313,13 @@ class TestCMPFlow(unittest.TestCase):
 
     def test_07_web_ui_and_easybuilder_studio(self):
         """Tests the Web UI dashboard, 1-click TOFU approval, and WYSIWYG EasyBuilder probes."""
+        # TODO (Jules): Ensure all test cases use self.client (TestClient) rather than raw localhost network sockets
         # 1. Test Web UI Dashboard HTML serving
-        url = "http://localhost:8000/"
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
-            self.assertEqual(resp.status, 200)
-            html = resp.read().decode('utf-8')
-            self.assertIn("Open Network Experience (ONE)", html)
-            self.assertIn("WYSIWYG EasyBuilder", html)
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.text
+        self.assertIn("Open Network Experience (ONE)", html)
+        self.assertIn("WYSIWYG EasyBuilder", html)
 
         # 2. Register a new sensor and approve it via 1-click endpoint
         s_id = f"easybuilder-node-{int(time.time())}"

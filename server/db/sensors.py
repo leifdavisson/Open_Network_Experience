@@ -18,6 +18,7 @@ def load_all_sensors() -> Dict[str, dict]:
                 "status": row["status"],
                 "api_key": row["api_key"] or "",
                 "hostname": row["hostname"] or "unknown",
+                "ip_address": row["ip_address"] if "ip_address" in row.keys() else None,
                 "mac_address": row["mac_address"] or "unknown",
                 "os": row["os"] or "unknown",
                 "last_seen": row["last_seen"] or 0,
@@ -42,6 +43,7 @@ def load_sensor(sensor_id: str) -> Optional[dict]:
             "status": row["status"],
             "api_key": row["api_key"] or "",
             "hostname": row["hostname"] or "unknown",
+            "ip_address": row["ip_address"] if "ip_address" in row.keys() else None,
             "mac_address": row["mac_address"] or "unknown",
             "os": row["os"] or "unknown",
             "last_seen": row["last_seen"] or 0,
@@ -63,14 +65,15 @@ def save_sensor(sensor: dict):
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO sensors (
-                sensor_id, status, api_key, hostname, mac_address, os,
+                sensor_id, status, api_key, hostname, ip_address, mac_address, os,
                 last_seen, reset_flag, campus_id, probing_state, location_json, target_config_json,
                 reported_containers_json, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(sensor_id) DO UPDATE SET
                 status=excluded.status,
                 api_key=excluded.api_key,
                 hostname=excluded.hostname,
+                ip_address=COALESCE(excluded.ip_address, sensors.ip_address),
                 mac_address=excluded.mac_address,
                 os=excluded.os,
                 last_seen=excluded.last_seen,
@@ -86,6 +89,7 @@ def save_sensor(sensor: dict):
             sensor["status"],
             sensor.get("api_key", ""),
             sensor.get("hostname", "unknown"),
+            sensor.get("ip_address"),
             sensor.get("mac_address", "unknown"),
             sensor.get("os", "unknown"),
             sensor.get("last_seen", 0),
@@ -112,6 +116,7 @@ def batch_save_sensors(sensors: List[dict]):
             sensor["status"],
             sensor.get("api_key", ""),
             sensor.get("hostname", "unknown"),
+            sensor.get("ip_address"),
             sensor.get("mac_address", "unknown"),
             sensor.get("os", "unknown"),
             sensor.get("last_seen", 0),
@@ -127,14 +132,15 @@ def batch_save_sensors(sensors: List[dict]):
     with get_connection() as conn:
         conn.executemany("""
             INSERT INTO sensors (
-                sensor_id, status, api_key, hostname, mac_address, os,
+                sensor_id, status, api_key, hostname, ip_address, mac_address, os,
                 last_seen, reset_flag, campus_id, probing_state, location_json, target_config_json,
                 reported_containers_json, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(sensor_id) DO UPDATE SET
                 status=excluded.status,
                 api_key=excluded.api_key,
                 hostname=excluded.hostname,
+                ip_address=COALESCE(excluded.ip_address, sensors.ip_address),
                 mac_address=excluded.mac_address,
                 os=excluded.os,
                 last_seen=excluded.last_seen,
