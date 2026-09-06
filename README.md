@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=flat-square" alt="License: AGPL v3"></a>
   <a href="https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/leifdavisson/Open_Network_Experience/ci.yml?branch=main&label=CI%20Build&style=flat-square" alt="CI"></a>
   <a href="https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/leifdavisson/Open_Network_Experience/security.yml?branch=main&label=Security%20SAST&style=flat-square" alt="Security"></a>
-  <img src="https://img.shields.io/badge/Release-v0.4.0-00F0FF?style=flat-square" alt="Release v0.4.0">
+  <img src="https://img.shields.io/badge/Release-v0.7.1-00F0FF?style=flat-square" alt="Release v0.7.1">
   <img src="https://img.shields.io/badge/Architecture-Dual--NIC%20%2B%20ChromeOS-10B981?style=flat-square" alt="Dual-NIC Architecture">
 </p>
 
@@ -44,7 +44,8 @@ Instead of waiting for a classroom of students to get disconnected during state 
 - [6. Brand, Marketing & Whitepaper Collateral](#6-brand-marketing--whitepaper-collateral)
 - [7. Running Diagnostics Manually](#7-running-diagnostics-manually)
 - [8. Development & Test Execution](#8-development--test-execution)
-- [9. License & Disclaimers](#9-license--disclaimers)
+- [9. Documentation Index & Repository Markdown Files](#9-documentation-index--repository-markdown-files)
+- [10. License & Disclaimers](#10-license--disclaimers)
 
 ---
 
@@ -271,10 +272,54 @@ pytest
 
 ---
 
-## 9. License & Disclaimers
+## 9. Documentation Index & Repository Markdown Files
+
+Below is a complete index of all Markdown (`.md`) documentation files across the Open Network Experience (ONE) repository:
+
+### 🚀 Getting Started & Project Fundamentals
+* **[`README.md`](README.md)** — Core platform overview, architectural features, quickstart, and deployment guide.
+* **[`GETTING_STARTED.md`](GETTING_STARTED.md)** — Step-by-step walkthrough for deploying CMP Docker stack, edge sensors, and custom probe templates.
+* **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — Contribution guidelines, development environment setup, and pull request workflows.
+* **[`CHANGELOG.md`](CHANGELOG.md)** — Chronological release notes, feature highlights, and version history.
+* **[`SECURITY.md`](SECURITY.md)** — Security disclosure policy, supported versions, and vulnerability reporting procedures.
+
+### 📦 Component Architecture & Fleet Guides
+* **[`sensor/README.md`](sensor/README.md)** — Linux Edge Sensor architecture, complete diagnostic suite, dual-NIC split-brain routing, and GPS setup.
+* **[`server/README.md`](server/README.md)** — Central Management Platform (CMP) FastAPI orchestration server, API routes, and authentication.
+* **[`chromebook-sensor/README.md`](chromebook-sensor/README.md)** — ChromeOS Manifest V3 Extension & Kiosk sensor, Google Workspace Admin Console deployment, and WebRTC MOS prober.
+
+### 🛠️ Platform Administration & Operations
+* **[`docs/ADMIN_UPDATE_AND_FLEET_ALIGNMENT_GUIDE.md`](docs/ADMIN_UPDATE_AND_FLEET_ALIGNMENT_GUIDE.md)** — Operational guide for administrative CMP server updates and downstream sensor fleet alignment.
+* **[`docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md`](docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md)** — Zero-Touch Provisioning (ZTP) guide using DHCP Option 43 vendor options and DNS search domains.
+* **[`docs/HELPDESK_INSTALL_GUIDE.md`](docs/HELPDESK_INSTALL_GUIDE.md)** — First-principles field technician guide for installing and troubleshooting edge hardware sensors over SSH.
+* **[`docs/SCHEDULED_MAINTENANCE_WINDOWS.md`](docs/SCHEDULED_MAINTENANCE_WINDOWS.md)** — Guide to setting up maintenance windows and multi-day facility construction muting rules.
+* **[`docs/JULES_TODO.md`](docs/JULES_TODO.md)** — Jules autonomous engineering backlog, technical debt, and optimization targets.
+
+### 📐 Architecture Decision Records (ADRs) & Handoff Logs
+* **[`docs/ADR_AND_DECISION_LOG.md`](docs/ADR_AND_DECISION_LOG.md)** — Master compilation of Architecture Decision Records and technical decision logs.
+* **[`docs/adr/ADR-012_LINUX_SENSOR_OTA_UPGRADE.md`](docs/adr/ADR-012_LINUX_SENSOR_OTA_UPGRADE.md)** — ADR-012: Linux Edge Sensor Over-The-Air (OTA) upgrade pipeline via reconciler graceful respawn.
+* **[`docs/adr/ADR-013_DYNAMIC_CHROMEBOOK_PACKAGE_BUILDER.md`](docs/adr/ADR-013_DYNAMIC_CHROMEBOOK_PACKAGE_BUILDER.md)** — ADR-013: In-memory dynamic Chromebook extension packaging and version monotonicity.
+* **[`docs/HANDOFF_ACTIVE_ALERTS_PANEL.md`](docs/HANDOFF_ACTIVE_ALERTS_PANEL.md)** — Handoff documentation for the Active Alert Panel, incident triage workflow, and REST endpoints.
+* **[`docs/HANDOFF_ALERT_RULES_AND_WEBHOOKS.md`](docs/HANDOFF_ALERT_RULES_AND_WEBHOOKS.md)** — Handoff documentation for Prometheus Alertmanager integration, alert rules, and outbound webhooks.
+
+### 📢 Brand, Executive & Marketing Collateral
+* **[`docs/BRAND_GUIDE.md`](docs/BRAND_GUIDE.md)** — Design system, dark NOC color palette, typography, vector logos, and social assets.
+* **[`docs/COMMUNITY_LAUNCH_PLAYBOOK.md`](docs/COMMUNITY_LAUNCH_PLAYBOOK.md)** — Pre-written templates and strategy for Hacker News, Reddit, and Product Hunt announcements.
+* **[`docs/COMPARISON_ARUBA_UXI_7SIGNAL.md`](docs/COMPARISON_ARUBA_UXI_7SIGNAL.md)** — Architectural breakdown and 5-year Total Cost of Ownership (TCO) comparison vs. commercial UXI platforms.
+* **[`docs/DISTRICT_IT_DIRECTOR_ONE_PAGER.md`](docs/DISTRICT_IT_DIRECTOR_ONE_PAGER.md)** — Executive 1-pager summary for K-12 Superintendents, School Boards, and Technology Directors.
+
+### 🤝 GitHub Templates & Community Standards
+* **[`.github/ISSUE_TEMPLATE/bug_report.md`](.github/ISSUE_TEMPLATE/bug_report.md)** — GitHub issue template for reporting bugs and defects.
+* **[`.github/ISSUE_TEMPLATE/feature_request.md`](.github/ISSUE_TEMPLATE/feature_request.md)** — GitHub issue template for proposing new platform features.
+* **[`.github/RELEASE_TEMPLATE.md`](.github/RELEASE_TEMPLATE.md)** — GitHub release summary template.
+* **[`.github/pull_request_template.md`](.github/pull_request_template.md)** — GitHub pull request submission template.
+
+---
+
+## 10. License & Disclaimers
 
 ### License
-This project is licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](file:///data/Open_Network_Experience/LICENSE)** (`file:///data/Open_Network_Experience/LICENSE`). See the [LICENSE](LICENSE) file for the full license text.
+This project is licensed under the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)** (`LICENSE`). See the [LICENSE](LICENSE) file for the full license text.
 
 ### Disclaimers & Trademarks
 * **Trademarks**: All product names, logos, brands, trademarks, and registered trademarks mentioned within this project or documentation (including Aruba UXI, 7SIGNAL, Cisco ThousandEyes, Fortinet, Google ChromeOS, Cambium, ETS) are property of their respective owners. Their use does not imply any affiliation with, endorsement by, or sponsorship by those owners.
