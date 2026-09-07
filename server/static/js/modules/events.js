@@ -38,7 +38,7 @@ document.addEventListener('click', (e) => {
                  console.error("Error executing data-action", action, err);
             }
             // don't preventDefault automatically, some might be links
-            if (target.tagName.toLowerCase() === 'button') {
+            if (target.tagName.toLowerCase() === 'button' || target.tagName.toLowerCase() === 'a') {
                  e.preventDefault();
             }
             return;
