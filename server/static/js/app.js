@@ -3168,7 +3168,43 @@
             }
         }
 
-        function updateDiagTargetHint() {
+        // --- Dynamic Safe Presets (Issue #22) ---
+        // Caches the last-fetched network footprint per sensor so preset pills
+        // update instantly when the test type changes without re-fetching.
+        let _sensorFootprintCache = {};
+
+        async function fetchSensorFootprint(sensorId) {
+            if (!sensorId) return null;
+            if (_sensorFootprintCache[sensorId]) return _sensorFootprintCache[sensorId];
+
+            const presetsContainer = document.getElementById('diag-presets-container');
+            const badge = document.getElementById('diag-hint-badge');
+
+            // Show pulsing skeleton loader while fetching
+            if (presetsContainer) {
+                presetsContainer.innerHTML = `
+                    <span class="preset-skeleton" style="display:inline-block;width:110px;height:22px;border-radius:4px;background:linear-gradient(90deg,var(--surface-2,#2a2a2a) 25%,var(--surface-3,#333) 50%,var(--surface-2,#2a2a2a) 75%);background-size:200% 100%;animation:skeletonPulse 1.2s infinite;"></span>
+                    <span class="preset-skeleton" style="display:inline-block;width:90px;height:22px;border-radius:4px;background:linear-gradient(90deg,var(--surface-2,#2a2a2a) 25%,var(--surface-3,#333) 50%,var(--surface-2,#2a2a2a) 75%);background-size:200% 100%;animation:skeletonPulse 1.2s infinite 0.2s;margin-left:6px;"></span>
+                `;
+            }
+            if (badge) badge.innerText = 'Fetching local network…';
+
+            try {
+                const res = await fetch(`/api/v1/sensors/${sensorId}/network-footprint`, {
+                    headers: { 'X-API-Key': ADMIN_KEY }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const footprint = await res.json();
+                _sensorFootprintCache[sensorId] = footprint;
+                return footprint;
+            } catch (err) {
+                console.warn('[Dynamic Presets] Could not fetch network footprint:', err);
+                return null;
+            }
+        }
+
+        function updateDiagTargetHint(footprint) {
+
             const testType = document.getElementById('diag-test-select')?.value || 'all';
             const input = document.getElementById('diag-custom-target');
             const badge = document.getElementById('diag-hint-badge');
@@ -3195,24 +3231,42 @@
                         { label: 'TRCS Readiness Checker', val: 'https://trcs.ets.org' }
                     ]
                 },
-                'dns': {
-                    placeholder: 'e.g. 10.98.98.53 or 1.1.1.1',
-                    badge: 'Safe Default: Multi-Resolver Internal + Cloudflare',
-                    presets: [
-                        { label: 'District Primary (10.98.98.53)', val: '10.98.98.53' },
-                        { label: 'District Secondary (10.98.98.54)', val: '10.98.98.54' },
-                        { label: 'Cloudflare (1.1.1.1)', val: '1.1.1.1' },
-                        { label: 'Google (8.8.8.8)', val: '8.8.8.8' }
-                    ]
-                },
-                'gateway': {
-                    placeholder: 'e.g. 10.98.2.1 (Default Gateway)',
-                    badge: 'Safe Default: Campus Gateway Subnet Router',
-                    presets: [
-                        { label: 'Default Gateway (10.98.2.1)', val: '10.98.2.1' },
-                        { label: 'CMP Controller (10.98.2.125)', val: '10.98.2.125' }
-                    ]
-                },
+                'dns': (() => {
+                    // Dynamic: use local DNS IPs from sensor footprint if available
+                    const dnsServers = footprint?.dns_servers || [];
+                    const dnsPresets = dnsServers.length > 0
+                        ? dnsServers.slice(0, 4).map(ip => ({
+                            label: ip === '1.1.1.1' ? `Cloudflare (${ip})` : ip === '8.8.8.8' ? `Google (${ip})` : `Local DNS (${ip})`,
+                            val: ip
+                          }))
+                        : [
+                            { label: 'Cloudflare (1.1.1.1)', val: '1.1.1.1' },
+                            { label: 'Google (8.8.8.8)', val: '8.8.8.8' }
+                          ];
+                    const badgeText = footprint?.ip_address
+                        ? `🔍 Local DNS: ${dnsServers[0] || '1.1.1.1'} (${footprint.subnet || 'subnet unknown'})`
+                        : 'Safe Default: Multi-Resolver Internal + Cloudflare';
+                    return {
+                        placeholder: dnsServers[0] ? `e.g. ${dnsServers[0]} (Local DNS)` : 'e.g. 10.x.x.53 or 1.1.1.1',
+                        badge: badgeText,
+                        presets: dnsPresets
+                    };
+                })(),
+                'gateway': (() => {
+                    const gw = footprint?.gateway || '10.98.2.1';
+                    const badgeText = footprint?.ip_address
+                        ? `🌐 Local Gateway: ${gw} (${footprint.subnet || 'subnet unknown'})`
+                        : 'Safe Default: Campus Gateway Subnet Router';
+                    return {
+                        placeholder: `e.g. ${gw} (Local Gateway)`,
+                        badge: badgeText,
+                        presets: [
+                            { label: `🌐 Local Gateway (${gw})`, val: gw },
+                            { label: 'CMP Controller (10.98.2.125)', val: '10.98.2.125' }
+                        ]
+                    };
+                })(),
+
                 'canvas': {
                     placeholder: 'e.g. https://canvas.instructure.com',
                     badge: 'Safe Default: Production Canvas LMS',

@@ -2,7 +2,7 @@ import { apiClient } from "./api.js";
 import { loadCustomAlertRules, showFormError, clearFormError, openAlertRuleModal, closeAlertRuleModal, editAlertRule, handleSaveAlertRule, toggleRuleActive, deleteAlertRule, loadMaintenanceWindows, openMaintenanceModal, closeMaintenanceModal, setMaintDurationPreset, editMaintenanceWindow, handleSaveMaintenance, quickCreateMuteWindow, quickCreateConstructionWindow, toggleMaintenanceWindow, deleteMaintenanceWindow, loadNotificationChannels, handleChannelTypeChange, applyEmailPreset, openChannelModal, editChannel, closeChannelModal, handleSaveChannel, testChannel, testCurrentChannel, deleteChannel, setAlertStatusFilter, loadAlertCenterData, updateAlertBadgeAndBanner, renderAlertsTable, openSimulateAlertModal, closeSimulateAlertModal, applySimulatePreset, handleSimulateAlert, handleAcknowledgeAlert, openResolveAlertModal, closeResolveAlertModal, handleConfirmResolveAlert, viewAlertDetails, closeAlertDetailModal, openEvidenceModal, closeEvidenceModal, downloadCurrentPcap, triggerManualPcap, launchSensorDiag } from './alerts.js';
 import { handleBackdropClick } from './modals.js';
 import { renderAnalyticsCharts, chartFault, chartTrend, chartAlarm } from './charts.js';
-import { renderDashboard, createCustomGlowMarker, initOrUpdateMap, initOrUpdateWallboardMap, zoomToSensor, approveSensor, rejectSensor, triggerOTAUpgrade, triggerPcap, downloadLatestPcap, updateDiagTargetHint, setDiagTarget, triggerSpeedtest, executeSelectedDiagnostic, copyDiagLog, downloadDiagLog, openLocationModal, closeLocationModal, handleSaveLocation, openProbeModal, closeProbeModal, applyProbeTemplate, handleSaveProbe, deleteProbe, downloadSlaCsv } from './sensors.js';
+import { renderDashboard, createCustomGlowMarker, initOrUpdateMap, initOrUpdateWallboardMap, zoomToSensor, approveSensor, rejectSensor, triggerOTAUpgrade, triggerPcap, downloadLatestPcap, updateDiagTargetHint, fetchSensorFootprint, setDiagTarget, triggerSpeedtest, executeSelectedDiagnostic, copyDiagLog, downloadDiagLog, openLocationModal, closeLocationModal, handleSaveLocation, openProbeModal, closeProbeModal, applyProbeTemplate, handleSaveProbe, deleteProbe, downloadSlaCsv } from './sensors.js';
 
 window.loadCustomAlertRules = loadCustomAlertRules;
 window.showFormError = showFormError;
@@ -65,6 +65,7 @@ window.triggerOTAUpgrade = triggerOTAUpgrade;
 window.triggerPcap = triggerPcap;
 window.downloadLatestPcap = downloadLatestPcap;
 window.updateDiagTargetHint = updateDiagTargetHint;
+window.fetchSensorFootprint = fetchSensorFootprint;
 window.setDiagTarget = setDiagTarget;
 window.triggerSpeedtest = triggerSpeedtest;
 window.executeSelectedDiagnostic = executeSelectedDiagnostic;

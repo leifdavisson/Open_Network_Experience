@@ -549,13 +549,13 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>1. Target Edge Sensor</label>
-                            <select id="diag-sensor-select">
+                            <select id="diag-sensor-select" onchange="(async(e)=>{const fp=await fetchSensorFootprint(e.target.value);await updateDiagTargetHint(fp);})(event)">
                                 <option value="">Select an online sensor...</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>2. Diagnostic Probe / Action</label>
-                            <select id="diag-test-select" data-change="updateDiagTargetHint()">
+                            <select id="diag-test-select" onchange="updateDiagTargetHint()">
                                 <optgroup label="Built-in Standard Tests">
                                     <option value="all">🚀 Run Full 7-Layer OSI & SaaS Diagnostic Suite</option>
                                     <option value="speedtest">📊 iPerf3 Bandwidth Throughput Test</option>

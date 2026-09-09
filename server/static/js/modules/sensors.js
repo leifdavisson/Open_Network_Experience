@@ -730,13 +730,65 @@ export async function downloadLatestPcap(sensorId) {
     }
 }
 
-export function updateDiagTargetHint() {
+// --- Dynamic Safe Presets (Issue #22) ---
+// Per-session cache of network footprints keyed by sensor_id
+const _sensorFootprintCache = {};
+
+/**
+ * Fetches the sensor's local network footprint (gateway + DNS IPs) from the API.
+ * Shows a pulsing skeleton loader in the presets container while in-flight.
+ * Results are cached for the duration of the page session to avoid re-fetching
+ * every time the test-type dropdown changes.
+ */
+export async function fetchSensorFootprint(sensorId) {
+    if (!sensorId) return null;
+    if (_sensorFootprintCache[sensorId]) return _sensorFootprintCache[sensorId];
+
+    const presetsContainer = document.getElementById('diag-presets-container');
+    const badge = document.getElementById('diag-hint-badge');
+
+    // Pulsing skeleton loader while fetching
+    if (presetsContainer) {
+        presetsContainer.innerHTML = `
+            <span style="display:inline-block;width:110px;height:22px;border-radius:4px;
+                background:linear-gradient(90deg,var(--surface-2,#2a2a2a) 25%,var(--surface-3,#333) 50%,var(--surface-2,#2a2a2a) 75%);
+                background-size:200% 100%;animation:skeletonPulse 1.2s infinite;"></span>
+            <span style="display:inline-block;width:90px;height:22px;border-radius:4px;margin-left:6px;
+                background:linear-gradient(90deg,var(--surface-2,#2a2a2a) 25%,var(--surface-3,#333) 50%,var(--surface-2,#2a2a2a) 75%);
+                background-size:200% 100%;animation:skeletonPulse 1.2s infinite 0.2s;"></span>
+        `;
+    }
+    if (badge) badge.innerText = 'Fetching local network…';
+
+    try {
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/network-footprint`, {
+            headers: { 'X-API-Key': ADMIN_KEY }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const footprint = await res.json();
+        _sensorFootprintCache[sensorId] = footprint;
+        return footprint;
+    } catch (err) {
+        console.warn('[Dynamic Presets] Could not fetch network footprint:', err);
+        return null;
+    }
+}
+
+export async function updateDiagTargetHint(footprint) {
     const testType = document.getElementById('diag-test-select')?.value || 'all';
     const input = document.getElementById('diag-custom-target');
     const badge = document.getElementById('diag-hint-badge');
     const presetsContainer = document.getElementById('diag-presets-container');
 
     if (!input || !badge || !presetsContainer) return;
+
+    // If no footprint was provided, try to fetch one for the currently selected sensor
+    if (!footprint) {
+        const sensorId = document.getElementById('diag-sensor-select')?.value;
+        if (sensorId) {
+            footprint = await fetchSensorFootprint(sensorId);
+        }
+    }
 
     const hints = {
         'speedtest': {
@@ -757,24 +809,42 @@ export function updateDiagTargetHint() {
                 { label: 'TRCS Readiness Checker', val: 'https://trcs.ets.org' }
             ]
         },
-        'dns': {
-            placeholder: 'e.g. 10.98.98.53 or 1.1.1.1',
-            badge: 'Safe Default: Multi-Resolver Internal + Cloudflare',
-            presets: [
-                { label: 'District Primary (10.98.98.53)', val: '10.98.98.53' },
-                { label: 'District Secondary (10.98.98.54)', val: '10.98.98.54' },
-                { label: 'Cloudflare (1.1.1.1)', val: '1.1.1.1' },
-                { label: 'Google (8.8.8.8)', val: '8.8.8.8' }
-            ]
-        },
-        'gateway': {
-            placeholder: 'e.g. 10.98.2.1 (Default Gateway)',
-            badge: 'Safe Default: Campus Gateway Subnet Router',
-            presets: [
-                { label: 'Default Gateway (10.98.2.1)', val: '10.98.2.1' },
-                { label: 'CMP Controller (10.98.2.125)', val: '10.98.2.125' }
-            ]
-        },
+        // Dynamic: DNS presets derived from the sensor's local subnet
+        'dns': (() => {
+            const dnsServers = footprint?.dns_servers || [];
+            const dnsPresets = dnsServers.length > 0
+                ? dnsServers.slice(0, 4).map(ip => ({
+                    label: ip === '1.1.1.1' ? `Cloudflare (${ip})`
+                         : ip === '8.8.8.8'  ? `Google (${ip})`
+                         : `🔍 Local DNS (${ip})`,
+                    val: ip
+                  }))
+                : [
+                    { label: 'Cloudflare (1.1.1.1)', val: '1.1.1.1' },
+                    { label: 'Google (8.8.8.8)', val: '8.8.8.8' }
+                  ];
+            return {
+                placeholder: dnsServers[0] ? `e.g. ${dnsServers[0]} (Local DNS)` : 'e.g. 10.x.x.53 or 1.1.1.1',
+                badge: footprint?.ip_address
+                    ? `🔍 Local DNS: ${dnsServers[0] || '1.1.1.1'} · Subnet ${footprint.subnet || 'unknown'}`
+                    : 'Safe Default: Multi-Resolver Internal + Cloudflare',
+                presets: dnsPresets
+            };
+        })(),
+        // Dynamic: gateway preset derived from the sensor's local subnet
+        'gateway': (() => {
+            const gw = footprint?.gateway || '10.98.2.1';
+            return {
+                placeholder: `e.g. ${gw} (Local Gateway)`,
+                badge: footprint?.ip_address
+                    ? `🌐 Local Gateway: ${gw} · Subnet ${footprint.subnet || 'unknown'}`
+                    : 'Safe Default: Campus Gateway Subnet Router',
+                presets: [
+                    { label: `🌐 Local Gateway (${gw})`, val: gw },
+                    { label: 'CMP Controller (10.98.2.125)', val: '10.98.2.125' }
+                ]
+            };
+        })(),
         'canvas': {
             placeholder: 'e.g. https://canvas.instructure.com',
             badge: 'Safe Default: Production Canvas LMS',
@@ -887,6 +957,22 @@ export function updateDiagTargetHint() {
         <button type="button" class="btn btn-outline btn-sm" style="padding: 1px 7px; font-size: 10px; border-radius: 4px;" onclick="setDiagTarget('${p.val}')">${p.label}</button>
     `).join('');
 }
+
+// Wire the sensor select so changing it fetches a fresh footprint and updates presets.
+// Uses a small delay so the DOM is ready before we attach the listener.
+setTimeout(() => {
+    const sensorSel = document.getElementById('diag-sensor-select');
+    if (sensorSel) {
+        sensorSel.addEventListener('change', async () => {
+            const sensorId = sensorSel.value;
+            if (!sensorId) return;
+            const footprint = await fetchSensorFootprint(sensorId);
+            await updateDiagTargetHint(footprint);
+        });
+    }
+}, 500);
+
+
 
 export function setDiagTarget(val) {
     const input = document.getElementById('diag-custom-target');
