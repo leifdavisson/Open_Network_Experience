@@ -37,8 +37,10 @@ document.addEventListener('click', (e) => {
             } catch (err) {
                  console.error("Error executing data-action", action, err);
             }
-            // don't preventDefault automatically, some might be links
-            if (target.tagName.toLowerCase() === 'button') {
+            // Prevent default page scroll on buttons and dummy links
+            const tag = target.tagName.toLowerCase();
+            const href = target.getAttribute('href');
+            if (tag === 'button' || tag === 'a' && (href === '#' || href === 'javascript:void(0)')) {
                  e.preventDefault();
             }
             return;
