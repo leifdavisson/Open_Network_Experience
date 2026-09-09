@@ -13,7 +13,6 @@ Features:
 
 import os
 import sys
-import time
 import urllib.request
 import urllib.error
 

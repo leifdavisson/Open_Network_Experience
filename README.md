@@ -292,6 +292,7 @@ Below is a complete index of all Markdown (`.md`) documentation files across the
 * **[`docs/ADMIN_UPDATE_AND_FLEET_ALIGNMENT_GUIDE.md`](docs/ADMIN_UPDATE_AND_FLEET_ALIGNMENT_GUIDE.md)** — Operational guide for administrative CMP server updates and downstream sensor fleet alignment.
 * **[`docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md`](docs/DHCP_OPTION_43_AND_DNS_DISCOVERY_GUIDE.md)** — Zero-Touch Provisioning (ZTP) guide using DHCP Option 43 vendor options and DNS search domains.
 * **[`docs/HELPDESK_INSTALL_GUIDE.md`](docs/HELPDESK_INSTALL_GUIDE.md)** — First-principles field technician guide for installing and troubleshooting edge hardware sensors over SSH.
+* **[`docs/TECH_SPEC_SENSOR_OFFBOARDING.md`](docs/TECH_SPEC_SENSOR_OFFBOARDING.md)** — Technical specification and architectural design for the automated edge hardware sensor offboarding script.
 * **[`docs/SCHEDULED_MAINTENANCE_WINDOWS.md`](docs/SCHEDULED_MAINTENANCE_WINDOWS.md)** — Guide to setting up maintenance windows and multi-day facility construction muting rules.
 * **[`docs/JULES_TODO.md`](docs/JULES_TODO.md)** — Jules autonomous engineering backlog, technical debt, and optimization targets.
 

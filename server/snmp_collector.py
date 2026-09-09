@@ -9,8 +9,6 @@ with firewall resource utilization and deep SSL inspection pressure.
 """
 
 import os
-import sys
-import time
 import subprocess
 import argparse
 from typing import Dict, Any, Optional
@@ -85,24 +83,24 @@ def write_metrics(results: Dict[str, Any], output_path: str):
     dtype = results["device_type"]
 
     prom_lines = [
-        f'# HELP openux_firewall_reachable Whether the Security Gateway responds to SNMP queries (1=Up, 0=Down)',
-        f'# TYPE openux_firewall_reachable gauge',
+        '# HELP openux_firewall_reachable Whether the Security Gateway responds to SNMP queries (1=Up, 0=Down)',
+        '# TYPE openux_firewall_reachable gauge',
         f'openux_firewall_reachable{{device="{dev}",host="{host}",type="{dtype}"}} {results["is_reachable"]}',
 
-        f'# HELP openux_firewall_cpu_utilization_percent Firewall CPU usage percent',
-        f'# TYPE openux_firewall_cpu_utilization_percent gauge',
+        '# HELP openux_firewall_cpu_utilization_percent Firewall CPU usage percent',
+        '# TYPE openux_firewall_cpu_utilization_percent gauge',
         f'openux_firewall_cpu_utilization_percent{{device="{dev}",host="{host}"}} {results["cpu_percent"]}',
 
-        f'# HELP openux_firewall_memory_utilization_percent Firewall RAM usage percent',
-        f'# TYPE openux_firewall_memory_utilization_percent gauge',
+        '# HELP openux_firewall_memory_utilization_percent Firewall RAM usage percent',
+        '# TYPE openux_firewall_memory_utilization_percent gauge',
         f'openux_firewall_memory_utilization_percent{{device="{dev}",host="{host}"}} {results["memory_percent"]}',
 
-        f'# HELP openux_firewall_active_sessions Count of active concurrent firewall sessions',
-        f'# TYPE openux_firewall_active_sessions gauge',
+        '# HELP openux_firewall_active_sessions Count of active concurrent firewall sessions',
+        '# TYPE openux_firewall_active_sessions gauge',
         f'openux_firewall_active_sessions{{device="{dev}",host="{host}"}} {results["active_sessions"]}',
 
-        f'# HELP openux_firewall_conserve_mode Alert flag indicating firewall conserve mode (1=Active Conserve Mode, 0=Normal)',
-        f'# TYPE openux_firewall_conserve_mode gauge',
+        '# HELP openux_firewall_conserve_mode Alert flag indicating firewall conserve mode (1=Active Conserve Mode, 0=Normal)',
+        '# TYPE openux_firewall_conserve_mode gauge',
         f'openux_firewall_conserve_mode{{device="{dev}",host="{host}"}} {results["conserve_mode"]}'
     ]
 

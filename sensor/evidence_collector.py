@@ -16,7 +16,7 @@ import glob
 import tarfile
 import tempfile
 import subprocess
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Optional, Tuple
 
 SNAPSHOTS_DIR = "/var/lib/sensor/snapshots"
 EVIDENCE_BUNDLE_DIR = "/var/lib/sensor/evidence_bundles"

@@ -17,7 +17,7 @@ import sys
 import socket
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 # Ensure sensor directory is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))

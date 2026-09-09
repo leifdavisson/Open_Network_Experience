@@ -11,14 +11,13 @@ Enforces 5 mandatory safety mechanisms during active/intrusive network testing:
 """
 
 import os
-import sys
 import time
 import socket
 import struct
 import datetime
 import subprocess
 import threading
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional
 
 # Default Safety Parameters
 DEFAULT_INSTRUCTIONAL_START = "07:30"

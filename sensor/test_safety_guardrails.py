@@ -18,10 +18,7 @@ def verifies(req_id: str):
 
 import os
 import sys
-import time
 import datetime
-import subprocess
-import pytest
 from unittest.mock import patch, MagicMock, mock_open
 
 # Ensure sensor directory is in sys.path

@@ -18,7 +18,7 @@ import time
 import glob
 import signal
 import subprocess
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
 RAM_BUFFER_DIR = "/dev/shm/openux_pcap"
 SNAPSHOT_DIR = "/var/lib/sensor/snapshots"

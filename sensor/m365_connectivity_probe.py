@@ -9,15 +9,13 @@ Tests full-spectrum connectivity, real-time media quality, and security policy f
 """
 
 import os
-import sys
 import time
 import socket
 import ssl
-import struct
 import urllib.request
 import urllib.error
 import argparse
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple
 
 DEFAULT_PROM_FILE = "/var/lib/node_exporter/textfile_collector/m365.prom"
 

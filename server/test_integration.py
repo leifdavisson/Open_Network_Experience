@@ -6,8 +6,6 @@ and administration endpoints against the running API container.
 """
 
 import unittest
-import urllib.request
-import urllib.error
 import time
 
 CMP_BASE_URL = "http://localhost:8001/api/v1"
@@ -23,7 +21,8 @@ class TestCMPFlow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from fastapi.testclient import TestClient
-        import sys, os
+        import sys
+        import os
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
         from server import main as server_main
         cls.client = TestClient(server_main.app)
