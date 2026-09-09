@@ -1,0 +1,506 @@
+[
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "all",
+    "status": "FAIL",
+    "execution_time_ms": 79.1,
+    "elapsed_wall_ms": 61.81,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "speedtest",
+    "status": "PASS",
+    "execution_time_ms": 5.99,
+    "elapsed_wall_ms": 2.55,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "caaspp",
+    "status": "PASS",
+    "execution_time_ms": 879.03,
+    "elapsed_wall_ms": 881.44,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "dns",
+    "status": "PASS",
+    "execution_time_ms": 95.2,
+    "elapsed_wall_ms": 97.85,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "gateway",
+    "status": "PASS",
+    "execution_time_ms": 33.27,
+    "elapsed_wall_ms": 36.11,
+    "details_count": 2,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "canvas",
+    "status": "FAIL",
+    "execution_time_ms": 262.4,
+    "elapsed_wall_ms": 227.28,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": [
+      "Canvas LMS Web Portal"
+    ]
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "classroom",
+    "status": "PASS",
+    "execution_time_ms": 934.57,
+    "elapsed_wall_ms": 902.49,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "iready",
+    "status": "PASS",
+    "execution_time_ms": 548.76,
+    "elapsed_wall_ms": 513.52,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "ringcentral",
+    "status": "PASS",
+    "execution_time_ms": 1660.2,
+    "elapsed_wall_ms": 1650.88,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "zoom",
+    "status": "PASS",
+    "execution_time_ms": 124.64,
+    "elapsed_wall_ms": 127.0,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "client_isolation",
+    "status": "PASS",
+    "execution_time_ms": 232.62,
+    "elapsed_wall_ms": 235.19,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "vlan_isolation",
+    "status": "PASS",
+    "execution_time_ms": 400.59,
+    "elapsed_wall_ms": 402.98,
+    "details_count": 6,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "cipa",
+    "status": "FAIL",
+    "execution_time_ms": 78.19,
+    "elapsed_wall_ms": 54.63,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "dhcp",
+    "status": "FAIL",
+    "execution_time_ms": 85.28,
+    "elapsed_wall_ms": 61.81,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "wifi_flapping",
+    "status": "PASS",
+    "execution_time_ms": 33.8,
+    "elapsed_wall_ms": 2.76,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "chromebook-dev-e7573882-80d0-4bec-ab68-4e1f98afd22f",
+    "test": "pcap",
+    "status": "PASS",
+    "execution_time_ms": 17.5,
+    "elapsed_wall_ms": 2.61,
+    "details_count": 2,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "all",
+    "status": "FAIL",
+    "execution_time_ms": 63.39,
+    "elapsed_wall_ms": 39.91,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "speedtest",
+    "status": "PASS",
+    "execution_time_ms": 5.99,
+    "elapsed_wall_ms": 3.1,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "caaspp",
+    "status": "PASS",
+    "execution_time_ms": 616.38,
+    "elapsed_wall_ms": 619.29,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "dns",
+    "status": "PASS",
+    "execution_time_ms": 94.57,
+    "elapsed_wall_ms": 97.56,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "gateway",
+    "status": "PASS",
+    "execution_time_ms": 32.01,
+    "elapsed_wall_ms": 34.5,
+    "details_count": 2,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "canvas",
+    "status": "FAIL",
+    "execution_time_ms": 221.29,
+    "elapsed_wall_ms": 185.7,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": [
+      "Canvas LMS Web Portal"
+    ]
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "classroom",
+    "status": "PASS",
+    "execution_time_ms": 809.76,
+    "elapsed_wall_ms": 776.67,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "iready",
+    "status": "PASS",
+    "execution_time_ms": 540.27,
+    "elapsed_wall_ms": 504.38,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "ringcentral",
+    "status": "PASS",
+    "execution_time_ms": 1530.88,
+    "elapsed_wall_ms": 1521.04,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "zoom",
+    "status": "PASS",
+    "execution_time_ms": 85.11,
+    "elapsed_wall_ms": 86.61,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "client_isolation",
+    "status": "PASS",
+    "execution_time_ms": 233.57,
+    "elapsed_wall_ms": 235.85,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "vlan_isolation",
+    "status": "PASS",
+    "execution_time_ms": 407.79,
+    "elapsed_wall_ms": 410.18,
+    "details_count": 6,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "cipa",
+    "status": "FAIL",
+    "execution_time_ms": 62.46,
+    "elapsed_wall_ms": 39.3,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "dhcp",
+    "status": "FAIL",
+    "execution_time_ms": 64.07,
+    "elapsed_wall_ms": 40.14,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "wifi_flapping",
+    "status": "PASS",
+    "execution_time_ms": 33.8,
+    "elapsed_wall_ms": 2.16,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "f10325921e2b43b2b5fcf33cadad864b",
+    "test": "pcap",
+    "status": "PASS",
+    "execution_time_ms": 17.5,
+    "elapsed_wall_ms": 11.2,
+    "details_count": 2,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "all",
+    "status": "FAIL",
+    "execution_time_ms": 67.18,
+    "elapsed_wall_ms": 54.44,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "speedtest",
+    "status": "PASS",
+    "execution_time_ms": 5.98,
+    "elapsed_wall_ms": 2.56,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "caaspp",
+    "status": "PASS",
+    "execution_time_ms": 620.92,
+    "elapsed_wall_ms": 623.51,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "dns",
+    "status": "PASS",
+    "execution_time_ms": 94.09,
+    "elapsed_wall_ms": 97.02,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "gateway",
+    "status": "PASS",
+    "execution_time_ms": 29.64,
+    "elapsed_wall_ms": 32.23,
+    "details_count": 2,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "canvas",
+    "status": "FAIL",
+    "execution_time_ms": 226.85,
+    "elapsed_wall_ms": 191.37,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": [
+      "Canvas LMS Web Portal"
+    ]
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "classroom",
+    "status": "PASS",
+    "execution_time_ms": 804.88,
+    "elapsed_wall_ms": 772.18,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "iready",
+    "status": "PASS",
+    "execution_time_ms": 530.04,
+    "elapsed_wall_ms": 494.64,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "ringcentral",
+    "status": "PASS",
+    "execution_time_ms": 1520.04,
+    "elapsed_wall_ms": 1511.2,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "zoom",
+    "status": "PASS",
+    "execution_time_ms": 78.5,
+    "elapsed_wall_ms": 80.31,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "client_isolation",
+    "status": "PASS",
+    "execution_time_ms": 229.42,
+    "elapsed_wall_ms": 231.8,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "vlan_isolation",
+    "status": "PASS",
+    "execution_time_ms": 402.81,
+    "elapsed_wall_ms": 405.15,
+    "details_count": 6,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "cipa",
+    "status": "FAIL",
+    "execution_time_ms": 64.0,
+    "elapsed_wall_ms": 40.1,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "dhcp",
+    "status": "FAIL",
+    "execution_time_ms": 63.52,
+    "elapsed_wall_ms": 39.51,
+    "details_count": 4,
+    "http_code": 200,
+    "failed_probes": [
+      "External Core SaaS HTTP Probe"
+    ]
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "wifi_flapping",
+    "status": "PASS",
+    "execution_time_ms": 33.8,
+    "elapsed_wall_ms": 2.32,
+    "details_count": 3,
+    "http_code": 200,
+    "failed_probes": []
+  },
+  {
+    "sensor": "0320589c63904502bd820cb0c321a1b2",
+    "test": "pcap",
+    "status": "PASS",
+    "execution_time_ms": 17.5,
+    "elapsed_wall_ms": 1.86,
+    "details_count": 2,
+    "http_code": 200,
+    "failed_probes": []
+  }
+]
