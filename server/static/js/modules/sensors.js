@@ -3,6 +3,14 @@ import { showFormError, clearFormError } from './alerts.js';
 import { clearModalDirty } from './modals.js';
 
 import { ADMIN_KEY } from "./api.js";
+
+let mapInstance = null;
+let wallboardMapInstance = null;
+let mapMarkers = [];
+let wallboardMapMarkers = [];
+let SENSORS_CACHE = [];
+let CHROMEBOOKS_CACHE = [];
+
 export function formatTimeAgo(ts) {
     if (!ts) return 'Never';
     const diff = Math.floor(Date.now() / 1000) - ts;
@@ -14,6 +22,8 @@ export function formatTimeAgo(ts) {
 }
 
 export function renderDashboard(sensors, probes, liveStats, chromebooks, roamingTrail) {
+    SENSORS_CACHE = sensors || [];
+    CHROMEBOOKS_CACHE = chromebooks || [];
     let onlineCount = 0;
     let offlineCount = 0;
     let pendingCount = 0;

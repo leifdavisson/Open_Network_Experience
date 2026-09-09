@@ -17,19 +17,23 @@ export async function apiClient(endpoint, options = {}) {
 
         // Handle 204 No Content
         if (response.status === 204) {
-            return null;
+            response.data = null;
+            return response;
         }
 
         const data = await response.json().catch(() => null);
+        response.data = data;
+        // Also provide .json() resolving to data so calling `await res.json()` works
+        response.json = async () => data;
 
         if (!response.ok) {
-            const errorMessage = data?.detail || data?.message || \`HTTP Error: \${response.status}\`;
-            throw new Error(errorMessage);
+            const errorMessage = data?.detail || data?.message || `HTTP Error: ${response.status}`;
+            console.error(`API Error [${options.method || 'GET'} ${endpoint}]:`, errorMessage);
         }
 
-        return data;
+        return response;
     } catch (error) {
-        console.error(\`API Error [\${options.method || 'GET'} \${endpoint}]:\`, error);
+        console.error(`API Error [${options.method || 'GET'} ${endpoint}]:`, error);
         throw error;
     }
 }
