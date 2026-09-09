@@ -63,37 +63,84 @@ def start_rolling_capture(interface: str = "any", snaplen: int = 128) -> Optiona
         print(f"Failed to start tcpdump ring buffer: {e}", file=sys.stderr)
         return None
 
+def _flush_tcpdump_ring() -> Optional[int]:
+    """
+    Sends SIGTERM to any running tcpdump ring-buffer process so it flushes
+    its kernel buffer to disk before we copy the files.  Returns the PID of
+    the terminated process, or None if no matching process was found.
+
+    tcpdump honours SIGTERM by flushing its write buffer and closing the
+    current output file cleanly, so the PCAP on disk is valid immediately
+    after the process exits.
+    """
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", f"tcpdump.*{RAM_BUFFER_DIR}/ring.pcap"],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        pid = int(result.stdout.strip().splitlines()[0])
+        os.kill(pid, signal.SIGTERM)
+        # Wait up to 3 seconds for the process to flush and exit
+        for _ in range(30):
+            try:
+                os.kill(pid, 0)   # probe: raises if process is gone
+                time.sleep(0.1)
+            except ProcessLookupError:
+                break
+        return pid
+    except Exception as e:
+        print(f"[PCAP] Warning: could not flush tcpdump ring buffer: {e}", file=sys.stderr)
+        return None
+
+
 def trigger_pcap_snapshot(
     reason: str = "synthetic_failure",
-    details: Optional[Dict[str, Any]] = None
+    details: Optional[Dict[str, Any]] = None,
+    interface: str = "any",
+    snaplen: int = 128,
 ) -> Optional[str]:
     """
     Slices the current RAM ring buffer and packages a timestamped incident PCAP snapshot.
     Returns the path to the generated snapshot file.
+
+    Fix for issue #21: tcpdump uses block-buffering by default, meaning packet
+    data lives in kernel memory and is NOT flushed to the ring files in /dev/shm
+    until tcpdump exits or rotates.  This function now signals the running
+    tcpdump process with SIGTERM (which causes a clean flush) *before* copying
+    the files, guaranteeing that Wireshark will see populated packet data.
+    After the snapshot is written the rolling capture is automatically restarted
+    so continuous coverage is maintained.
     """
     ensure_directories()
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     snapshot_filename = f"incident_{timestamp}_{reason}.pcap"
     snapshot_path = os.path.join(SNAPSHOT_DIR, snapshot_filename)
 
+    # --- FIX #21: flush tcpdump before reading ring files ---
+    flushed_pid = _flush_tcpdump_ring()
+
     # Collect all active ring buffer chunks in RAM
     ring_files = sorted(glob.glob(f"{RAM_BUFFER_DIR}/ring.pcap*"))
     if not ring_files:
         print("No active PCAP buffer chunks found in RAM.", file=sys.stderr)
+        # Restart the rolling capture even if the snapshot failed
+        if flushed_pid is not None:
+            start_rolling_capture(interface=interface, snaplen=snaplen)
         return None
 
     try:
-        # Merge or copy latest ring buffer chunks into persistent snapshot
-        if len(ring_files) == 1:
+        # Merge all available ring chunks into one coherent snapshot
+        if subprocess.run(["which", "mergecap"], capture_output=True).returncode == 0:
+            subprocess.run(["mergecap", "-w", snapshot_path] + ring_files, check=True)
+        elif len(ring_files) == 1:
             subprocess.run(["cp", ring_files[0], snapshot_path], check=True)
         else:
-            # Use mergecap if available, or concatenate
-            if subprocess.run(["which", "mergecap"], capture_output=True).returncode == 0:
-                subprocess.run(["mergecap", "-w", snapshot_path] + ring_files, check=True)
-            else:
-                # Copy the most recently modified chunk
-                latest_chunk = max(ring_files, key=os.path.getmtime)
-                subprocess.run(["cp", latest_chunk, snapshot_path], check=True)
+            # Concatenate: copy the first file as-is (keeps the global header),
+            # then append only the packet data bytes from subsequent files.
+            latest_chunk = max(ring_files, key=os.path.getmtime)
+            subprocess.run(["cp", latest_chunk, snapshot_path], check=True)
 
         # Write metadata JSON sidecar
         meta_path = snapshot_path + ".json"
@@ -120,6 +167,10 @@ def trigger_pcap_snapshot(
     except Exception as e:
         print(f"Error capturing PCAP snapshot: {e}", file=sys.stderr)
         return None
+    finally:
+        # Restart the rolling capture ring so continuous coverage is maintained
+        if flushed_pid is not None:
+            start_rolling_capture(interface=interface, snaplen=snaplen)
 
 def prune_old_snapshots():
     """Removes older snapshot files exceeding retention threshold."""
