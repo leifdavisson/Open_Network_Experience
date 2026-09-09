@@ -91,10 +91,10 @@
         <header class="topbar">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="global-search" placeholder="Search sensors by Room, School, MAC, or IP..." data-keyup="handleGlobalSearch()">
+                <input type="text" id="global-search" aria-label="Search sensors by Room, School, MAC, or IP" placeholder="Search sensors by Room, School, MAC, or IP..." data-keyup="handleGlobalSearch()">
             </div>
             <div class="topbar-actions">
-                <button class="theme-btn" data-action="toggleTheme()" id="theme-btn">☀️ Light Mode</button>
+                <button class="theme-btn" data-action="toggleTheme()" id="theme-btn" aria-label="Toggle theme">☀️ Light Mode</button>
                 <a href="#" id="grafana-link" target="_blank" class="btn btn-outline btn-sm">📊 Grafana ↗</a>
                 <a href="/docs" target="_blank" class="btn btn-outline btn-sm">📖 Swagger ↗</a>
             </div>
@@ -586,7 +586,7 @@
                                 <label style="margin-bottom: 0;">3. Target Endpoint Override (Optional URL / Host / Port)</label>
                                 <span id="diag-hint-badge" style="font-size: 11px; color: var(--accent); font-weight: 600;">Safe Default: Full 7-Layer OSI & SaaS Suite</span>
                             </div>
-                            <input type="text" id="diag-custom-target" placeholder="Leave blank to use safe auto-discovered target..." style="width: 100%;">
+                            <input type="text" id="diag-custom-target" aria-label="Target Endpoint Override" placeholder="Leave blank to use safe auto-discovered target..." style="width: 100%;">
                             <div id="diag-target-presets" style="margin-top: 6px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                 <span>💡 Safe Presets:</span>
                                 <span id="diag-presets-container" style="display: flex; gap: 6px; flex-wrap: wrap;">
