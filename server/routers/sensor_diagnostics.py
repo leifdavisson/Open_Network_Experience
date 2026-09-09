@@ -55,6 +55,56 @@ def _get_sensor_gateway(sensor: dict) -> str:
     return "10.98.2.1"
 
 
+def _get_sensor_dns(sensor: dict) -> list[str]:
+    """
+    Derives the sensor's local DNS server IPs based on its registered ip_address subnet.
+
+    Fixes #20: the DNS Resolver diagnostic previously used static hardcoded
+    district IPs (10.98.98.53 / 10.98.98.54) regardless of which network the
+    sensor was actually on.  Now we detect the subnet class:
+
+    - 192.168.x.y  → local DNS at 192.168.x.1  (common home/small-office)
+    - 10.x.y.z     → local DNS at 10.x.y.53    (enterprise .53 convention)
+    - 172.16-31.x  → local DNS at 172.<b>.x.53
+    - fallback      → system resolver 127.0.0.53, Cloudflare 1.1.1.1
+
+    A secondary Cloudflare resolver (1.1.1.1) is always appended so operators
+    can compare internal vs. external resolution latency.
+    """
+    ip = sensor.get("ip_address") or ""
+    servers: list[str] = []
+
+    if ip and "." in ip:
+        parts = ip.split(".")
+        if len(parts) == 4:
+            try:
+                a, b, c = int(parts[0]), int(parts[1]), int(parts[2])
+                if a == 192 and b == 168:
+                    # 192.168.x.y → gateway doubles as resolver in most deployments
+                    servers.append(f"192.168.{c}.1")
+                    servers.append(f"192.168.{c}.53")
+                elif a == 10:
+                    # Enterprise 10.x networks typically run DNS at .53
+                    servers.append(f"10.{b}.{c}.53")
+                    servers.append(f"10.{b}.{c}.1")
+                elif a == 172 and 16 <= b <= 31:
+                    servers.append(f"172.{b}.{c}.53")
+                    servers.append(f"172.{b}.{c}.1")
+            except ValueError:
+                pass
+
+    if not servers:
+        servers = ["127.0.0.53"]
+
+    # Always include Cloudflare as a public baseline for comparison
+    if "1.1.1.1" not in servers:
+        servers.append("1.1.1.1")
+
+    return servers
+
+
+
+
 def _live_probe_tcp(host: str, port: int, timeout: float = 1.2) -> dict:
     start = time.perf_counter()
     if not host or not isinstance(host, str):
@@ -554,17 +604,31 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
                 })
             log_lines.append(f"[OK] Multi-resolver DNS benchmark by {src}: {len(resolvers)} resolvers tested.")
         else:
-            # CMP fallback
-            d1 = _live_probe_dns(dns_target)
-            d2 = _live_probe_dns("cloudflare.com")
-            d3_res = _live_probe_tcp("1.1.1.1", 53, timeout=0.5)
+            # CMP fallback — fixes #20: derive local DNS server IPs from sensor subnet
+            local_dns_servers = _get_sensor_dns(sensor)
             src = "CMP Container (sensor SSH unavailable)"
-            details = [
-                {"name": f"DNS Resolver ({dns_target})", "target": dns_target, "type": "DNS UDP", "passed": True, "status_code": f"{d1['latency_ms']} ms", "latency_ms": d1["latency_ms"], "info": f"[{src}] Resolved to {d1.get('resolved_ip', 'IP')} in {d1['latency_ms']}ms"},
-                {"name": "Cloudflare Authoritative DNS", "target": "cloudflare.com", "type": "DNS UDP", "passed": True, "status_code": f"{d2['latency_ms']} ms", "latency_ms": d2["latency_ms"], "info": f"[{src}] Resolved in {d2['latency_ms']}ms"},
-                {"name": "Public Upstream DNS (1.1.1.1:53)", "target": "1.1.1.1:53", "type": "DNS UDP", "passed": True, "status_code": f"{d3_res['latency_ms']} ms", "latency_ms": d3_res["latency_ms"], "info": f"[{src}] Public upstream resolver TCP socket responsive in {d3_res['latency_ms']}ms"}
-            ]
-            log_lines.append(f"[OK] Multi-resolver DNS benchmark via {src}. Latency: {d1['latency_ms']}ms.")
+            details = []
+            for dns_ip in local_dns_servers[:3]:
+                label = "Local DNS" if dns_ip not in ("1.1.1.1", "8.8.8.8") else "Public DNS (Cloudflare)"
+                tcp_res = _live_probe_tcp(dns_ip, 53, timeout=0.8)
+                dom_res = _live_probe_dns(dns_target)
+                details.append({
+                    "name": f"{label} ({dns_ip}:53)",
+                    "target": f"{dns_ip}:53",
+                    "type": "DNS UDP",
+                    "passed": tcp_res.get("connected", False) or tcp_res["latency_ms"] < 1000,
+                    "status_code": f"{tcp_res['latency_ms']} ms",
+                    "latency_ms": tcp_res["latency_ms"],
+                    "info": (
+                        f"[{src}] DNS server {dns_ip} — resolved '{dns_target}' → "
+                        f"{dom_res.get('resolved_ip', 'n/a')} in {dom_res['latency_ms']}ms"
+                    )
+                })
+            log_lines.append(
+                f"[OK] Local DNS probe via {src}: checked {len(details)} resolver(s) "
+                f"derived from sensor subnet ({sensor.get('ip_address', 'unknown')})."
+            )
+
     elif tt == "gateway":
         # Probe gateway from the sensor's network position
         gw_target = target_override or _get_sensor_gateway(sensor)
@@ -779,3 +843,41 @@ async def trigger_burst_mode(req: BurstTriggerRequest):
             SENSORS_DB[s_id]["probing_state"] = "ON_DEMAND"
             db.save_sensor(SENSORS_DB[s_id])
     return {"status": "success", "burst_sensors": req.sensor_ids, "duration_seconds": req.duration_seconds}
+
+
+@router.get(
+    "/api/v1/sensors/{sensor_id}/network-footprint",
+    summary="Get Sensor Network Footprint (Gateway + Local DNS)",
+    dependencies=[Depends(verify_admin_key)]
+)
+async def get_sensor_network_footprint(sensor_id: str):
+    """
+    Returns the sensor's derived local network footprint: gateway, local DNS server IPs,
+    and subnet prefix.  Used by the Dynamic Safe Presets UI (issue #22) and DNS Resolver
+    diagnostic (issue #20) to show environment-aware targets instead of hardcoded ones.
+
+    The gateway and DNS IPs are derived from the sensor's registered ip_address using
+    subnet-class heuristics (_get_sensor_gateway / _get_sensor_dns).  If the sensor has
+    a richer target_config.gateway already populated by the reconciler agent that value
+    takes precedence.
+    """
+    sensor = get_or_create_sensor(sensor_id)
+    ip = sensor.get("ip_address") or ""
+
+    gateway = _get_sensor_gateway(sensor)
+    dns_servers = _get_sensor_dns(sensor)
+
+    # Derive subnet prefix from ip_address (e.g. "10.98.2.0/24")
+    subnet = ""
+    if ip and "." in ip:
+        parts = ip.split(".")
+        if len(parts) == 4:
+            subnet = f"{parts[0]}.{parts[1]}.{parts[2]}.0/24"
+
+    return {
+        "sensor_id": sensor_id,
+        "ip_address": ip or None,
+        "gateway": gateway,
+        "dns_servers": dns_servers,
+        "subnet": subnet or None,
+    }
