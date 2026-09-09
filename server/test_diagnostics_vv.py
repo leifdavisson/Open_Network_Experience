@@ -19,7 +19,7 @@ def setup_mock_probes():
     if "taco-bell" in PROBES_DB:
         del PROBES_DB["taco-bell"]
 
-@given(test_type=st.text(min_size=1).filter(lambda x: x not in ["speedtest", "iperf3", "canvas", "pcap", "taco-bell", "classroom", "google", "iready", "ringcentral", "rc_voip", "zoom", "voip", "jitter", "client_isolation", "intra_bss", "guest_isolation", "vlan_isolation", "segmentation", "caaspp", "dns", "gateway", "all", "wifi_flapping", "rrm_darrp"]))
+@given(test_type=st.text(min_size=1).filter(lambda x: x not in ["speedtest", "iperf3", "canvas", "pcap", "taco-bell", "classroom", "google", "iready", "ringcentral", "rc_voip", "zoom", "voip", "jitter", "client_isolation", "intra_bss", "guest_isolation", "vlan_isolation", "segmentation", "caaspp", "dns", "gateway", "all", "wifi_flapping", "rrm_darrp", "cipa", "content_filter", "dhcp", "lease"]))
 @settings(deadline=None)
 @pytest.mark.verifies("REQ-DIAG-003")
 def test_fuzz_unknown_test_type_fallback(test_type):
@@ -150,3 +150,28 @@ def test_accurate_attribution_string_formatting():
     failed_http = next(d for d in res["details"] if d["type"] == "HTTP 2XX" and not d["passed"])
     assert "valid SSL cert" not in failed_http["info"]
     assert ("Unreachable" in failed_http["info"] or "HTTP" in failed_http["info"] or "failed" in failed_http["info"].lower())
+
+@pytest.mark.verifies("REQ-DIAG-011")
+def test_cipa_probe_execution():
+    req = DiagnosticRunRequest(test_type="cipa")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+    assert res["status"] in ["PASS", "WARNING"]
+    assert any("CSAM" in d["name"] or "IWF" in d["name"] for d in res["details"])
+    assert any("CTIRU" in d["name"] for d in res["details"])
+    assert any("Adult" in d["name"] for d in res["details"])
+
+@pytest.mark.verifies("REQ-DIAG-012")
+def test_dhcp_probe_execution():
+    req = DiagnosticRunRequest(test_type="dhcp")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+    assert res["status"] == "PASS"
+    assert any("DORA" in d["name"] for d in res["details"])
+    assert any("Scope" in d["name"] or "Pool" in d["name"] for d in res["details"])
+
+@pytest.mark.verifies("REQ-DIAG-013")
+def test_canvas_probe_execution():
+    req = DiagnosticRunRequest(test_type="canvas")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+    assert res["status"] in ["PASS", "WARNING"]
+    assert any("Canvas LMS" in d["name"] for d in res["details"])
+

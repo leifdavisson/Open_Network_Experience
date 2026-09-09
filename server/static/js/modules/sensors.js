@@ -426,6 +426,8 @@ export function renderDashboard(sensors, probes, liveStats, chromebooks, roaming
         diagSelect.innerHTML = diagSelectOptions.join('');
         if (prevDiagVal && Array.from(diagSelect.options).some(o => o.value === prevDiagVal)) {
             diagSelect.value = prevDiagVal;
+        } else if (diagSelect.options.length > 1) {
+            diagSelect.selectedIndex = 1;
         }
     }
 
@@ -831,7 +833,16 @@ export function updateDiagTargetHint() {
             badge: 'Safe Default: IWF + Adult Filter Targets',
             presets: [
                 { label: 'IWF Standard CSAM', val: 'http://iwf.testfiltering.com' },
-                { label: 'CTIRU Malware Threat', val: 'https://ctiru.testfiltering.com' }
+                { label: 'CTIRU Malware Threat', val: 'https://ctiru.testfiltering.com' },
+                { label: 'Restricted Adult Guardrail', val: 'https://testfiltering.pornhub.com' }
+            ]
+        },
+        'dhcp': {
+            placeholder: 'e.g. 10.98.2.1:67 (Default DHCP Gateway)',
+            badge: 'Safe Default: DHCP DORA 4-Way Lease Timing',
+            presets: [
+                { label: 'Local DHCP Gateway (:67)', val: '' },
+                { label: 'Fast Discover / Offer Test', val: 'dhcp-discover' }
             ]
         },
         'wifi_flapping': {
@@ -924,7 +935,14 @@ export async function executeSelectedDiagnostic() {
     const timeChip = document.getElementById('diag-time-chip');
 
     if (!sensorId) {
-        alert('Please select an online sensor from the dropdown first.');
+        resultsCard.style.display = 'block';
+        timeChip.innerText = "Action Required";
+        statusPill.className = "result-chip";
+        statusPill.style.background = "rgba(245, 158, 11, 0.15)";
+        statusPill.style.color = "var(--warning)";
+        statusPill.innerText = "⚠️ SENSOR REQUIRED";
+        consoleBox.innerText = "> [WARNING] No target edge sensor selected.\n> Please select an approved, online sensor from the 'Target Edge Sensor' dropdown above before running diagnostics.\n";
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--warning);">⚠️ <strong>Please select an online sensor from the dropdown above to execute diagnostics.</strong></td></tr>`;
         return;
     }
 
