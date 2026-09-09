@@ -100,6 +100,11 @@
             margin-bottom: 2px;
             transition: all 0.15s ease;
             white-space: nowrap;
+            width: 100%;
+            background: transparent;
+            border: none;
+            text-align: left;
+            font-family: inherit;
         }
         .nav-item:hover { background: var(--bg-hover); color: var(--text-main); }
         .nav-item.active { background: var(--accent); color: var(--accent-text); font-weight: 700; }

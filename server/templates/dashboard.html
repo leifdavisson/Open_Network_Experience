@@ -27,61 +27,61 @@
         <nav class="nav-menu">
             <!-- 1. MONITOR BUCKET -->
             <div class="bucket-label">1. Monitor</div>
-            <a href="#" role="button" class="nav-item active" id="nav-monitor-noc" data-action="switchView('monitor-noc')" title="NOC Live Operations Wallboard">
+            <button type="button" class="nav-item active" id="nav-monitor-noc" data-action="switchView('monitor-noc')" title="NOC Live Operations Wallboard">
                 <span class="nav-icon">📊</span> <span class="nav-text">NOC Overview</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-monitor-map" data-action="switchView('monitor-map')" title="GIS Campus Geolocation">
+            </button>
+            <button type="button" class="nav-item" id="nav-monitor-map" data-action="switchView('monitor-map')" title="GIS Campus Geolocation">
                 <span class="nav-icon">🗺️</span> <span class="nav-text">GIS Campus Map</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-monitor-ondemand" data-action="switchView('monitor-ondemand')" title="On-Demand Diagnostic Action Center">
+            </button>
+            <button type="button" class="nav-item" id="nav-monitor-ondemand" data-action="switchView('monitor-ondemand')" title="On-Demand Diagnostic Action Center">
                 <span class="nav-icon">⚡</span> <span class="nav-text">Live Diagnostics</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-monitor-reports" data-action="switchView('monitor-reports')" title="Forensics & SLA Reports">
+            </button>
+            <button type="button" class="nav-item" id="nav-monitor-reports" data-action="switchView('monitor-reports')" title="Forensics & SLA Reports">
                 <span class="nav-icon">📋</span> <span class="nav-text">Reports & Forensics</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-monitor-alerts" data-action="switchView('monitor-alerts')" title="Active Alarms & Alert Lifecycle Center">
+            </button>
+            <button type="button" class="nav-item" id="nav-monitor-alerts" data-action="switchView('monitor-alerts')" title="Active Alarms & Alert Lifecycle Center">
                 <span class="nav-icon">🚨</span> <span class="nav-text">Alert Center</span>
                 <span id="sidebar-alert-badge" style="display:none; margin-left:auto; background:var(--danger); color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
-            </a>
+            </button>
 
             <!-- 2. FLEET & REGISTRATION BUCKET -->
             <div class="bucket-label">2. Fleet & Registration</div>
-            <a href="#" role="button" class="nav-item" id="nav-manage-fleet" data-action="switchView('manage-fleet')" title="Fixed Hardware Edge Sensors & Onboarding">
+            <button type="button" class="nav-item" id="nav-manage-fleet" data-action="switchView('manage-fleet')" title="Fixed Hardware Edge Sensors & Onboarding">
                 <span class="nav-icon">📡</span> <span class="nav-text">Fixed Edge Sensors</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-manage-chromebooks" data-action="switchView('manage-chromebooks')" title="1:1 Student Chromebook Fleet & Security Lock">
+            </button>
+            <button type="button" class="nav-item" id="nav-manage-chromebooks" data-action="switchView('manage-chromebooks')" title="1:1 Student Chromebook Fleet & Security Lock">
                 <span class="nav-icon">💻</span> <span class="nav-text">1:1 Chromebooks</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-manage-locations" data-action="switchView('manage-locations')" title="Campus & Room Hierarchy">
+            </button>
+            <button type="button" class="nav-item" id="nav-manage-locations" data-action="switchView('manage-locations')" title="Campus & Room Hierarchy">
                 <span class="nav-icon">📍</span> <span class="nav-text">Campus Hierarchy</span>
-            </a>
+            </button>
 
             <!-- 3. CONFIGURE BUCKET -->
             <div class="bucket-label">3. Configure</div>
-            <a href="#" role="button" class="nav-item" id="nav-configure-schedules" data-action="switchView('configure-schedules')" title="Visual Probe & Test Scheduler">
+            <button type="button" class="nav-item" id="nav-configure-schedules" data-action="switchView('configure-schedules')" title="Visual Probe & Test Scheduler">
                 <span class="nav-icon">📅</span> <span class="nav-text">Probe Scheduler</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-configure-alerts" data-action="switchView('configure-alerts')" title="Custom Alert Rules & Metric Thresholds">
+            </button>
+            <button type="button" class="nav-item" id="nav-configure-alerts" data-action="switchView('configure-alerts')" title="Custom Alert Rules & Metric Thresholds">
                 <span class="nav-icon">🚨</span> <span class="nav-text">Alert Thresholds</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-configure-maintenance" data-action="switchView('configure-maintenance')" title="Scheduled IT Maintenance & Muting Windows">
+            </button>
+            <button type="button" class="nav-item" id="nav-configure-maintenance" data-action="switchView('configure-maintenance')" title="Scheduled IT Maintenance & Muting Windows">
                 <span class="nav-icon">🔕</span> <span class="nav-text">Muting Windows</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-configure-probes" data-action="switchView('configure-probes')" title="WYSIWYG Custom Probes">
+            </button>
+            <button type="button" class="nav-item" id="nav-configure-probes" data-action="switchView('configure-probes')" title="WYSIWYG Custom Probes">
                 <span class="nav-icon">🛠️</span> <span class="nav-text">EasyBuilder Tests</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-configure-osi" data-action="switchView('configure-osi')" title="OSI Diagnostic Matrix">
+            </button>
+            <button type="button" class="nav-item" id="nav-configure-osi" data-action="switchView('configure-osi')" title="OSI Diagnostic Matrix">
                 <span class="nav-icon">🔬</span> <span class="nav-text">OSI Layer Suite</span>
-            </a>
+            </button>
 
             <!-- 4. SETUP BUCKET -->
             <div class="bucket-label">4. Setup</div>
-            <a href="#" role="button" class="nav-item" id="nav-setup-server" data-action="switchView('setup-server')" title="Server & TSDB Health">
+            <button type="button" class="nav-item" id="nav-setup-server" data-action="switchView('setup-server')" title="Server & TSDB Health">
                 <span class="nav-icon">🖥️</span> <span class="nav-text">Server & TSDB</span>
-            </a>
-            <a href="#" role="button" class="nav-item" id="nav-setup-integrations" data-action="switchView('setup-integrations')" title="Push Alerts & Webhooks">
+            </button>
+            <button type="button" class="nav-item" id="nav-setup-integrations" data-action="switchView('setup-integrations')" title="Push Alerts & Webhooks">
                 <span class="nav-icon">⚙️</span> <span class="nav-text">Alerts & Webhooks</span>
-            </a>
+            </button>
         </nav>
     </aside>
 
