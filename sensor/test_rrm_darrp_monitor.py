@@ -103,5 +103,62 @@ BSS 11:22:33:44:55:66(on wlan0)
             content = f.read()
             self.assertIn("test_metric 1.0", content)
 
+    @verifies("REQ-PRB-005")
+    @patch("rrm_darrp_monitor.write_metrics")
+    @patch("rrm_darrp_monitor.scan_cochannel_interference")
+    @patch("rrm_darrp_monitor.get_connected_wifi_info")
+    def test_rrm_switch_vs_roam(self, mock_wifi, mock_scan, mock_write):
+        """Verifies that identical BSSID frequency changes count as RRM switches while BSSID changes count as roams."""
+        mock_scan.return_value = (0, [])
+        with patch("rrm_darrp_monitor.STATE_FILE", self.state_file):
+            # 1. First connection: BSSID-A, Ch 36
+            mock_wifi.return_value = {
+                "connected": True, "ssid": "District-WLAN", "bssid": "00:11:22:33:44:01",
+                "freq_mhz": 5180, "channel": 36, "rssi_dbm": -60, "channel_width_mhz": 80
+            }
+            with patch("sys.argv", ["rrm_darrp_monitor.py", self.prom_file, "wlan0"]):
+                rrm_darrp_monitor.main()
+            state = rrm_darrp_monitor.load_state()
+            self.assertEqual(state["current_channel"], 36)
+            self.assertEqual(state["current_bssid"], "00:11:22:33:44:01")
+            self.assertEqual(state["total_switches"], 0)
+            self.assertEqual(state["total_roams"], 0)
+
+            # 2. RRM Event: Same BSSID-A jumps to Ch 48
+            mock_wifi.return_value = {
+                "connected": True, "ssid": "District-WLAN", "bssid": "00:11:22:33:44:01",
+                "freq_mhz": 5240, "channel": 48, "rssi_dbm": -62, "channel_width_mhz": 80
+            }
+            with patch("sys.argv", ["rrm_darrp_monitor.py", self.prom_file, "wlan0"]):
+                rrm_darrp_monitor.main()
+            state = rrm_darrp_monitor.load_state()
+            self.assertEqual(state["current_channel"], 48)
+            self.assertEqual(state["current_bssid"], "00:11:22:33:44:01")
+            self.assertEqual(state["total_switches"], 1)
+            self.assertEqual(state["total_roams"], 0)
+
+            # 3. Roam Event: Client roams to BSSID-B on Ch 36 (channel changes, but BSSID is different)
+            mock_wifi.return_value = {
+                "connected": True, "ssid": "District-WLAN", "bssid": "00:11:22:33:44:02",
+                "freq_mhz": 5180, "channel": 36, "rssi_dbm": -55, "channel_width_mhz": 80
+            }
+            with patch("sys.argv", ["rrm_darrp_monitor.py", self.prom_file, "wlan0"]):
+                rrm_darrp_monitor.main()
+            state = rrm_darrp_monitor.load_state()
+            self.assertEqual(state["current_channel"], 36)
+            self.assertEqual(state["current_bssid"], "00:11:22:33:44:02")
+            # total_switches must remain 1 (NOT 2)
+            self.assertEqual(state["total_switches"], 1)
+            # total_roams must now be 1
+            self.assertEqual(state["total_roams"], 1)
+
+            # Check that write_metrics was called with both metrics
+            last_prom_lines = mock_write.call_args[0][0]
+            switches_line = next(line for line in last_prom_lines if line.startswith("wifi_rrm_channel_switches_total"))
+            roams_line = next(line for line in last_prom_lines if line.startswith("wifi_client_roams_total"))
+            self.assertTrue(switches_line.endswith(" 1"))
+            self.assertTrue(roams_line.endswith(" 1"))
+
 if __name__ == "__main__":
     unittest.main()
+

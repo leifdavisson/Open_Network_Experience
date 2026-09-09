@@ -38,7 +38,9 @@ def load_state() -> Dict[str, Any]:
         "current_bssid": "",
         "channel_start_epoch": int(time.time()),
         "switch_history": [],  # Timestamps of channel switches in the past 24h
-        "total_switches": 0
+        "total_switches": 0,
+        "roam_history": [],  # Timestamps of BSSID roams in the past 24h
+        "total_roams": 0
     }
 
 def save_state(state: Dict[str, Any]):
@@ -300,6 +302,8 @@ def main():
         "# TYPE wifi_rrm_channel_width_mhz gauge",
         "# HELP wifi_rrm_channel_switches_total Total number of dynamic channel changes executed by DARRP/GSK",
         "# TYPE wifi_rrm_channel_switches_total counter",
+        "# HELP wifi_client_roams_total Total number of times the client roamed to a new BSSID",
+        "# TYPE wifi_client_roams_total counter",
         "# HELP wifi_rrm_channel_dwell_seconds Number of seconds the AP has remained stable on the current channel",
         "# TYPE wifi_rrm_channel_dwell_seconds gauge",
         "# HELP wifi_rrm_switches_last_hour Channel switch frequency in the past 60 minutes",
@@ -333,28 +337,39 @@ def main():
     state = load_state()
     now_epoch = int(time.time())
 
-    # Prune switch history older than 24 hours
+    # Prune switch and roam history older than 24 hours
     one_day_ago = now_epoch - 86400
     one_hour_ago = now_epoch - 3600
     state["switch_history"] = [t for t in state.get("switch_history", []) if t >= one_day_ago]
+    state["roam_history"] = [t for t in state.get("roam_history", []) if t >= one_day_ago]
 
     curr_chan = wifi["channel"]
     curr_bssid = wifi["bssid"]
     prev_chan = state.get("current_channel", 0)
+    prev_bssid = state.get("current_bssid", "")
 
-    # Check if a DARRP / GSK dynamic channel switch occurred
-    if prev_chan > 0 and curr_chan != prev_chan and curr_chan > 0:
-        print(f"\033[96m[RRM EVENT] Dynamic Channel Switch Detected!\033[0m Channel changed from {prev_chan} -> {curr_chan}")
+    # Scenario 1: Infrastructure RRM Channel Switch (BSSID is the same, channel changed)
+    if prev_bssid == curr_bssid and curr_chan != prev_chan and prev_chan > 0 and curr_chan > 0:
+        print(f"\033[96m[RRM EVENT] Dynamic Channel Switch!\033[0m {prev_bssid} jumped from Ch {prev_chan} -> {curr_chan}")
         state["total_switches"] = state.get("total_switches", 0) + 1
         state["switch_history"].append(now_epoch)
         state["channel_start_epoch"] = now_epoch
-        state["current_channel"] = curr_chan
-        state["current_bssid"] = curr_bssid
-    elif prev_chan == 0 and curr_chan > 0:
-        # First initialization
-        state["current_channel"] = curr_chan
-        state["current_bssid"] = curr_bssid
+
+    # Scenario 2: Client Roamed to a new AP (BSSID changed)
+    elif prev_bssid != curr_bssid and prev_bssid != "":
+        print(f"\033[92m[ROAM EVENT] Client roamed!\033[0m {prev_bssid} -> {curr_bssid}")
+        state["total_roams"] = state.get("total_roams", 0) + 1
+        state["roam_history"].append(now_epoch)
+        # Reset the dwell timer because we are on a new AP
         state["channel_start_epoch"] = now_epoch
+
+    # Scenario 3: First initialization or reconnecting from dead state
+    elif prev_chan == 0 and curr_chan > 0:
+        state["channel_start_epoch"] = now_epoch
+
+    # Always update current state
+    state["current_channel"] = curr_chan
+    state["current_bssid"] = curr_bssid
 
     # Calculate dwell time and flapping
     dwell_time = max(0, now_epoch - state.get("channel_start_epoch", now_epoch))
@@ -376,6 +391,7 @@ def main():
     prom_lines.append(f'wifi_rrm_current_channel{{{labels}}} {curr_chan}')
     prom_lines.append(f'wifi_rrm_channel_width_mhz{{{labels}}} {wifi["channel_width_mhz"]}')
     prom_lines.append(f'wifi_rrm_channel_switches_total{{{labels}}} {state.get("total_switches", 0)}')
+    prom_lines.append(f'wifi_client_roams_total{{{labels}}} {state.get("total_roams", 0)}')
     prom_lines.append(f'wifi_rrm_channel_dwell_seconds{{{labels}}} {dwell_time}')
     prom_lines.append(f'wifi_rrm_switches_last_hour{{{labels}}} {switches_last_hour}')
     prom_lines.append(f'wifi_rrm_flapping_detected{{{labels}}} {is_flapping}')
