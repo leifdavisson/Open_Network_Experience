@@ -160,4 +160,3 @@ BSS 11:22:33:44:55:66(on wlan0)
 
 if __name__ == "__main__":
     unittest.main()
-

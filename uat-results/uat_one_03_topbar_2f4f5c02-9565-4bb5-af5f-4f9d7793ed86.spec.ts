@@ -3,7 +3,7 @@ import { test } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 test('UAT-ONE-03-Topbar_2026-09-08', async ({ page, context }) => {
-  
+
     // Navigate to URL
     await page.goto('http://10.98.2.125:8000/');
 

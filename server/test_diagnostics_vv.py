@@ -174,4 +174,3 @@ def test_canvas_probe_execution():
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     assert res["status"] in ["PASS", "WARNING"]
     assert any("Canvas LMS" in d["name"] for d in res["details"])
-
