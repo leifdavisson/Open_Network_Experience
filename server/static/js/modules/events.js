@@ -37,9 +37,33 @@ document.addEventListener('click', (e) => {
             } catch (err) {
                  console.error("Error executing data-action", action, err);
             }
-            // don't preventDefault automatically, some might be links
-            if (target.tagName.toLowerCase() === 'button') {
+            // Prevent default page scroll on buttons and dummy links
+            const tag = target.tagName.toLowerCase();
+            const href = target.getAttribute('href');
+            if (tag === 'button' || tag === 'a' && (href === '#' || href === 'javascript:void(0)')) {
                  e.preventDefault();
+            }
+            return;
+        }
+        target = target.parentElement;
+    }
+});
+
+// Keydown event listener for Enter and Space key accessibility
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') {
+        return;
+    }
+
+    let target = e.target;
+    while (target && target !== document.body) {
+        if (target.hasAttribute('data-action') || target.getAttribute('role') === 'button' || target.hasAttribute('tabindex') || target.tagName.toLowerCase() === 'button') {
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault(); // Prevent page scroll on Space press
+                target.click();
+            } else if (e.key === 'Enter' && target.tagName.toLowerCase() !== 'button') {
+                // Native buttons handle Enter click automatically; for non-button controls, trigger click
+                target.click();
             }
             return;
         }
