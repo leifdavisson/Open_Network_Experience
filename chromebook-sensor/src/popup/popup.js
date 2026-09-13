@@ -14,17 +14,41 @@ function updateUI(snapshot, config) {
     badge.className = `badge ${snapshot.status === "HEALTHY" ? "badge-green" : snapshot.status === "PROBING" ? "badge-info" : "badge-amber"}`;
   }
 
-  // Wi-Fi RF Info
+  // Active Network RF Info
   const wifi = snapshot.wifi;
-  if (wifi) {
-    document.getElementById("val-ssid").textContent = wifi.ssid || (wifi.connected ? "Connected" : "Disconnected");
-    document.getElementById("val-bssid").textContent = wifi.bssid || "N/A (Virtual/Ethernet)";
-    document.getElementById("val-rssi").textContent = wifi.rssi_dbm ? `${wifi.rssi_dbm} dBm (${wifi.signal_strength_pct || '--'}%)` : "--";
-    document.getElementById("val-channel").textContent = wifi.channel ? `Ch ${wifi.channel} (${wifi.frequency_mhz || '--'} MHz)` : "--";
-    document.getElementById("band-tag").textContent = wifi.band || (wifi.connected ? "Active" : "Offline");
+  const isEthernet = !wifi?.bssid || wifi.bssid.includes("Virtual") || wifi.bssid.includes("Ethernet") || (!wifi.channel && !wifi.rssi_dbm);
+
+  const titleRfCard = document.getElementById("title-rf-card");
+  const titleHealthCard = document.getElementById("title-health-card");
+  const rowFlapping = document.getElementById("row-flapping");
+  const colRssi = document.getElementById("col-rssi");
+  const colChannel = document.getElementById("col-channel");
+
+  if (isEthernet) {
+    if (titleRfCard) titleRfCard.textContent = "🔌 Active Network State (Wired / Ethernet)";
+    if (titleHealthCard) titleHealthCard.textContent = "🩺 Network Health & Diagnostics";
+    if (rowFlapping) rowFlapping.style.display = "none";
+    if (colRssi) colRssi.style.display = "none";
+    if (colChannel) colChannel.style.display = "none";
+  } else {
+    if (titleRfCard) titleRfCard.textContent = "📶 Active Wi-Fi RF State";
+    if (titleHealthCard) titleHealthCard.textContent = "🩺 Wi-Fi Health & Diagnostics";
+    if (rowFlapping) rowFlapping.style.display = "flex";
+    if (colRssi) colRssi.style.display = "block";
+    if (colChannel) colChannel.style.display = "block";
   }
 
-  // Wi-Fi Diagnostics & Captive Portal
+  if (wifi) {
+    document.getElementById("val-ssid").textContent = isEthernet ? "Wired Ethernet Connection" : (wifi.ssid || (wifi.connected ? "Connected" : "Disconnected"));
+    document.getElementById("val-bssid").textContent = wifi.bssid || (isEthernet ? "Ethernet Interface" : "N/A");
+    if (!isEthernet) {
+      document.getElementById("val-rssi").textContent = wifi.rssi_dbm ? `${wifi.rssi_dbm} dBm (${wifi.signal_strength_pct || '--'}%)` : "--";
+      document.getElementById("val-channel").textContent = wifi.channel ? `Ch ${wifi.channel} (${wifi.frequency_mhz || '--'} MHz)` : "--";
+    }
+    document.getElementById("band-tag").textContent = isEthernet ? "Ethernet" : (wifi.band || (wifi.connected ? "Active" : "Offline"));
+  }
+
+  // Diagnostics & Captive Portal
   const diag = snapshot.wifi_diagnostics;
   const portal = snapshot.captive_portal;
 
@@ -44,12 +68,12 @@ function updateUI(snapshot, config) {
   if (diag) {
     const healthTag = document.getElementById("health-tag");
     if (healthTag) {
-      healthTag.textContent = diag.signal_health || "OK";
-      healthTag.className = `tag ${diag.signal_health === "EXCELLENT" || diag.signal_health === "GOOD" ? "badge-green" : diag.signal_health === "FAIR" ? "badge-info" : "badge-amber"}`;
+      healthTag.textContent = isEthernet ? "ONLINE" : (diag.signal_health || "OK");
+      healthTag.className = `tag ${diag.signal_health === "EXCELLENT" || diag.signal_health === "GOOD" || isEthernet ? "badge-green" : diag.signal_health === "FAIR" ? "badge-info" : "badge-amber"}`;
     }
 
     const flappingEl = document.getElementById("val-flapping");
-    if (flappingEl) {
+    if (flappingEl && !isEthernet) {
       if (diag.is_flapping) {
         flappingEl.textContent = `FLAPPING (${diag.roam_transitions_last_min} switches/min)`;
         flappingEl.style.color = "#ef4444";
@@ -61,33 +85,51 @@ function updateUI(snapshot, config) {
 
     const recEl = document.getElementById("val-wifi-recommendation");
     if (recEl) {
-      recEl.textContent = diag.recommendation || "Wi-Fi running nominally";
+      if (isEthernet) {
+        recEl.textContent = "Wired Ethernet connection healthy";
+      } else {
+        recEl.textContent = diag.recommendation || "Wi-Fi running nominally";
+      }
     }
   }
 
-  // Gateway Probe UI Binding
+  // Gateway Probe UI Binding (Transparent Sandboxing & No Guessing)
   const gw = snapshot.gateway_probe;
   const gwEl = document.getElementById("val-gateway");
-  if (gw && gwEl) {
+  const gwRow = document.getElementById("row-gateway");
+  if (gw && gwEl && gwRow) {
     if (gw.reachable) {
-      gwEl.textContent = `Reachable (${gw.rtt_ms} ms to ${gw.gateway_ip || 'GW'})`;
+      gwEl.textContent = `Reachable (${gw.rtt_ms} ms to ${gw.gateway_ip})`;
       gwEl.style.color = "#10b981";
+      gwRow.style.display = "flex";
+    } else if (gw.status === "NO_GATEWAY" || !gw.gateway_ip) {
+      // Don't guess. Be honest about Chrome security sandboxing
+      gwEl.innerHTML = 'Restricted by Chrome Sandbox (<a href="https://developer.chrome.com/docs/extensions/mv3/intro/" target="_blank" style="color: #94a3b8; text-decoration: underline;">Learn more</a>)';
+      gwEl.style.color = "#94a3b8";
+      gwRow.style.display = "flex";
     } else {
       gwEl.textContent = `UNREACHABLE (${gw.error || gw.status})`;
       gwEl.style.color = "#ef4444";
+      gwRow.style.display = "flex";
     }
   }
 
-  // DNS Benchmark UI Binding
+  // DNS Benchmark UI Binding (Clearer Details)
   const dns = snapshot.dns_benchmark;
   const dnsEl = document.getElementById("val-dns");
   if (dns && dnsEl) {
     if (dns.dns_health === "HEALTHY") {
-      dnsEl.textContent = `Healthy (${dns.doh_google?.latency_ms || 0}ms DoH / ${dns.local_dns?.latency_ms || 0}ms Local)`;
+      const dohLatency = dns.doh_google?.latency_ms ?? dns.doh_cloudflare?.latency_ms ?? 0;
+      const localLatency = dns.local_dns?.latency_ms ?? 0;
+      dnsEl.textContent = `Healthy (DoH: ${dohLatency}ms | Local: ${localLatency}ms)`;
       dnsEl.style.color = "#10b981";
+    } else if (dns.dns_health === "DEGRADED_LATENCY") {
+      const maxLat = Math.max(dns.local_dns?.latency_ms || 0, dns.doh_google?.latency_ms || 0);
+      dnsEl.textContent = `High Latency (${maxLat}ms - Web pages may feel sluggish)`;
+      dnsEl.style.color = "#f59e0b";
     } else {
       dnsEl.textContent = `${dns.dns_health}: ${dns.recommendation.slice(0, 45)}...`;
-      dnsEl.style.color = dns.dns_health === "DEGRADED_LATENCY" ? "#f59e0b" : "#ef4444";
+      dnsEl.style.color = "#ef4444";
     }
   }
 
@@ -194,6 +236,35 @@ function refreshSnapshot() {
 
 document.addEventListener("DOMContentLoaded", () => {
   refreshSnapshot();
+
+  // Check if opened as standalone tab or popout window
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("mode") === "popout" || window.innerWidth > 450) {
+    document.body.classList.add("popout-mode");
+    const popoutBtn = document.getElementById("btn-popout");
+    if (popoutBtn) popoutBtn.style.display = "none";
+  }
+
+  const popoutBtn = document.getElementById("btn-popout");
+  if (popoutBtn) {
+    popoutBtn.addEventListener("click", () => {
+      const popoutUrl = chrome.runtime?.getURL ? chrome.runtime.getURL("src/popup/popup.html?mode=popout") : "popup.html?mode=popout";
+      if (chrome.windows && chrome.windows.create) {
+        chrome.windows.create({
+          url: popoutUrl,
+          type: "popup",
+          width: 580,
+          height: 750
+        });
+        window.close();
+      } else if (chrome.tabs && chrome.tabs.create) {
+        chrome.tabs.create({ url: popoutUrl });
+        window.close();
+      } else {
+        window.open(popoutUrl, "_blank", "width=580,height=750");
+      }
+    });
+  }
 
   const settingsBtn = document.getElementById("btn-open-settings");
   if (settingsBtn) {
