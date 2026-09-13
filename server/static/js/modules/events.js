@@ -48,3 +48,27 @@ document.addEventListener('click', (e) => {
         target = target.parentElement;
     }
 });
+
+// Add keyboard navigation support for interactive elements
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        let target = e.target;
+        if (!target) return;
+
+        // Native buttons already handle Enter/Space natively
+        if (target.tagName.toLowerCase() === 'button') {
+            return;
+        }
+
+        if (target.hasAttribute('data-action') ||
+            target.getAttribute('role') === 'button' ||
+            target.getAttribute('tabindex') === '0') {
+
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault(); // Prevent page scroll
+            }
+
+            target.click();
+        }
+    }
+});

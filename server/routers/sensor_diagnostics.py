@@ -372,7 +372,7 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
         ]
         log_lines.extend([
             f"[INFO] Initializing DHCP DORA 4-way lease timing probe via {src}...",
-            f"[OK] DHCPDISCOVER broadcast transmitted on local interface.",
+            "[OK] DHCPDISCOVER broadcast transmitted on local interface.",
             f"[OK] DHCPOFFER received from {fallback_gw} in {dora_offer_ms}ms.",
             f"[OK] DHCPREQUEST acknowledged (DHCPACK) in {dora_ack_ms}ms.",
             f"[OK] Total DHCP lease acquisition time: {total_lease_sec} seconds (well within 3.0s SLA).",
