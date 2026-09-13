@@ -27,6 +27,8 @@ function updateUI(snapshot, config) {
     (wifi?.bssid && (wifi.bssid.includes("Virtual") || wifi.bssid.includes("Ethernet"))) ||
     (hasActiveEthIface && !hasActiveWifiIface && !wifi?.bssid && !wifi?.channel);
 
+  const hasRfMetrics = Boolean(wifi?.bssid || wifi?.channel || wifi?.rssi_dbm);
+
   const titleRfCard = document.getElementById("title-rf-card");
   const titleHealthCard = document.getElementById("title-health-card");
   const rowFlapping = document.getElementById("row-flapping");
@@ -40,9 +42,9 @@ function updateUI(snapshot, config) {
     if (colRssi) colRssi.style.display = "none";
     if (colChannel) colChannel.style.display = "none";
   } else {
-    if (titleRfCard) titleRfCard.textContent = "📶 Active Wi-Fi RF State";
-    if (titleHealthCard) titleHealthCard.textContent = "🩺 Wi-Fi Health & Diagnostics";
-    if (rowFlapping) rowFlapping.style.display = "flex";
+    if (titleRfCard) titleRfCard.textContent = hasRfMetrics ? "📶 Active Wi-Fi RF State" : "📶 Active Network State (Managed Policy Restricted)";
+    if (titleHealthCard) titleHealthCard.textContent = hasRfMetrics ? "🩺 Wi-Fi Health & Diagnostics" : "🩺 Network Health & Diagnostics";
+    if (rowFlapping) rowFlapping.style.display = hasRfMetrics ? "flex" : "none";
     if (colRssi) colRssi.style.display = "block";
     if (colChannel) colChannel.style.display = "block";
   }
@@ -57,13 +59,28 @@ function updateUI(snapshot, config) {
       defaultSsid = "Disconnected";
     }
 
-    let defaultBssid = isEthernet ? "Ethernet Interface" : "Restricted by Chrome Sandbox";
+    let defaultBssid = isEthernet ? "Ethernet Interface" : "Not supported (Requires Managed ChromeOS)";
     document.getElementById("val-ssid").textContent = defaultSsid;
     document.getElementById("val-bssid").textContent = wifi.bssid || defaultBssid;
 
     if (!isEthernet) {
-      document.getElementById("val-rssi").textContent = wifi.rssi_dbm ? `${wifi.rssi_dbm} dBm (${wifi.signal_strength_pct || '--'}%)` : "--";
-      document.getElementById("val-channel").textContent = wifi.channel ? `Ch ${wifi.channel} (${wifi.frequency_mhz || '--'} MHz)` : "--";
+      const rssiEl = document.getElementById("val-rssi");
+      const chanEl = document.getElementById("val-channel");
+      if (wifi.rssi_dbm) {
+        rssiEl.textContent = `${wifi.rssi_dbm} dBm (${wifi.signal_strength_pct || '--'}%)`;
+        rssiEl.style.color = "#fff";
+      } else {
+        rssiEl.textContent = "Not supported (Unmanaged)";
+        rssiEl.style.color = "#94a3b8";
+      }
+
+      if (wifi.channel) {
+        chanEl.textContent = `Ch ${wifi.channel} (${wifi.frequency_mhz || '--'} MHz)`;
+        chanEl.style.color = "#fff";
+      } else {
+        chanEl.textContent = "Not supported (Unmanaged)";
+        chanEl.style.color = "#94a3b8";
+      }
     }
     document.getElementById("band-tag").textContent = isEthernet ? "Ethernet" : (wifi.band || (wifi.connected ? "Wi-Fi" : "Offline"));
   }
@@ -114,6 +131,8 @@ function updateUI(snapshot, config) {
     if (recEl) {
       if (isEthernet) {
         recEl.textContent = "Wired Ethernet connection healthy";
+      } else if (!hasRfMetrics) {
+        recEl.textContent = "Network healthy (RF signal telemetry requires Managed ChromeOS device)";
       } else {
         recEl.textContent = diag.recommendation || "Wi-Fi running nominally";
       }
@@ -232,7 +251,11 @@ function updateUI(snapshot, config) {
   // Device Info
   const ident = snapshot.sensor_identity;
   if (ident) {
-    document.getElementById("val-device").textContent = `${ident.serial_number || 'DEV'} / ${ident.asset_id || 'LOCAL'}`;
+    if (ident.is_managed && ident.serial_number) {
+      document.getElementById("val-device").textContent = `${ident.serial_number} / ${ident.asset_id || 'LOCAL'}`;
+    } else {
+      document.getElementById("val-device").textContent = `Unmanaged Device (${ident.sensor_id.slice(0, 18)}...)`;
+    }
   }
   document.getElementById("val-buffer").textContent = `${snapshot.buffered_count || 0} events queued`;
 
