@@ -13,6 +13,12 @@ import { logger } from "./logger.js";
 export function buildReportPayload({
   sensorIdentity,
   wifiTelemetry,
+  wifiDiagnostics,
+  captivePortalResult,
+  gatewayProbeResult,
+  dualStackDnsResult,
+  bandwidthBufferbloatResult,
+  edtechFilterResult,
   hardwareTelemetry,
   syntheticHttpResults,
   webrtcResult,
@@ -51,8 +57,14 @@ export function buildReportPayload({
       channel: wifiTelemetry.channel,
       band: wifiTelemetry.band,
       security: wifiTelemetry.security,
-      roamed_recently: wifiTelemetry.roamed_recently
+      roamed_recently: wifiTelemetry.roamed_recently,
+      diagnostics: wifiDiagnostics || null
     },
+    captive_portal: captivePortalResult || null,
+    gateway_probe: gatewayProbeResult || null,
+    dns_benchmark: dualStackDnsResult || null,
+    bandwidth_bufferbloat: bandwidthBufferbloatResult || null,
+    edtech_filter: edtechFilterResult || null,
     hardware: {
       cpu: hardwareTelemetry?.cpu || null,
       memory: hardwareTelemetry?.memory || null,

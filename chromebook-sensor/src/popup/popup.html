@@ -49,6 +49,42 @@
       </div>
     </section>
 
+    <!-- Wi-Fi Diagnostics & Troubleshooting Card -->
+    <section class="card">
+      <div class="card-header">
+        <h2>🩺 Wi-Fi Health & Diagnostics</h2>
+        <span id="health-tag" class="tag">Checking</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Captive Portal:</span>
+        <span id="val-portal" class="stat-value" style="color: #10b981">Clear (Open)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">AP Roaming / Flapping:</span>
+        <span id="val-flapping" class="stat-value">Stable</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Default Gateway (L3):</span>
+        <span id="val-gateway" class="stat-value" style="color: #10b981">Reachable (-- ms)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">DNS Benchmark:</span>
+        <span id="val-dns" class="stat-value" style="color: #10b981">Healthy</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Downlink & Bufferbloat:</span>
+        <span id="val-bandwidth" class="stat-value" style="color: #10b981">-- Mbps (Grade --)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">EdTech Safety & Filter:</span>
+        <span id="val-filter" class="stat-value" style="color: #10b981">Healthy (-- ms)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Diagnosis:</span>
+        <span id="val-wifi-recommendation" class="stat-value text-sm">Evaluating...</span>
+      </div>
+    </section>
+
     <!-- WebRTC MOS & Latency Card -->
     <section class="card">
       <div class="card-header">

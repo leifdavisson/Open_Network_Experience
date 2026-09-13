@@ -15,12 +15,16 @@ class OfflineStorageManager {
   constructor() {
     this.db = null;
     this.memFallback = [];
+    this.hasWarnedFallback = false;
   }
 
   async openDb() {
     if (this.db) return this.db;
     if (typeof indexedDB === "undefined") {
-      logger.warn("IndexedDB not supported in current environment; using in-memory fallback queue");
+      if (!this.hasWarnedFallback) {
+        logger.warn("IndexedDB not supported in current environment; using in-memory fallback queue");
+        this.hasWarnedFallback = true;
+      }
       return null;
     }
 

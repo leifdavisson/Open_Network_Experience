@@ -44,7 +44,10 @@ def _seed_default_alert_configs():
                 ("rule_dns_lookup_sla", "Core DNS Multi-Resolver SLA Timeout", "dns_multi_resolver", "rtt_ms", "gt", 500.0, "ms", 30, "critical", None, None, json.dumps(["chan_slack_noc", "chan_itsm_servicenow"]), 1, 1, now, now),
                 ("rule_voip_jitter_mos", "Classroom VoIP & Zoom RTP Jitter SLA", "voip_jitter", "mos_score", "lt", 3.8, "score", 60, "warning", None, None, json.dumps(["chan_teams_support"]), 1, 1, now, now),
                 ("rule_saas_lms_rtt", "Canvas LMS & Google Classroom Latency Spike", "synthetic_web", "response_time_ms", "gt", 450.0, "ms", 120, "warning", None, None, json.dumps([]), 0, 1, now, now),
-                ("rule_wifi_flapping", "Wi-Fi AP Channel Hopping & Roam Storm", "rrm_darrp", "roams_per_minute", "gt", 6.0, "roams/min", 60, "critical", None, None, json.dumps(["chan_slack_noc"]), 1, 1, now, now)
+                ("rule_wifi_flapping", "Wi-Fi AP Channel Hopping & Roam Storm", "rrm_darrp", "roams_per_minute", "gt", 6.0, "roams/min", 60, "critical", None, None, json.dumps(["chan_slack_noc"]), 1, 1, now, now),
+                ("rule_cb_filter_collision", "Chromebook EdTech Multi-Filter Collision", "edtech_filter", "collision_detected", "eq", 1.0, "count", 30, "warning", None, None, json.dumps(["chan_slack_noc"]), 0, 1, now, now),
+                ("rule_cb_ssl_cert_fail", "Chromebook Filter SSL MITM Certificate Error", "edtech_filter", "ssl_failed", "eq", 1.0, "status", 30, "critical", None, None, json.dumps(["chan_slack_noc", "chan_teams_support"]), 0, 1, now, now),
+                ("rule_cb_bufferbloat", "Chromebook High Downlink Bufferbloat (Grade D/F)", "bandwidth_bufferbloat", "delta_rtt_ms", "gt", 150.0, "ms", 60, "warning", None, None, json.dumps(["chan_teams_support"]), 0, 1, now, now)
             ]
             conn.executemany("""
                 INSERT INTO custom_alert_rules (id, name, probe_id, metric, operator, threshold_value, unit, duration_seconds, severity, campus_id, sensor_id, channels_json, autocapture_pcap, is_active, created_at, updated_at)

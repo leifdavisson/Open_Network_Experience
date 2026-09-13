@@ -1,3 +1,4 @@
+import os
 import pytest
 import json
 import time
@@ -156,3 +157,98 @@ def test_forward_chromebook_metrics_dequeue_when_reachable(mock_delete, mock_deq
 
     forward_chromebook_metrics_to_tsdb(report)
     mock_delete.assert_called_once_with([1])
+
+
+@verifies("REQ-PRB-006")
+@patch("urllib.request.urlopen")
+@patch("server.db.enqueue_tsdb_spool")
+def test_forward_chromebook_probe_metrics_all_fields(mock_enqueue, mock_urlopen):
+    """Test full metric payload with EdTech, bufferbloat, gateway, and DNS generates expected Prometheus series."""
+    mock_urlopen.side_effect = Exception("Spool it")
+
+    report = {
+        "sensor_id": "cb-advanced-01",
+        "wifi": {"ssid": "District-Secure", "connected": True, "rssi": -65},
+        "gateway_probe": {"reachable": True, "rtt_ms": 1.45, "gateway_ip": "10.0.0.1"},
+        "dns_benchmark": {
+            "doh_google": {"latency_ms": 12.5},
+            "doh_cloudflare": {"latency_ms": 14.2},
+            "local_dns": {"latency_ms": 5.1}
+        },
+        "bandwidth_bufferbloat": {
+            "success": True,
+            "throughput_mbps": 85.2,
+            "bufferbloat_delta_ms": 42.0,
+            "grade": "B (Good)"
+        },
+        "edtech_filter": {
+            "detected_agents": ["Securly Filter", "Lightspeed Systems Relay"],
+            "collision_detected": True,
+            "filter_overhead_ms": 115.0,
+            "ssl_inspection": {"ssl_valid": False},
+            "classroom_whitelist": {"blocked_count": 1}
+        }
+    }
+
+    forward_chromebook_metrics_to_tsdb(report)
+    mock_enqueue.assert_called_once()
+    payload = mock_enqueue.call_args[0][0]
+    assert 'chromebook_gateway_reachable{sensor_id="cb-advanced-01"' in payload
+    assert 'chromebook_gateway_rtt_ms{sensor_id="cb-advanced-01"' in payload
+    assert 'chromebook_dns_latency_ms{sensor_id="cb-advanced-01",campus_id="CAMPUS-CHROMEBOOK-FLEET",resolver="google_doh"} 12.5' in payload
+    assert 'chromebook_bandwidth_downlink_mbps{sensor_id="cb-advanced-01",campus_id="CAMPUS-CHROMEBOOK-FLEET"} 85.2' in payload
+    assert 'chromebook_bufferbloat_delta_ms{sensor_id="cb-advanced-01",campus_id="CAMPUS-CHROMEBOOK-FLEET",grade="B"} 42.0' in payload
+    assert 'chromebook_filter_collision{sensor_id="cb-advanced-01",campus_id="CAMPUS-CHROMEBOOK-FLEET"} 1' in payload
+    assert 'chromebook_filter_overhead_ms{sensor_id="cb-advanced-01",campus_id="CAMPUS-CHROMEBOOK-FLEET"} 115.0' in payload
+    assert 'chromebook_filter_ssl_failed{sensor_id="cb-advanced-01",campus_id="CAMPUS-CHROMEBOOK-FLEET"} 1' in payload
+    assert 'chromebook_filter_classroom_blocked_count{sensor_id="cb-advanced-01",campus_id="CAMPUS-CHROMEBOOK-FLEET"} 1' in payload
+
+
+@verifies("REQ-DB-001")
+def test_chromebook_report_and_fleet_listing_integration():
+    """Test ingestion of new Chromebook probe metrics and verify they appear in /api/v1/chromebooks."""
+    report_payload = {
+        "sensor_id": "cb-fleet-test-01",
+        "timestamp": int(time.time()),
+        "os": "chromeos",
+        "battery": {"charging": True, "level": 0.95},
+        "wifi": {"ssid": "District-Secure", "connected": True, "signal_strength": -58},
+        "gateway_probe": {"reachable": True, "rtt_ms": 2.1},
+        "dns_benchmark": {"dns_health": "HEALTHY", "doh_google": {"latency_ms": 18.4}},
+        "bandwidth_bufferbloat": {
+            "success": True,
+            "throughput_mbps": 94.5,
+            "bufferbloat_delta_ms": 15.0,
+            "grade": "A"
+        },
+        "edtech_filter": {
+            "health_status": "HEALTHY",
+            "collision_detected": False,
+            "filter_overhead_ms": 35.0,
+            "ssl_inspection": {"ssl_valid": True},
+            "classroom_whitelist": {"blocked_count": 0}
+        }
+    }
+
+    # Ingest report
+    resp = client.post("/api/v1/sensors/report", json=report_payload)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "received"
+
+    # Verify presence and enriched fields in fleet endpoint
+    admin_key = os.environ.get("ADMIN_API_KEY", "test-admin-key-12345")
+    fleet_resp = client.get("/api/v1/chromebooks", headers={"X-API-Key": admin_key})
+    assert fleet_resp.status_code == 200
+    devices = fleet_resp.json()
+    device = next((d for d in devices if d["sensor_id"] == "cb-fleet-test-01"), None)
+    assert device is not None
+    assert device["gateway_reachable"] is True
+    assert device["gateway_rtt_ms"] == 2.1
+    assert device["dns_health"] == "HEALTHY"
+    assert device["bandwidth_downlink_mbps"] == 94.5
+    assert device["bufferbloat_grade"] == "A"
+    assert device["bufferbloat_delta_ms"] == 15.0
+    assert device["edtech_collision_detected"] is False
+    assert device["edtech_filter_overhead_ms"] == 35.0
+    assert device["edtech_filter_status"] == "HEALTHY"
+

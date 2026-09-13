@@ -94,6 +94,52 @@ def forward_chromebook_metrics_to_tsdb(report: dict):
                     if app.get("ttfb_ms"):
                         lines.append(f'chromebook_app_ttfb_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",app="{app_name}"}} {app.get("ttfb_ms")} {ts}')
 
+    # --- Gateway Probe Metrics ---
+    gw = report.get("gateway_probe")
+    if gw and isinstance(gw, dict):
+        is_reachable = 1 if gw.get("reachable") else 0
+        gw_ip = gw.get("gateway_ip") or "unknown"
+        lines.append(f'chromebook_gateway_reachable{{sensor_id="{sensor_id}",campus_id="{campus_id}",gateway_ip="{gw_ip}"}} {is_reachable} {ts}')
+        if gw.get("rtt_ms") is not None:
+            lines.append(f'chromebook_gateway_rtt_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",gateway_ip="{gw_ip}"}} {gw.get("rtt_ms")} {ts}')
+
+    # --- Dual-Stack DNS Benchmark Metrics ---
+    dns = report.get("dns_benchmark")
+    if dns and isinstance(dns, dict):
+        if dns.get("doh_google", {}).get("latency_ms") is not None:
+            lines.append(f'chromebook_dns_latency_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",resolver="google_doh"}} {dns["doh_google"]["latency_ms"]} {ts}')
+        if dns.get("doh_cloudflare", {}).get("latency_ms") is not None:
+            lines.append(f'chromebook_dns_latency_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",resolver="cloudflare_doh"}} {dns["doh_cloudflare"]["latency_ms"]} {ts}')
+        if dns.get("local_dns", {}).get("latency_ms") is not None:
+            lines.append(f'chromebook_dns_latency_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",resolver="local_dns"}} {dns["local_dns"]["latency_ms"]} {ts}')
+
+    # --- Micro-Burst Bandwidth & Bufferbloat Metrics ---
+    bw = report.get("bandwidth_bufferbloat")
+    if bw and isinstance(bw, dict) and bw.get("success"):
+        if bw.get("throughput_mbps") is not None:
+            lines.append(f'chromebook_bandwidth_downlink_mbps{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {bw.get("throughput_mbps")} {ts}')
+        if bw.get("bufferbloat_delta_ms") is not None:
+            grade = (bw.get("grade") or "A").split()[0]
+            lines.append(f'chromebook_bufferbloat_delta_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}",grade="{grade}"}} {bw.get("bufferbloat_delta_ms")} {ts}')
+
+    # --- EdTech Filter & Student Safety Metrics ---
+    filter_data = report.get("edtech_filter")
+    if filter_data and isinstance(filter_data, dict):
+        is_collision = 1 if filter_data.get("collision_detected") else 0
+        lines.append(f'chromebook_filter_collision{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {is_collision} {ts}')
+        if filter_data.get("filter_overhead_ms") is not None:
+            lines.append(f'chromebook_filter_overhead_ms{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {filter_data.get("filter_overhead_ms")} {ts}')
+
+        ssl = filter_data.get("ssl_inspection")
+        if ssl and isinstance(ssl, dict):
+            ssl_failed = 1 if ssl.get("ssl_valid") is False else 0
+            lines.append(f'chromebook_filter_ssl_failed{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {ssl_failed} {ts}')
+
+        whitelists = filter_data.get("classroom_whitelist")
+        if whitelists and isinstance(whitelists, dict):
+            blocked = whitelists.get("blocked_count", 0)
+            lines.append(f'chromebook_filter_classroom_blocked_count{{sensor_id="{sensor_id}",campus_id="{campus_id}"}} {blocked} {ts}')
+
     # Fetch queued items from SQLite disk spool queue
     spooled_entries = []
     try:
@@ -292,6 +338,11 @@ async def ingest_sensor_report(
     sensor["wifi_telemetry"] = report.get("wifi", {})
     sensor["probe_telemetry"] = report.get("probes", {})
     sensor["hardware_telemetry"] = report.get("hardware", {})
+    sensor["captive_portal"] = report.get("captive_portal")
+    sensor["gateway_probe"] = report.get("gateway_probe")
+    sensor["dns_benchmark"] = report.get("dns_benchmark")
+    sensor["bandwidth_bufferbloat"] = report.get("bandwidth_bufferbloat")
+    sensor["edtech_filter"] = report.get("edtech_filter")
 
     if sensor["status"] != "approved":
         matched_rule = db.match_subnet_auto_enroll(client_ip)
@@ -374,6 +425,11 @@ async def list_chromebook_fleet(campus: str | None = None):
             app_success_count = sum(1 for a in apps if a.get("success"))
             app_sla = round((app_success_count / len(apps)) * 100, 1) if apps else 100.0
 
+            gw = s.get("gateway_probe") or {}
+            dns = s.get("dns_benchmark") or {}
+            bw = s.get("bandwidth_bufferbloat") or {}
+            ef = s.get("edtech_filter") or {}
+
             result.append(ChromebookFleetItemResponse(
                 sensor_id=s_id,
                 serial_number=s.get("serial_number") or "UNTAGGED",
@@ -403,6 +459,15 @@ async def list_chromebook_fleet(campus: str | None = None):
                 webrtc_mos_grade=webrtc.get("mos_grade"),
                 app_sla_pct=app_sla,
                 roamed_recently=wifi.get("roamed_recently", False),
+                gateway_reachable=gw.get("reachable"),
+                gateway_rtt_ms=gw.get("rtt_ms"),
+                dns_health=dns.get("dns_health"),
+                bandwidth_downlink_mbps=bw.get("throughput_mbps"),
+                bufferbloat_grade=bw.get("grade"),
+                bufferbloat_delta_ms=bw.get("bufferbloat_delta_ms"),
+                edtech_filter_status=ef.get("health_status"),
+                edtech_collision_detected=ef.get("collision_detected"),
+                edtech_filter_overhead_ms=ef.get("filter_overhead_ms"),
                 location=s.get("location"),
                 settings_locked=s.get("settings_locked", True),
                 version=s.get("version") or "1.0.0",

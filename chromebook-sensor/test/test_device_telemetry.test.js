@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert";
 import { setupChromeMock } from "./mocks/chrome_mock.js";
+import { verifies } from "./helpers/rtm.js";
 import {
   getEnterpriseDeviceAttributes,
   getSystemHardwareTelemetry,
@@ -12,7 +13,7 @@ import {
   percentToRssiDbm
 } from "../src/background/network_private.js";
 
-test("Device Telemetry - Resolves enterprise device attributes dynamically", async () => {
+test("Device Telemetry - Resolves enterprise device attributes dynamically", verifies("REQ-TEL-001", "Resolves enterprise device attributes dynamically")(async () => {
   setupChromeMock();
 
   const attrs = await getEnterpriseDeviceAttributes();
@@ -24,9 +25,9 @@ test("Device Telemetry - Resolves enterprise device attributes dynamically", asy
   assert.strictEqual(attrs.hostname, "cb-student-204-01");
   assert.strictEqual(attrs.macAddress, "00:1A:2B:3C:4D:5E");
   assert.strictEqual(attrs.ipv4Address, "10.200.4.155");
-});
+}));
 
-test("Device Telemetry - Hardware CPU, Memory, Storage, Display & Battery inspection", async () => {
+test("Device Telemetry - Hardware CPU, Memory, Storage, Display & Battery inspection", verifies("REQ-TEL-002", "Hardware CPU, Memory, Storage, Display & Battery inspection")(async () => {
   setupChromeMock();
 
   const hw = await getSystemHardwareTelemetry();
@@ -61,9 +62,9 @@ test("Device Telemetry - Hardware CPU, Memory, Storage, Display & Battery inspec
   // Interfaces
   assert.strictEqual(hw.interfaces.length, 1);
   assert.strictEqual(hw.interfaces[0].address, "10.200.4.155");
-});
+}));
 
-test("Device Telemetry - Deterministic identity resolution", async () => {
+test("Device Telemetry - Deterministic identity resolution", verifies("REQ-TEL-001", "Deterministic identity resolution")(async () => {
   setupChromeMock();
 
   const ident = await resolveSensorIdentity();
@@ -74,9 +75,9 @@ test("Device Telemetry - Deterministic identity resolution", async () => {
   assert.strictEqual(ident.annotated_user, "student.jdoe@example.edu");
   assert.strictEqual(ident.directory_device_id, "dir-dev-12345");
   assert.strictEqual(ident.mac_address, "00:1A:2B:3C:4D:5E");
-});
+}));
 
-test("Network Telemetry - Wi-Fi RF frequency to channel conversion", () => {
+test("Network Telemetry - Wi-Fi RF frequency to channel conversion", verifies("REQ-NET-001", "Wi-Fi RF frequency to channel conversion")(() => {
   assert.strictEqual(frequencyToChannel(2412), 1);
   assert.strictEqual(frequencyToChannel(2437), 6);
   assert.strictEqual(frequencyToChannel(2462), 11);
@@ -84,16 +85,16 @@ test("Network Telemetry - Wi-Fi RF frequency to channel conversion", () => {
   assert.strictEqual(frequencyToChannel(5240), 48);
   assert.strictEqual(frequencyToChannel(5745), 149);
   assert.strictEqual(frequencyToChannel(6125), 35); // 6GHz
-});
+}));
 
-test("Network Telemetry - Signal percentage to RSSI dBm conversion", () => {
+test("Network Telemetry - Signal percentage to RSSI dBm conversion", verifies("REQ-NET-002", "Signal percentage to RSSI dBm conversion")(() => {
   assert.strictEqual(percentToRssiDbm(100), -50);
   assert.strictEqual(percentToRssiDbm(80), -60);
   assert.strictEqual(percentToRssiDbm(50), -75);
   assert.strictEqual(percentToRssiDbm(0), -100);
-});
+}));
 
-test("Network Telemetry - getActiveWifiTelemetry retrieves active BSSID & RSSI", async () => {
+test("Network Telemetry - getActiveWifiTelemetry retrieves active BSSID & RSSI", verifies("REQ-NET-001", "getActiveWifiTelemetry retrieves active BSSID & RSSI")(async () => {
   setupChromeMock();
 
   const wifi = await getActiveWifiTelemetry();
@@ -103,4 +104,4 @@ test("Network Telemetry - getActiveWifiTelemetry retrieves active BSSID & RSSI",
   assert.strictEqual(wifi.rssi_dbm, -58);
   assert.strictEqual(wifi.channel, 48);
   assert.strictEqual(wifi.band, "5GHz");
-});
+}));

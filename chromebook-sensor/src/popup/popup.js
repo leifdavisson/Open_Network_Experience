@@ -24,6 +24,113 @@ function updateUI(snapshot, config) {
     document.getElementById("band-tag").textContent = wifi.band || (wifi.connected ? "Active" : "Offline");
   }
 
+  // Wi-Fi Diagnostics & Captive Portal
+  const diag = snapshot.wifi_diagnostics;
+  const portal = snapshot.captive_portal;
+
+  if (portal) {
+    const portalEl = document.getElementById("val-portal");
+    if (portalEl) {
+      if (portal.is_captive_portal) {
+        portalEl.textContent = "BLOCKED (Portal Detected)";
+        portalEl.style.color = "#ef4444";
+      } else {
+        portalEl.textContent = "Clear (Internet Open)";
+        portalEl.style.color = "#10b981";
+      }
+    }
+  }
+
+  if (diag) {
+    const healthTag = document.getElementById("health-tag");
+    if (healthTag) {
+      healthTag.textContent = diag.signal_health || "OK";
+      healthTag.className = `tag ${diag.signal_health === "EXCELLENT" || diag.signal_health === "GOOD" ? "badge-green" : diag.signal_health === "FAIR" ? "badge-info" : "badge-amber"}`;
+    }
+
+    const flappingEl = document.getElementById("val-flapping");
+    if (flappingEl) {
+      if (diag.is_flapping) {
+        flappingEl.textContent = `FLAPPING (${diag.roam_transitions_last_min} switches/min)`;
+        flappingEl.style.color = "#ef4444";
+      } else {
+        flappingEl.textContent = `Stable (${diag.roam_transitions_last_min} roams/min)`;
+        flappingEl.style.color = "#10b981";
+      }
+    }
+
+    const recEl = document.getElementById("val-wifi-recommendation");
+    if (recEl) {
+      recEl.textContent = diag.recommendation || "Wi-Fi running nominally";
+    }
+  }
+
+  // Gateway Probe UI Binding
+  const gw = snapshot.gateway_probe;
+  const gwEl = document.getElementById("val-gateway");
+  if (gw && gwEl) {
+    if (gw.reachable) {
+      gwEl.textContent = `Reachable (${gw.rtt_ms} ms to ${gw.gateway_ip || 'GW'})`;
+      gwEl.style.color = "#10b981";
+    } else {
+      gwEl.textContent = `UNREACHABLE (${gw.error || gw.status})`;
+      gwEl.style.color = "#ef4444";
+    }
+  }
+
+  // DNS Benchmark UI Binding
+  const dns = snapshot.dns_benchmark;
+  const dnsEl = document.getElementById("val-dns");
+  if (dns && dnsEl) {
+    if (dns.dns_health === "HEALTHY") {
+      dnsEl.textContent = `Healthy (${dns.doh_google?.latency_ms || 0}ms DoH / ${dns.local_dns?.latency_ms || 0}ms Local)`;
+      dnsEl.style.color = "#10b981";
+    } else {
+      dnsEl.textContent = `${dns.dns_health}: ${dns.recommendation.slice(0, 45)}...`;
+      dnsEl.style.color = dns.dns_health === "DEGRADED_LATENCY" ? "#f59e0b" : "#ef4444";
+    }
+  }
+
+  // Bandwidth & Bufferbloat UI Binding
+  const bw = snapshot.bandwidth_bufferbloat;
+  const bwEl = document.getElementById("val-bandwidth");
+  if (bw && bwEl) {
+    if (bw.success) {
+      bwEl.textContent = `${bw.throughput_mbps} Mbps (Grade ${bw.grade?.split(' ')[0] || 'A'}, +${bw.bufferbloat_delta_ms}ms)`;
+      bwEl.style.color = bw.bufferbloat_delta_ms <= 60 ? "#10b981" : bw.bufferbloat_delta_ms <= 150 ? "#f59e0b" : "#ef4444";
+    } else {
+      bwEl.textContent = bw.error ? `Failed (${bw.error.slice(0, 30)})` : "Unmeasured";
+      bwEl.style.color = "#ef4444";
+    }
+  }
+
+  // EdTech Filter & Student Safety UI Binding
+  const filter = snapshot.edtech_filter;
+  const filterEl = document.getElementById("val-filter");
+  if (filter && filterEl) {
+    if (filter.collision_detected) {
+      filterEl.textContent = `COLLISION (${filter.detected_agents.join(" + ")})`;
+      filterEl.style.color = "#ef4444";
+    } else if (filter.health_status === "SSL_INSPECTION_FAILED") {
+      filterEl.textContent = "SSL CERT FAILED (MITM Error)";
+      filterEl.style.color = "#ef4444";
+    } else if (filter.health_status === "CLASSROOM_BLOCKED") {
+      const blocked = filter.classroom_whitelist?.services?.filter(s => !s.reachable)?.map(s => s.name) || ["LMS"];
+      filterEl.textContent = `LMS BLOCKED (${blocked.join(", ")})`;
+      filterEl.style.color = "#ef4444";
+    } else if (filter.health_status === "CLOUD_UNREACHABLE") {
+      filterEl.textContent = "FILTER CLOUD UNREACHABLE";
+      filterEl.style.color = "#ef4444";
+    } else if (filter.health_status === "DEGRADED_LATENCY") {
+      filterEl.textContent = `High Overhead (+${filter.filter_overhead_ms}ms)`;
+      filterEl.style.color = "#f59e0b";
+    } else {
+      const activeLabel = filter.detected_agents.length > 0 ? filter.detected_agents[0] : (filter.fastest_provider || "Nominal");
+      filterEl.textContent = `Healthy (${activeLabel}, +${filter.filter_overhead_ms}ms)`;
+      filterEl.style.color = "#10b981";
+    }
+  }
+
   // WebRTC / MOS
   const webrtc = snapshot.webrtc;
   if (webrtc && webrtc.mos) {

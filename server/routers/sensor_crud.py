@@ -48,9 +48,9 @@ async def list_sensors():
     """Administrative endpoint to list all registered sensors and status details."""
     now = int(time.time())
     response_list = []
-
     for s_id, data in SENSORS_DB.items():
-        is_online = (now - data["last_seen"]) < 120 and data["last_seen"] > 0
+        last_seen = data.get("last_seen", 0)
+        is_online = (now - last_seen) < 120 and last_seen > 0
         reported = data.get("reported_containers") or {}
         target_cfg = data.get("target_config")
         if hasattr(target_cfg, "containers"):
@@ -64,11 +64,11 @@ async def list_sensors():
         response_list.append(
             SensorStatusResponseSafe.from_internal(
                 sensor_id=s_id,
-                last_seen=data["last_seen"],
-                os_val=data["os"],
+                last_seen=last_seen,
+                os_val=data.get("os", "unknown"),
                 is_online=is_online,
                 reconciled_ok=reconciled_ok,
-                status_val=data["status"],
+                status_val=data.get("status", "pending"),
                 reported_containers=data.get("reported_containers", {}),
                 target_config=data.get("target_config"),
                 location_val=data.get("location"),

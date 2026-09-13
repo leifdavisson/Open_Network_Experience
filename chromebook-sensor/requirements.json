@@ -1,0 +1,98 @@
+[
+  {
+    "id": "REQ-TEL-001",
+    "title": "Deterministic Hardware and Enterprise Identity Resolution",
+    "safety_level": "STANDARD",
+    "acceptance_criteria": "The sensor MUST resolve a deterministic serial number, asset ID, hostname, and enterprise management flag. When running on unmanaged hardware, it MUST generate and persist a reproducible fallback device UUID."
+  },
+  {
+    "id": "REQ-TEL-002",
+    "title": "Dynamic Hardware Telemetry Inspection",
+    "safety_level": "STANDARD",
+    "acceptance_criteria": "The sensor MUST inspect CPU utilization, memory metrics, display resolution, battery level, and network interface IP addresses without throwing unhandled exceptions."
+  },
+  {
+    "id": "REQ-NET-001",
+    "title": "Wi-Fi RF Channel and Band Computation",
+    "safety_level": "STANDARD",
+    "acceptance_criteria": "The sensor MUST accurately compute Wi-Fi channels across 2.4 GHz, 5 GHz, and 6 GHz spectrum bands from RF center frequency in MHz."
+  },
+  {
+    "id": "REQ-NET-002",
+    "title": "Signal Percentage to RSSI dBm Mapping",
+    "safety_level": "STANDARD",
+    "acceptance_criteria": "The sensor MUST map linear 0-100% signal strength indicators to approximate RSSI values between -100 dBm and -50 dBm when raw dBm is absent."
+  },
+  {
+    "id": "REQ-DB-001",
+    "title": "Offline Telemetry Queue Buffering and Peek",
+    "safety_level": "CRITICAL",
+    "acceptance_criteria": "When the network or CMP is unreachable, telemetry reports MUST be enqueued in an offline buffer with FIFO retrieval order and zero data corruption."
+  },
+  {
+    "id": "REQ-DB-002",
+    "title": "FIFO Backpressure Eviction",
+    "safety_level": "CRITICAL",
+    "acceptance_criteria": "When the offline buffer reaches maximum configured capacity (maxRecords), the oldest telemetry records MUST be evicted to prevent unbounded memory or storage growth."
+  },
+  {
+    "id": "REQ-MOS-001",
+    "title": "WebRTC VoIP MOS Calculation (ITU-T G.107)",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "Given latency (RTT), jitter, and packet loss, the sensor MUST calculate an accurate Mean Opinion Score bounded between 1.0 and 4.5 and map to standard ITU-T quality grades."
+  },
+  {
+    "id": "REQ-PRB-001",
+    "title": "Captive Portal and Walled Garden Interception Detection",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "The sensor MUST detect HTTP 204 responses as clear internet and any redirect, HTTP 200/302 splash pages as a captive portal intercept, capturing the redirect URL."
+  },
+  {
+    "id": "REQ-PRB-002",
+    "title": "Wi-Fi Sticky Client and AP Flapping Detection",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "The analyzer MUST flag sticky client behavior when signal is weak on 2.4 GHz (<= -72 dBm) and identify AP thrashing/flapping when 3 or more BSSID transitions occur within 60 seconds."
+  },
+  {
+    "id": "REQ-UI-001",
+    "title": "UI Configuration Schema Validation and Sanitization",
+    "safety_level": "STANDARD",
+    "acceptance_criteria": "Settings inputs for CMP URL, probe intervals (15-3600), max buffer records (50-10000), and campus IDs MUST be strictly validated and sanitized before persistence."
+  },
+  {
+    "id": "REQ-PRB-003",
+    "title": "Local Default Gateway Reachability and RTT Probe",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "The sensor MUST derive the local gateway IP address from the client IPv4 address and probe its reachability and round-trip time (RTT) to isolate local subnet issues from upstream WAN outages."
+  },
+  {
+    "id": "REQ-PRB-004",
+    "title": "Dual-Stack DNS Resolution Benchmark",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "The sensor MUST execute concurrent DNS resolution benchmarks comparing public DoH providers (Google/Cloudflare) against the local DNS stack to detect latency degradation and DNS filter interception."
+  },
+  {
+    "id": "REQ-PRB-005",
+    "title": "Micro-Burst Downlink Bandwidth and Bufferbloat Probe",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "The sensor MUST perform low-overhead micro-chunk downloads to measure downlink throughput in Mbps and concurrent loaded RTT delta to grade bufferbloat latency spikes (A through F)."
+  },
+  {
+    "id": "REQ-PRB-006",
+    "title": "EdTech Filter and Student Safety Agent Diagnostics",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "The sensor MUST detect installed K-12 filtering agents (Securly, Lightspeed, Blocksi, GoGuardian, Linewize, ContentKeeper, Cisco Umbrella), probe cloud edge inspection gateway latency, flag multi-agent collisions, and evaluate filter latency overhead."
+  },
+  {
+    "id": "REQ-PRB-007",
+    "title": "District LMS Safe-List Pass-Through and SSL MITM Handshake Verification",
+    "safety_level": "HIGH",
+    "acceptance_criteria": "The sensor MUST verify that educational platforms (Google Classroom, Canvas LMS, Clever SSO, Kahoot) are reachable through the filtering proxy without false-positive blocks, and validate TLS/SSL inspection certificate handshake integrity."
+  },
+  {
+    "id": "REQ-E2E-001",
+    "title": "Real Chromium Extension Lifecycle and Popup DOM Rendering",
+    "safety_level": "CRITICAL",
+    "acceptance_criteria": "The extension MUST load cleanly inside Chromium without service worker crashes, bind diagnostic UI components in popup.html, and execute a live on-demand sweep without unhandled promise rejections."
+  }
+]
