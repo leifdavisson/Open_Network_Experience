@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert";
 import { offlineStorage } from "../src/db/indexed_db.js";
+import { verifies } from "./helpers/rtm.js";
 
-test("Offline Storage - Enqueue and Peek batch with fallback memory queue", async () => {
+test("Offline Storage - Enqueue and Peek batch with fallback memory queue", verifies("REQ-DB-001", "Enqueue and Peek batch with fallback memory queue")(async () => {
   await offlineStorage.clear();
 
   const countInitial = await offlineStorage.count();
@@ -30,9 +31,9 @@ test("Offline Storage - Enqueue and Peek batch with fallback memory queue", asyn
   // Clear
   await offlineStorage.clear();
   assert.strictEqual(await offlineStorage.count(), 0);
-});
+}));
 
-test("Offline Storage - FIFO backpressure eviction at max records", async () => {
+test("Offline Storage - FIFO backpressure eviction at max records", verifies("REQ-DB-002", "FIFO backpressure eviction at max records")(async () => {
   await offlineStorage.clear();
   const maxCap = 5;
 
@@ -50,4 +51,4 @@ test("Offline Storage - FIFO backpressure eviction at max records", async () => 
   assert.strictEqual(batch[4].payload.num, 8);
 
   await offlineStorage.clear();
-});
+}));

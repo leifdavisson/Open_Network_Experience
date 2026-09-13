@@ -153,15 +153,22 @@ export async function getActiveWifiTelemetry() {
     }
   }
 
-  // 3. Fallback: Query system.network for local IP
+  // 3. Query system.network for active local IP and interface type
   if (typeof chrome !== "undefined" && chrome.system && chrome.system.network) {
     try {
       const ifaces = await new Promise((resolve) => {
         chrome.system.network.getNetworkInterfaces((items) => resolve(items || []));
       });
-      const activeIface = ifaces.find((i) => i.prefixLength && !i.address.startsWith("127."));
-      if (activeIface) {
-        result.ip_address = activeIface.address;
+      const activeIfaces = ifaces.filter((i) => i.prefixLength && !i.address.startsWith("127."));
+      if (activeIfaces.length > 0) {
+        // Find wifi interface (wlan*, wl*, wifi*) or ethernet interface (eth*, en*, eno*, enp*)
+        const wifiIface = activeIfaces.find((i) => /^(wlan|wl|wifi)/i.test(i.name));
+        const ethIface = activeIfaces.find((i) => /^(eth|en|eno|enp)/i.test(i.name));
+        const chosen = wifiIface || ethIface || activeIfaces[0];
+
+        result.ip_address = chosen.address;
+        result.interface_name = chosen.name;
+        result.interface_type = wifiIface ? "wifi" : ethIface ? "ethernet" : "unknown";
       }
     } catch (e) {
       // Ignored

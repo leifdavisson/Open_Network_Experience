@@ -348,6 +348,15 @@ class ChromebookFleetItemResponse(BaseModel):
     webrtc_mos_grade: Optional[str] = None
     app_sla_pct: Optional[float] = None
     roamed_recently: bool = False
+    gateway_reachable: Optional[bool] = None
+    gateway_rtt_ms: Optional[float] = None
+    dns_health: Optional[str] = None
+    bandwidth_downlink_mbps: Optional[float] = None
+    bufferbloat_grade: Optional[str] = None
+    bufferbloat_delta_ms: Optional[int] = None
+    edtech_filter_status: Optional[str] = None
+    edtech_collision_detected: Optional[bool] = None
+    edtech_filter_overhead_ms: Optional[int] = None
     location: Optional[LocationSpec] = None
     settings_locked: bool = True
     version: Optional[str] = "1.0.0"

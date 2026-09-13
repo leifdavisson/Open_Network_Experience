@@ -18,34 +18,75 @@
     <div class="header-actions">
       <span id="badge-lock-status" class="tag" title="Settings Lock Status">🔒</span>
       <span id="badge-status" class="badge badge-info">Initializing</span>
+      <button id="btn-popout" class="btn-icon" title="Pop Out into Full Window">⤢</button>
       <button id="btn-open-settings" class="btn-icon" title="Open Sensor Settings">⚙️</button>
     </div>
   </header>
 
   <main class="content">
-    <!-- Wi-Fi Telemetry Card -->
+    <!-- Active Network State Card -->
     <section class="card">
       <div class="card-header">
-        <h2>📶 Active Wi-Fi RF State</h2>
+        <h2 id="title-rf-card">📶 Active Network State</h2>
         <span id="band-tag" class="tag">--</span>
       </div>
       <div class="grid-2">
         <div>
-          <div class="stat-label">SSID</div>
+          <div id="label-ssid" class="stat-label">SSID / Network</div>
           <div id="val-ssid" class="stat-value">Scanning...</div>
         </div>
         <div>
-          <div class="stat-label">BSSID (AP MAC)</div>
+          <div id="label-bssid" class="stat-label">BSSID (AP MAC)</div>
           <div id="val-bssid" class="stat-value code">--:--:--:--:--:--</div>
         </div>
-        <div>
+        <div id="col-rssi">
           <div class="stat-label">Signal (RSSI)</div>
           <div id="val-rssi" class="stat-value">-- dBm</div>
         </div>
-        <div>
+        <div id="col-channel">
           <div class="stat-label">Channel / Freq</div>
           <div id="val-channel" class="stat-value">Ch -- (-- MHz)</div>
         </div>
+        <div id="col-ip">
+          <div class="stat-label">Local Host IP</div>
+          <div id="val-ip" class="stat-value code">--</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Network Health & Diagnostics Card -->
+    <section class="card">
+      <div class="card-header">
+        <h2 id="title-health-card">🩺 Network Health & Diagnostics</h2>
+        <span id="health-tag" class="tag">Checking</span>
+      </div>
+      <div class="stat-row" id="row-portal">
+        <span class="stat-label">Captive Portal:</span>
+        <span id="val-portal" class="stat-value" style="color: #10b981">Clear (Open)</span>
+      </div>
+      <div class="stat-row" id="row-flapping">
+        <span class="stat-label">AP Roaming / Flapping:</span>
+        <span id="val-flapping" class="stat-value">Stable</span>
+      </div>
+      <div class="stat-row" id="row-gateway">
+        <span class="stat-label">Default Gateway (L3):</span>
+        <span id="val-gateway" class="stat-value" style="color: #10b981">Reachable (-- ms)</span>
+      </div>
+      <div class="stat-row" id="row-dns">
+        <span class="stat-label">DNS Benchmark:</span>
+        <span id="val-dns" class="stat-value" style="color: #10b981">Healthy</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Downlink & Bufferbloat:</span>
+        <span id="val-bandwidth" class="stat-value" style="color: #10b981">-- Mbps (Grade --)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">EdTech Safety & Filter:</span>
+        <span id="val-filter" class="stat-value" style="color: #10b981">Healthy (-- ms)</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Diagnosis:</span>
+        <span id="val-wifi-recommendation" class="stat-value text-sm">Evaluating...</span>
       </div>
     </section>
 

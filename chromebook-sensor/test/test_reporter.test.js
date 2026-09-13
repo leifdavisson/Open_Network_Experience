@@ -71,6 +71,7 @@ test("Reporter - Builds standardized Chromebook Sensor payload with full hardwar
   assert.strictEqual(payload.device_info.asset_id, "ASSET-CB-90210");
   assert.strictEqual(payload.device_info.annotated_user, "student.jdoe@example.edu");
   assert.strictEqual(payload.device_info.directory_device_id, "dir-dev-12345");
+  assert.strictEqual(payload.device_info.ip_address, "10.200.4.155");
   assert.strictEqual(payload.hardware.cpu.usage_percent, 18.5);
   assert.strictEqual(payload.hardware.battery.level_percent, 94);
   assert.strictEqual(payload.wifi.bssid, "00:1A:2B:3C:4D:5E");

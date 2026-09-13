@@ -10,9 +10,20 @@ import { configManager } from "./config_manager.js";
 import { resolveSensorIdentity, getSystemHardwareTelemetry } from "./device_telemetry.js";
 import { getActiveWifiTelemetry, onWifiRoam } from "./network_private.js";
 import { runSyntheticHttpSuite } from "../probes/http_synthetic.js";
+import { checkCaptivePortal } from "../probes/captive_portal.js";
+import { wifiHealthAnalyzer } from "../probes/wifi_health_analyzer.js";
+import { probeGatewayReachability, deriveGatewayIp } from "../probes/gateway_probe.js";
+import { runDualStackDnsBenchmark } from "../probes/dual_stack_dns.js";
+import { measureMicroBurstThroughput } from "../probes/bandwidth_bufferbloat.js";
+import { runEdtechFilterSuite } from "../probes/edtech_filter_probe.js";
 import { buildReportPayload, sendTelemetryReport } from "../utils/reporter.js";
 import { offlineStorage } from "../db/indexed_db.js";
 import { flushOfflineBuffer } from "./storage_sync.js";
+
+// Listen for roaming events to feed AP thrashing analyzer
+onWifiRoam((roamEvent) => {
+  wifiHealthAnalyzer.recordTransition(roamEvent.newBssid, roamEvent.ssid, roamEvent.timestamp);
+});
 
 const ALARM_NAME = "one_sensor_periodic_probe";
 const OFFSCREEN_DOCUMENT_PATH = "src/offscreen/offscreen.html";
@@ -22,6 +33,8 @@ let latestSnapshot = {
   last_run_timestamp: 0,
   sensor_identity: null,
   wifi: null,
+  wifi_diagnostics: null,
+  captive_portal: null,
   synthetic_http: [],
   webrtc: null,
   buffered_count: 0,
@@ -106,34 +119,67 @@ export async function executeDiagnosticCycle() {
     const sensorIdentity = await resolveSensorIdentity();
     const hardwareTelemetry = await getSystemHardwareTelemetry();
 
-    // 2. Wi-Fi & RF Telemetry
+    // 2. Fetch Active Wi-Fi Telemetry & Health Analytics
+    logger.debug("Inspecting Wi-Fi interface and RF characteristics...");
     const wifiTelemetry = await getActiveWifiTelemetry();
+    const wifiDiagnostics = wifiHealthAnalyzer.analyze(wifiTelemetry);
 
-    // 3. Synthetic HTTP Probing (Combines policy targets + CMP dynamic custom probes)
-    const combinedTargets = [...config.synthetic_http_targets, ...cmpDynamicTargets];
-    const syntheticHttpResults = await runSyntheticHttpSuite(combinedTargets);
+    // 3. Captive Portal & Walled Garden Check
+    logger.debug("Running captive portal verification (generate_204)...");
+    const captivePortalResult = await checkCaptivePortal();
 
-    // 4. WebRTC STUN Probing (via Offscreen Document)
+    // 4. Default Gateway & Subnet RTT Probe
+    const clientIp = wifiTelemetry.ip_address || (hardwareTelemetry.interfaces[0] ? hardwareTelemetry.interfaces[0].address : null);
+    const estimatedGatewayIp = deriveGatewayIp(clientIp);
+    logger.debug(`Probing local default gateway [${estimatedGatewayIp || "None"}]...`);
+    const gatewayProbeResult = await probeGatewayReachability(estimatedGatewayIp);
+
+    // 5. Dual-Stack DNS Resolution Benchmark
+    logger.debug("Running Dual-Stack DNS Benchmark (DoH vs Local)...");
+    const dualStackDnsResult = await runDualStackDnsBenchmark();
+
+    // 6. Micro-Burst Bandwidth & Bufferbloat Probe
+    logger.debug("Running Micro-Burst Bandwidth & Bufferbloat probe...");
+    const bandwidthBufferbloatResult = await measureMicroBurstThroughput();
+
+    // 7. EdTech Filter & Student Safety Agent Diagnostic (Securly, Lightspeed, Blocksi, GoGuardian)
+    logger.debug("Running EdTech Filter & Safety Agent diagnostic suite...");
+    const baselineRtt = gatewayProbeResult?.rtt_ms || 30;
+    const edtechFilterResult = await runEdtechFilterSuite(baselineRtt);
+
+    // 8. Run Synthetic HTTP Probes
+    logger.debug("Running Synthetic HTTP application probes...");
+    const targetsToProbe = cmpDynamicTargets.length > 0 ? cmpDynamicTargets : config.synthetic_http_targets;
+    const httpResults = await runSyntheticHttpSuite(targetsToProbe);
+
+    // 9. Run WebRTC Offscreen Prober (if enabled)
     let webrtcResult = null;
     if (config.enable_webrtc_probing) {
+      logger.debug("Triggering Offscreen WebRTC STUN Latency & MOS evaluation...");
       webrtcResult = await executeOffscreenWebRtcProbe(config.stun_servers);
     }
 
-    // 5. Construct Payload
-    const payload = buildReportPayload({
+    // 10. Build Standardized Ingestion Payload
+    const reportPayload = buildReportPayload({
       sensorIdentity,
       wifiTelemetry,
+      wifiDiagnostics,
+      captivePortalResult,
+      gatewayProbeResult,
+      dualStackDnsResult,
+      bandwidthBufferbloatResult,
+      edtechFilterResult,
       hardwareTelemetry,
-      syntheticHttpResults,
+      syntheticHttpResults: httpResults,
       webrtcResult,
       campusId: config.campus_id
     });
 
-    // 6. Submit to CMP
+    // 7. Submit to CMP
     const sendResult = await sendTelemetryReport(
       config.cmp_server_url,
       config.api_key,
-      payload
+      reportPayload
     );
 
     if (sendResult.success && sendResult.data) {
@@ -172,22 +218,49 @@ export async function executeDiagnosticCycle() {
 
     if (!sendResult.success && config.enable_offline_buffer) {
       logger.info("CMP unreachable; buffering report into IndexedDB offline queue");
-      await offlineStorage.enqueue(payload, config.max_offline_records);
+      await offlineStorage.enqueue(reportPayload, config.max_offline_records);
     } else if (sendResult.success && config.enable_offline_buffer) {
       // If report succeeded and we are online, flush any pending backlog
       await flushOfflineBuffer(config.cmp_server_url, config.api_key);
     }
 
-    // 7. Update Snapshot for UI / Diagnostics
+    // 8. Update Snapshot for UI / Diagnostics
     const count = await offlineStorage.count();
+    let computedStatus = "HEALTHY";
+    if (captivePortalResult && captivePortalResult.is_captive_portal) {
+      computedStatus = "CAPTIVE_PORTAL";
+    } else if (edtechFilterResult && edtechFilterResult.collision_detected) {
+      computedStatus = "FILTER_COLLISION";
+    } else if (edtechFilterResult && edtechFilterResult.health_status === "SSL_INSPECTION_FAILED") {
+      computedStatus = "SSL_INSPECTION_FAILED";
+    } else if (edtechFilterResult && edtechFilterResult.health_status === "CLASSROOM_BLOCKED") {
+      computedStatus = "CLASSROOM_BLOCKED";
+    } else if (wifiDiagnostics && wifiDiagnostics.is_flapping) {
+      computedStatus = "AP_FLAPPING";
+    } else if (wifiDiagnostics && wifiDiagnostics.is_sticky_client) {
+      computedStatus = "STICKY_CLIENT";
+    } else if (edtechFilterResult && edtechFilterResult.health_status === "CLOUD_UNREACHABLE") {
+      computedStatus = "FILTER_OFFLINE";
+    } else if (webrtcResult && webrtcResult.mos && webrtcResult.mos < 3.5) {
+      computedStatus = "DEGRADED";
+    }
+
     latestSnapshot = {
       last_run_timestamp: Date.now(),
       sensor_identity: sensorIdentity,
+      local_ip: clientIp,
       wifi: wifiTelemetry,
-      synthetic_http: syntheticHttpResults,
+      wifi_diagnostics: wifiDiagnostics,
+      captive_portal: captivePortalResult,
+      gateway_probe: gatewayProbeResult,
+      dns_benchmark: dualStackDnsResult,
+      bandwidth_bufferbloat: bandwidthBufferbloatResult,
+      edtech_filter: edtechFilterResult,
+      synthetic_http: httpResults,
       webrtc: webrtcResult,
+      hardware: hardwareTelemetry,
       buffered_count: count,
-      status: "HEALTHY"
+      status: computedStatus
     };
 
     logger.info("Diagnostic probe cycle completed successfully.");
@@ -226,6 +299,14 @@ onWifiRoam((roamEvent) => {
   logger.info("AP Handoff detected, triggering fast roaming validation sweep...");
   executeDiagnosticCycle();
 });
+
+// Network Interface Change Listener (e.g. Ethernet unplugged / Wi-Fi connected)
+if (typeof chrome !== "undefined" && chrome.system && chrome.system.network && chrome.system.network.onNetworkListChanged) {
+  chrome.system.network.onNetworkListChanged.addListener(() => {
+    logger.info("Network interfaces changed (Ethernet/Wi-Fi transition), running diagnostic sweep...");
+    executeDiagnosticCycle();
+  });
+}
 
 // Runtime Message Listener (Popup UI & On-Demand Actions)
 if (typeof chrome !== "undefined" && chrome.runtime) {

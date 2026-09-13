@@ -1,21 +1,22 @@
 import test from "node:test";
 import assert from "node:assert";
 import { calculateVoipMos } from "../src/probes/mos_calculator.js";
+import { verifies } from "./helpers/rtm.js";
 
-test("MOS Calculator - Excellent Toll Quality", () => {
+test("MOS Calculator - Excellent Toll Quality", verifies("REQ-MOS-001", "Excellent Toll Quality")(() => {
   // Low latency (20ms RTT), low jitter (2ms), zero loss
   const res = calculateVoipMos(20, 2, 0);
   assert.ok(res.mos >= 4.3, `Expected MOS >= 4.3, got ${res.mos}`);
   assert.strictEqual(res.qualityGrade, "Excellent");
   assert.ok(res.rFactor > 90);
-});
+}));
 
-test("MOS Calculator - Good Quality (Standard Classroom Call)", () => {
+test("MOS Calculator - Good Quality (Standard Classroom Call)", verifies("REQ-MOS-001", "Good Quality (Standard Classroom Call)")(() => {
   // 60ms RTT, 8ms jitter, 0.5% packet loss
   const res = calculateVoipMos(60, 8, 0.005);
   assert.ok(res.mos >= 4.0 && res.mos < 4.4, `Expected Good MOS, got ${res.mos}`);
   assert.strictEqual(res.qualityGrade, "Good");
-});
+}));
 
 test("MOS Calculator - Fair Quality (Noticeable delay / moderate packet loss)", () => {
   // 180ms RTT, 45ms jitter, 2.5% packet loss

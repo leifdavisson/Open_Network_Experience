@@ -2,6 +2,18 @@
 
 All notable changes to the Open Network Experience (OpenUX) platform will be documented in this file.
 
+## [0.7.6] — 2026-09-13
+
+### Added & Refactored
+- **Chromebook Sensor MV3 Diagnostic Engine & CMP Integration**:
+  - Engineered full MV3 synthetic diagnostic suite for ChromeOS (`chromebook-sensor`) with active dual-stack DNS benchmark, micro-burst bandwidth / bufferbloat scoring, WebRTC MOS estimation, captive portal detection, and district EdTech filtering probes (Lightspeed, Securly, GoGuardian, ContentKeeper).
+  - Integrated zero-configuration CMP ingestion with offline buffering (`IndexedDB` + in-memory fallback queue) and SHA-256 hardware/serial sensor identification.
+  - Implemented popout diagnostics window mode (`popup.js` / `manifest.json`) for full-page telemetry viewing.
+  - Added targetAddressSpace (`'local'`) annotations for Chromium Local Network Access (LNA) compliance.
+  - Added dynamic interface transition handling (`chrome.system.network.onNetworkListChanged`) and 3-second live polling.
+  - Handled unmanaged / developer mode environments gracefully by displaying explicit `Not supported (Unmanaged)` or `Restricted by Chrome Sandbox` indicators without guessing or fabricating telemetry.
+  - Published comprehensive ChromeOS vs. Desktop Chrome platform capabilities matrix to `chromebook-sensor/README.md`.
+
 ## [0.7.1] — 2026-09-05
 
 ### Added & Refactored

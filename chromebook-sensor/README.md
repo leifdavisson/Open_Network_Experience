@@ -116,7 +116,34 @@ chromebook-sensor/
 
 ---
 
-## 4. Google Workspace Admin Console Deployment Guide
+## 4. Platform Capabilities Matrix: ChromeOS (Managed) vs. Desktop Chrome (Unmanaged)
+
+Due to Chromium process sandboxing and security boundary models, certain physical network attributes behave differently depending on the deployment environment:
+
+| Capability / Metric | Desktop Chrome (Linux/macOS/Windows) | Unmanaged Chromebook (Dev Mode) | Managed ChromeOS (Force-Installed via Google Admin) |
+| :--- | :--- | :--- | :--- |
+| **SSID / Network Name** | ⚠️ Generic (`"Wi-Fi Connected"`) | ⚠️ Generic (`"Wi-Fi Connected"`) | ✅ **Yes** (via `chrome.networkingPrivate`) |
+| **AP BSSID (MAC Address)** | ❌ *Not supported* (`Sandbox Restricted`) | ❌ *Not supported* (`Sandbox Restricted`) | ✅ **Yes** (via `chrome.networkingPrivate`) |
+| **Signal Strength (RSSI dBm)**| ❌ *Not supported* (`Unmanaged`) | ❌ *Not supported* (`Unmanaged`) | ✅ **Yes** (via `chrome.networkingPrivate`) |
+| **Wi-Fi Channel & Frequency** | ❌ *Not supported* (`Unmanaged`) | ❌ *Not supported* (`Unmanaged`) | ✅ **Yes** (via `chrome.networkingPrivate`) |
+| **Device Serial Number & Asset ID** | ❌ *Not supported* (Uses local UUID) | ❌ *Not supported* (Uses local UUID) | ✅ **Yes** (via `chrome.enterprise.deviceAttributes`) |
+| **Local Host IP Address** | ✅ **Yes** (`chrome.system.network`) | ✅ **Yes** (`chrome.system.network`) | ✅ **Yes** (`chrome.system.network`) |
+| **Layer 1 Physical Carrier Detect** | ❌ **Impossible** (OS Sandbox Blocks `ioctl`) | ❌ **Impossible** (OS Sandbox Blocks `ioctl`) | ❌ **Impossible** (OS Sandbox Blocks `ioctl`) |
+| **Default Gateway IP Derivation** | ⚠️ L3 Subnet Estimation / Transparent Sandbox Link | ⚠️ L3 Subnet Estimation / Transparent Sandbox Link | ⚠️ L3 Subnet Estimation / Transparent Sandbox Link |
+| **Dual-Stack DNS (DoH vs Local)** | ✅ **100% Functional** | ✅ **100% Functional** | ✅ **100% Functional** |
+| **Bandwidth & Bufferbloat** | ✅ **100% Functional** | ✅ **100% Functional** | ✅ **100% Functional** |
+| **EdTech Filter Diagnostic** | ✅ **100% Functional** | ✅ **100% Functional** | ✅ **100% Functional** |
+| **WebRTC MOS, Jitter & RTT** | ✅ **100% Functional** | ✅ **100% Functional** | ✅ **100% Functional** |
+| **District LMS / App Probing** | ✅ **100% Functional** | ✅ **100% Functional** | ✅ **100% Functional** |
+
+### How the Sensor Gracefully Handles "Not Supported" Metrics
+1. **Zero Guessing & Transparent Status**: The sensor never fabricates dummy MACs or guesses Wi-Fi channels. When running on an unmanaged desktop or without enterprise policy, restricted metrics explicitly state **`Not supported (Unmanaged)`** or **`Restricted by Chrome Sandbox`** with direct documentation links.
+2. **Layer 1 vs Layer 3 Reality**: Chromium cannot read physical link carrier state (e.g. Ethernet cable pin/link beat). If an Ethernet cable is unplugged, the OS may retain the interface in the routing table until a DHCP lease teardown occurs. The sensor relies on **Layer 3/4 probe reachability** (RTT, HTTP sweeps, DNS response) rather than guessing physical cable presence.
+3. **Managed Policy Activation**: Deploying the extension via the Google Workspace Admin Console (`policy_installed`) automatically activates the privileged `chrome.networkingPrivate` and `chrome.enterprise.*` APIs, unlocking full BSSID, RSSI dBm, and hardware serial tracking.
+
+---
+
+## 5. Google Workspace Admin Console Deployment Guide
 
 To deploy the ONE Chromebook Sensor across your school district or enterprise fleet:
 
@@ -169,7 +196,7 @@ To deploy the ONE Chromebook Sensor across your school district or enterprise fl
 
 ---
 
-## 5. Running Tests
+## 6. Running Tests
 
 ### Chrome Extension Unit & Mock Tests
 ```bash
@@ -182,3 +209,4 @@ npm test
 cd /data/Open_Network_Experience
 pytest
 ```
+

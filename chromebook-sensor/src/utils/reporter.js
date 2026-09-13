@@ -13,6 +13,12 @@ import { logger } from "./logger.js";
 export function buildReportPayload({
   sensorIdentity,
   wifiTelemetry,
+  wifiDiagnostics,
+  captivePortalResult,
+  gatewayProbeResult,
+  dualStackDnsResult,
+  bandwidthBufferbloatResult,
+  edtechFilterResult,
   hardwareTelemetry,
   syntheticHttpResults,
   webrtcResult,
@@ -31,6 +37,7 @@ export function buildReportPayload({
       annotated_user: sensorIdentity.annotated_user || null,
       directory_device_id: sensorIdentity.directory_device_id || null,
       hostname: sensorIdentity.hostname,
+      ip_address: wifiTelemetry?.ip_address || hardwareTelemetry?.interfaces?.find(i => i.address && !i.address.startsWith("127."))?.address || null,
       mac_address: sensorIdentity.mac_address || null,
       is_managed: sensorIdentity.is_managed,
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "ChromeOS/ONE-Sensor"
@@ -45,14 +52,21 @@ export function buildReportPayload({
       connected: wifiTelemetry.connected,
       ssid: wifiTelemetry.ssid,
       bssid: wifiTelemetry.bssid,
+      ip_address: wifiTelemetry.ip_address || null,
       rssi_dbm: wifiTelemetry.rssi_dbm,
       signal_strength_pct: wifiTelemetry.signal_strength_pct,
       frequency_mhz: wifiTelemetry.frequency_mhz,
       channel: wifiTelemetry.channel,
       band: wifiTelemetry.band,
       security: wifiTelemetry.security,
-      roamed_recently: wifiTelemetry.roamed_recently
+      roamed_recently: wifiTelemetry.roamed_recently,
+      diagnostics: wifiDiagnostics || null
     },
+    captive_portal: captivePortalResult || null,
+    gateway_probe: gatewayProbeResult || null,
+    dns_benchmark: dualStackDnsResult || null,
+    bandwidth_bufferbloat: bandwidthBufferbloatResult || null,
+    edtech_filter: edtechFilterResult || null,
     hardware: {
       cpu: hardwareTelemetry?.cpu || null,
       memory: hardwareTelemetry?.memory || null,
