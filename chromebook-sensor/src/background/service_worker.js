@@ -248,6 +248,7 @@ export async function executeDiagnosticCycle() {
     latestSnapshot = {
       last_run_timestamp: Date.now(),
       sensor_identity: sensorIdentity,
+      local_ip: clientIp,
       wifi: wifiTelemetry,
       wifi_diagnostics: wifiDiagnostics,
       captive_portal: captivePortalResult,

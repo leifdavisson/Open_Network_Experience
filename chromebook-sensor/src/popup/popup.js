@@ -48,6 +48,13 @@ function updateUI(snapshot, config) {
     document.getElementById("band-tag").textContent = isEthernet ? "Ethernet" : (wifi.band || (wifi.connected ? "Active" : "Offline"));
   }
 
+  // Local Host IP Binding
+  const localIp = snapshot.local_ip || wifi?.ip_address || (snapshot.hardware?.interfaces?.find(i => i.address && !i.address.startsWith("127."))?.address) || "--";
+  const ipEl = document.getElementById("val-ip");
+  if (ipEl) {
+    ipEl.textContent = localIp;
+  }
+
   // Diagnostics & Captive Portal
   const diag = snapshot.wifi_diagnostics;
   const portal = snapshot.captive_portal;
