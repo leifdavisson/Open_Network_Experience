@@ -304,7 +304,33 @@ Deploying synthetic diagnostics as a Chrome Manifest V3 extension revealed stric
 
 ---
 
-## 13. Lessons Learned
+## 14. Probe Taxonomy, Health Separation, and Sequential Execution
+
+**Decision ID:** ADR-015  
+**Title:** Diagnostic Architecture: Separation of Core Health vs. Synthetic Probes, Sequential Execution, and Dynamic Target Configurations  
+**Status:** Accepted  
+**Date:** September 13, 2026  
+**License:** [GNU AGPLv3](https://www.gnu.org/licenses/agpl-3.0.en.html)  
+
+**Context & Problem Statement:**  
+Field audits revealed critical flaws in diagnostic testing: mixing sensor vital signs with external application tests, skewing measurements by running tests concurrently (saturating CPU and Wi-Fi airwaves), hardcoding vendor names and mock IPs (`10.98.x.x`), and masking local DNS failures as SaaS outages.
+
+**Decision Made:**  
+1. **Delineation of Core Health vs. Synthetic Add-On Probes**:  
+   - *Core Health*: `wifi_health` (primary test interface), `dhcp` (live DORA lease data only), `gateway` (derived from DHCP/route table), `dns` (DHCP-provided resolver pair on port 53), and `iperf3` (native binary with dual targets: Sensor $\rightarrow$ CMP and Sensor $\rightarrow$ Public WAN).  
+   - *Synthetic Add-On Probes*: `client_isolation` (scans adjacent subnet IPs), `vlan_isolation` (prompts admin for restricted subnets with saveable district presets), `voip_realtime_jitter` (RFC 3550 jitter/MOS), `sip_telephony` (SIP 5060/5061 with vendor presets), `saas_apps` (LMS/testing TTFB), and `cipa` (standardized `testfiltering.com`).  
+   - *Forensics Action*: `pcap` reclassified as an on-demand packet capture tool; blocked on Chromebooks.  
+2. **Sequential Execution Pipeline & Backpressure**: Replaced concurrent execution with sequential stage-gated test runs to prevent RF/CPU contention. Sensors enter a `DIAGNOSTIC_ACTIVE` state to prevent CMP overload.  
+3. **Root-Cause Isolation**: Application probes verify local DNS resolution first; DNS failures are flagged independently of external application status.  
+4. **Dynamic Vendor & District Configurations**: Dynamic schema in database to store and switch district/vendor presets without code changes.
+
+**Key Trade-offs / Consequences:**  
+- **Pros:** Completely eliminates RF/CPU self-contention skew; eliminates mock fallbacks; provides 100% vendor independence and root-cause clarity.  
+- **Cons:** Sequential runs take longer (15–30s total suite) than simultaneous burst runs.
+
+---
+
+## 15. Lessons Learned
 
 ### 13.1 Probe Truthfulness & Architectural Perspective
 During the development of on-demand diagnostic probes, a fundamental architecture flaw was identified: the Central Monitoring Platform (CMP) was executing network tests (like VLAN isolation and VoIP jitter) from within its own Docker container, rather than delegating them to the physical edge sensors.
