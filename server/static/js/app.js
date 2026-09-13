@@ -2360,8 +2360,7 @@
                 if (actions) {
                     actions.innerHTML = `
                         <button class="btn btn-sm btn-outline" onclick="triggerPcap('${data.sensor_id}'); closeSensorDetailModal();">⚡ Capture PCAP</button>
-                        <button class="btn btn-sm btn-outline" onclick="triggerSpeedtest('${data.sensor_id}'); closeSensorDetailModal();">📊 Speedtest</button>
-                        <button class="btn btn-sm" onclick="switchView('monitor-ondemand'); const sel=document.getElementById('diag-sensor-select'); if(sel)sel.value='${data.sensor_id}'; closeSensorDetailModal();">🚀 Live Diagnostics</button>
+                        <button class="btn btn-sm" onclick="openLiveDiagnosticsForSensor('${data.sensor_id}'); closeSensorDetailModal();">🚀 Live Diagnostics</button>
                     `;
                 }
             } catch (err) {
@@ -2546,8 +2545,7 @@
                             <td>
                                 <div class="btn-group">
                                     <button class="btn btn-outline btn-sm" onclick="openSensorDetailModal('${s.sensor_id}')">🔍 Details</button>
-                                    <button class="btn btn-outline btn-sm" onclick="triggerPcap('${s.sensor_id}')">⚡ PCAP</button>
-                                    <button class="btn btn-outline btn-sm" onclick="triggerSpeedtest('${s.sensor_id}')">📊 Speedtest</button>
+                                    <button class="btn btn-outline btn-sm" onclick="openLiveDiagnosticsForSensor('${s.sensor_id}')" title="Run Live Diagnostics for this sensor">⚡ Live Diag</button>
                                     <button class="btn btn-warning btn-sm" onclick="triggerOTAUpgrade('${s.sensor_id}')"><i class="fas fa-cloud-download-alt"></i> Upgrade</button>
                                     <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Revoke</button>
                                 </div>
@@ -3379,7 +3377,7 @@
             }
         }
 
-        async function triggerSpeedtest(sensorId) {
+        function openLiveDiagnosticsForSensor(sensorId, testType = 'all') {
             // 1. Switch to Live Diagnostics view
             switchView('monitor-ondemand');
 
@@ -3393,16 +3391,26 @@
                     diagSelect.appendChild(opt);
                 }
                 diagSelect.value = sensorId;
+                // Trigger footprint & hint update
+                if (typeof fetchSensorFootprint === 'function') {
+                    fetchSensorFootprint(sensorId).then(fp => {
+                        if (typeof updateDiagTargetHint === 'function') updateDiagTargetHint(fp);
+                    });
+                }
             }
 
-            // 3. Set test type to speedtest and update hint
+            // 3. Set test type if specified and update hint
             const testSelect = document.getElementById('diag-test-select');
-            if (testSelect) {
-                testSelect.value = 'speedtest';
-                updateDiagTargetHint();
+            if (testSelect && testType) {
+                testSelect.value = testType;
+                if (typeof updateDiagTargetHint === 'function') updateDiagTargetHint();
             }
+        }
+        window.openLiveDiagnosticsForSensor = openLiveDiagnosticsForSensor;
 
-            // 4. Automatically run diagnostic
+        async function triggerSpeedtest(sensorId) {
+            openLiveDiagnosticsForSensor(sensorId, 'speedtest');
+            // Automatically run diagnostic
             await executeSelectedDiagnostic();
         }
 

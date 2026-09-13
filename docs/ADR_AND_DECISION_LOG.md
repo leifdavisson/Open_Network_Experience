@@ -278,24 +278,50 @@ Generate deployment zip packages on demand in memory (`io.BytesIO`). Intercept `
 
 ---
 
-## 12. Lessons Learned
+## 12. Chromebook Sensor MV3 Sandbox Security & Telemetry Truthfulness
 
-### 12.1 Probe Truthfulness & Architectural Perspective
+**Decision ID:** ADR-014
+**Title:** Chromebook Sensor MV3 Architecture: Sandbox Security Boundaries, Layer 1 vs Layer 3 Telemetry, and Local Network Access Compliance
+**Status:** Accepted
+**Date:** September 13, 2026
+
+**Context & Problem Statement:**
+Deploying synthetic diagnostics as a Chrome Manifest V3 extension revealed strict browser sandbox boundaries:
+- Chromium's unprivileged userspace sandbox cannot execute kernel ioctls (`SIOCETHTOOL`) or inspect physical carrier state (`/sys/class/net/<iface>/carrier`). Consequently, unplugging Ethernet leaves IP assignments active in the OS routing table until lease teardown.
+- Wi-Fi RF telemetry (`chrome.networkingPrivate`) and hardware serial IDs (`chrome.enterprise.deviceAttributes`) require enterprise policy force-installation via Google Workspace Admin Console, returning `undefined` on unmanaged devices.
+- Chromium's Local Network Access (LNA) specification enforces strict preflights on private IP addresses.
+
+**Decision Made:**
+- Enforce strict "Zero Guessing" truthfulness: unmanaged devices explicitly display `"Not supported (Unmanaged)"` or `"Restricted by Chrome Sandbox"` rather than fabricating heuristics or dummy MACs.
+- Rely on active Layer 3/4 reachability (RTT, DoH vs Local DNS, WebRTC MOS) rather than Layer 1 link carrier heuristics.
+- Annotate all private synthetic fetch probes with `targetAddressSpace: 'local'` and `mode: 'no-cors'`.
+- Implement popout window mode (`chrome.windows.create`) for unconstrained full-screen diagnostic viewing.
+- Deploy a two-tier `IndexedDB` + in-memory fallback queue with backpressure eviction (capped at 500 records).
+
+**Key Trade-offs / Consequences:**
+- **Pros:** Zero-touch web deployment; 100% telemetry truthfulness without deceptive heuristics; full compliance with modern Chromium LNA standards.
+- **Cons:** RF telemetry (BSSID, RSSI dBm, Wi-Fi channel) strictly requires enterprise management enrollment.
+
+---
+
+## 13. Lessons Learned
+
+### 13.1 Probe Truthfulness & Architectural Perspective
 During the development of on-demand diagnostic probes, a fundamental architecture flaw was identified: the Central Monitoring Platform (CMP) was executing network tests (like VLAN isolation and VoIP jitter) from within its own Docker container, rather than delegating them to the physical edge sensors.
 - **Lesson:** Network telemetry is highly dependent on the physical and logical network vantage point. A VLAN isolation check run from the CMP (which sits on a management/control VLAN) will incorrectly report that isolation is working, because it isn't testing from the student/guest VLAN where the physical sensor resides.
 - **Resolution:** All on-demand probe handlers were rewritten to use SSH delegation (`_run_remote_sensor_probe()`) to execute scripts directly on the physical sensor, parsing the JSON stdout. This restored architectural truthfulness to the diagnostic data.
 
-### 12.2 Hardcoded Credentials & Lab Bench Artifacts
+### 13.2 Hardcoded Credentials & Lab Bench Artifacts
 During rapid prototyping, lab bench IP addresses (`10.98.2.125`, `10.98.2.105`) and credentials (`SSH_USER=kern`, `SSH_PASS=Kern1234`) were inadvertently hardcoded into core routing logic, state initializers, and fallbacks.
 - **Lesson:** Hardcoded environment-specific variables create technical debt, security vulnerabilities, and brittle systems that fail when deployed to production or new environments.
 - **Resolution:** A comprehensive credential scrub was performed. All hardcoded IPs were replaced with environment variables (`CMP_HOST`, `CMP_PORT`) injected via `docker-compose.yml`. Passwords were removed from default arguments, and fallback IPs in responses were replaced with `null` or `"unknown"`. The `deploy_bench.sh` script was updated to handle dynamic environment injection without polluting the codebase.
 
-### 12.3 High-Assurance CI/CD Validation
+### 13.3 High-Assurance CI/CD Validation
 The implementation of a rigorous 359-test suite that included unit testing, integration testing, static type checking (`mypy`), linting (`ruff`), and security scanning (`bandit`) proved invaluable during the v0.5.0 production hardening phase.
 - **Lesson:** Deep architectural refactors (like moving from local socket probes to SSH-delegated JSON probes across 12 different network protocols) can be executed rapidly and safely when backed by a comprehensive test suite.
 - **Resolution:** The tests immediately caught edge cases—such as missing imports, unused variables, and incongruous state transitions—that would have otherwise caused production outages, proving that the upfront cost of writing tests pays off during major refactors.
 
-### 12.4 Sensor Trust & Identity (The Bench Auto-Approval Trap)
+### 13.4 Sensor Trust & Identity (The Bench Auto-Approval Trap)
 During early development, the lab bench sensor (ID `f10325921...`) was hardcoded into the CMP's state engine to automatically approve its own registration, assign itself a static IP/MAC, and bypass the normal Trust On First Use (TOFU) workflow.
 - **Lesson:** Bypassing security controls for the sake of developer convenience creates severe security vulnerabilities if those shortcuts persist into production. A hardcoded sensor auto-approval path effectively backdoor'd the zero-trust onboarding model, allowing any device mimicking that ID to automatically gain access to the CMP.
 - **Resolution:** The bench-specific auto-approval logic was completely removed from `state.py`. All sensors, including the developer bench sensor, must now follow the standard zero-trust provisioning flow (Pending Registration -> Administrator Manual Approval -> Secure API Key Exchange) via the dashboard UI or database seeding scripts.

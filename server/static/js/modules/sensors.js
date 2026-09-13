@@ -106,8 +106,7 @@ export function renderDashboard(sensors, probes, liveStats, chromebooks, roaming
                     <td>
                         <div class="btn-group">
                             <button class="btn btn-outline btn-sm" onclick="openSensorDetailModal('${s.sensor_id}')">🔍 Details</button>
-                            <button class="btn btn-outline btn-sm" onclick="triggerPcap('${s.sensor_id}')">⚡ PCAP</button>
-                            <button class="btn btn-outline btn-sm" onclick="triggerSpeedtest('${s.sensor_id}')">📊 Speedtest</button>
+                            <button class="btn btn-outline btn-sm" onclick="openLiveDiagnosticsForSensor('${s.sensor_id}')" title="Run Live Diagnostics for this sensor">⚡ Live Diag</button>
                             <button class="btn btn-warning btn-sm" onclick="triggerOTAUpgrade('${s.sensor_id}')"><i class="fas fa-cloud-download-alt"></i> Upgrade</button>
                             <button class="btn btn-danger btn-sm" onclick="rejectSensor('${s.sensor_id}')">Revoke</button>
                         </div>
@@ -982,7 +981,7 @@ export function setDiagTarget(val) {
     }
 }
 
-export async function triggerSpeedtest(sensorId) {
+export function openLiveDiagnosticsForSensor(sensorId, testType = 'all') {
     // 1. Switch to Live Diagnostics view
     switchView('monitor-ondemand');
 
@@ -996,16 +995,21 @@ export async function triggerSpeedtest(sensorId) {
             diagSelect.appendChild(opt);
         }
         diagSelect.value = sensorId;
+        // Trigger footprint & hint update
+        fetchSensorFootprint(sensorId).then(fp => updateDiagTargetHint(fp));
     }
 
-    // 3. Set test type to speedtest and update hint
+    // 3. Set test type if specified and update hint
     const testSelect = document.getElementById('diag-test-select');
-    if (testSelect) {
-        testSelect.value = 'speedtest';
+    if (testSelect && testType) {
+        testSelect.value = testType;
         updateDiagTargetHint();
     }
+}
 
-    // 4. Automatically run diagnostic
+export async function triggerSpeedtest(sensorId) {
+    openLiveDiagnosticsForSensor(sensorId, 'speedtest');
+    // Automatically run diagnostic
     await executeSelectedDiagnostic();
 }
 
