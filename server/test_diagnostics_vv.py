@@ -174,3 +174,28 @@ def test_canvas_probe_execution():
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     assert res["status"] in ["PASS", "WARNING"]
     assert any("Canvas LMS" in d["name"] for d in res["details"])
+
+
+@pytest.mark.verifies("REQ-DIAG-014")
+def test_captive_portal_probe_execution():
+    req = DiagnosticRunRequest(test_type="captive_portal")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+    assert res["status"] in ["PASS", "WARNING", "FAIL"]
+    assert any("Captive Portal" in d["name"] for d in res["details"])
+
+
+@pytest.mark.verifies("REQ-DIAG-015")
+def test_m365_probe_execution():
+    req = DiagnosticRunRequest(test_type="m365")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+    assert res["status"] in ["PASS", "WARNING", "FAIL"]
+    assert any("Teams" in d["name"] or "M365" in d["name"] for d in res["details"])
+
+
+@pytest.mark.verifies("REQ-DIAG-016")
+def test_windows_update_probe_execution():
+    req = DiagnosticRunRequest(test_type="windows_update")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+    assert res["status"] in ["PASS", "WARNING", "FAIL"]
+    assert any("Windows Update" in d["name"] for d in res["details"])
+
