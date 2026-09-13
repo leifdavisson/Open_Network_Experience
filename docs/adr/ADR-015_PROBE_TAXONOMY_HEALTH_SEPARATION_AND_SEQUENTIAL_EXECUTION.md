@@ -27,7 +27,9 @@ During initial prototyping and early field testing across enterprise and K-12 sc
     - **`dhcp`**: Verifies dynamic lease acquisition on the active interface. Strictly uses authentic timing data; never fabricates dummy DORA timing constants.
     - **`gateway`**: Dynamically determined from the active DHCP lease/kernel routing table (`ip route show default`). Probed via ICMP/ARP with TCP fallback. Rejects static `10.98.x.x` assumptions.
     - **`dns`**: Discovers the pair of local DHCP-assigned DNS resolvers. Strictly enforces standard UDP Port 53 resolution. Flags a warning if fewer than two resolvers are provided.
-    - **`iperf3`**: Native point-to-point Layer 4 throughput test. Retains the explicit application name `iperf3`. Supports dual targets: Local Sensor $\rightarrow$ CMP, and Local Sensor $\rightarrow$ Public/WAN iPerf3 server.
+    - **`captive_portal`**: Active HTTP 204 check (`connectivitycheck.gstatic.com/generate_204`). Intercepted splash pages immediately trigger a critical alert and pause subsequent SaaS tests with an explicit captive portal notification.
+    - **`system_vitals`**: Sensor hardware telemetry (CPU, RAM, disk utilization, and SoC temperature to detect thermal throttling in ceiling/IDF closet deployments).
+    - **`iperf3`**: Native point-to-point Layer 4 throughput test on physical edge sensors. Retains the explicit application name `iperf3`. Supports dual targets: Local Sensor $\rightarrow$ CMP, and Local Sensor $\rightarrow$ Public/WAN iPerf3 server. On Chromebooks, raw TCP iPerf3 is sandboxed by ChromeOS, so the sensor automatically executes an HTTP5 chunked micro-burst benchmark with loaded latency (Bufferbloat scoring A–F).
 * **Synthetic Add-On Probes (Modular External Workloads)**:
   - Definition: Configurable, pluggable simulations of end-user transactions against external services.
   - Components:
@@ -36,6 +38,8 @@ During initial prototyping and early field testing across enterprise and K-12 sc
     - **`voip_realtime_jitter`** (Media Probe): Measures UDP burst packet loss, RFC 3550 interarrival jitter, and ITU-T G.107 MOS score against standard STUN or customer media gateways.
     - **`sip_telephony`** (Voice Signaling Probe): Validates SIP signaling (TCP/UDP 5060, TLS 5061, OPTIONS ping) with a preset dropdown of common vendors (RingCentral, Zoom Phone, Cisco CallManager, Teams SIP) and custom IP/port overrides.
     - **`saas_apps`** (LMS / State Testing / Portals): HTTP/TLS TTFB verification with district presets (Canvas, Google Classroom, i-Ready, CAASPP) and custom URL overrides.
+    - **`m365`** (Enterprise Cloud Probe): Comprehensive Microsoft 365 endpoint audit (Teams media, Outlook Exchange, OneDrive, SharePoint) via `m365_connectivity_probe.py`.
+    - **`windows_update`** (Infrastructure / CDN Probe): Validates Windows Update (WaaS), BITS range headers, Delivery Optimization (DO) cloud tracking, and local P2P LAN peer listener (TCP 7680 / MCC cache) via `windows_update_do_probe.py`.
     - **`cipa`** (Compliance Probe): Standardized against recognized safe test filtering domains (`testfiltering.com`).
 * **Forensics Actions**:
   - **`pcap`**: Reclassified as an **On-Demand Diagnostic Action** rather than a pass/fail connectivity probe. Executes rolling ring-buffer packet capture strictly on physical edge sensors; explicitly blocked on Chromebook extensions.
