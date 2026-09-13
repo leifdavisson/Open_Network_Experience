@@ -59,12 +59,13 @@ export async function probeGatewayReachability(gatewayIp, timeoutMs = 2000) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    // Send a lightweight HTTP HEAD/GET probe to gateway port 80/443 with cache buster
+    // Send a lightweight HTTP HEAD probe to gateway with cache buster and Chrome LNA annotation
     const probeUrl = `http://${gatewayIp}/?_one_gw_probe=${Date.now()}`;
     await fetch(probeUrl, {
       method: "HEAD",
       mode: "no-cors",
       cache: "no-store",
+      targetAddressSpace: "local", // W3C Local Network Access specification (Chrome 138+)
       signal: controller.signal
     });
 
