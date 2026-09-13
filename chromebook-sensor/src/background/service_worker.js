@@ -258,6 +258,7 @@ export async function executeDiagnosticCycle() {
       edtech_filter: edtechFilterResult,
       synthetic_http: httpResults,
       webrtc: webrtcResult,
+      hardware: hardwareTelemetry,
       buffered_count: count,
       status: computedStatus
     };
@@ -298,6 +299,14 @@ onWifiRoam((roamEvent) => {
   logger.info("AP Handoff detected, triggering fast roaming validation sweep...");
   executeDiagnosticCycle();
 });
+
+// Network Interface Change Listener (e.g. Ethernet unplugged / Wi-Fi connected)
+if (typeof chrome !== "undefined" && chrome.system && chrome.system.network && chrome.system.network.onNetworkListChanged) {
+  chrome.system.network.onNetworkListChanged.addListener(() => {
+    logger.info("Network interfaces changed (Ethernet/Wi-Fi transition), running diagnostic sweep...");
+    executeDiagnosticCycle();
+  });
+}
 
 // Runtime Message Listener (Popup UI & On-Demand Actions)
 if (typeof chrome !== "undefined" && chrome.runtime) {

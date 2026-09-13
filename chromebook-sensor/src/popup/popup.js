@@ -14,9 +14,18 @@ function updateUI(snapshot, config) {
     badge.className = `badge ${snapshot.status === "HEALTHY" ? "badge-green" : snapshot.status === "PROBING" ? "badge-info" : "badge-amber"}`;
   }
 
-  // Active Network RF Info
+  // Active Network RF & Interface Info
   const wifi = snapshot.wifi;
-  const isEthernet = !wifi?.bssid || wifi.bssid.includes("Virtual") || wifi.bssid.includes("Ethernet") || (!wifi.channel && !wifi.rssi_dbm);
+  const ifaces = snapshot.hardware?.interfaces || [];
+  const hasActiveWifiIface = ifaces.some(i => /^(wlan|wl|wifi)/i.test(i.name) && !i.address.startsWith("127."));
+  const hasActiveEthIface = ifaces.some(i => /^(eth|en|eno|enp)/i.test(i.name) && !i.address.startsWith("127."));
+
+  // Only consider connection as Ethernet if:
+  // 1) wifi explicitly indicates ethernet or virtual bssid, OR
+  // 2) an active eth/en interface exists AND no active wlan interface exists
+  const isEthernet = wifi?.interface_type === "ethernet" ||
+    (wifi?.bssid && (wifi.bssid.includes("Virtual") || wifi.bssid.includes("Ethernet"))) ||
+    (hasActiveEthIface && !hasActiveWifiIface && !wifi?.bssid && !wifi?.channel);
 
   const titleRfCard = document.getElementById("title-rf-card");
   const titleHealthCard = document.getElementById("title-health-card");
@@ -39,13 +48,24 @@ function updateUI(snapshot, config) {
   }
 
   if (wifi) {
-    document.getElementById("val-ssid").textContent = isEthernet ? "Wired Ethernet Connection" : (wifi.ssid || (wifi.connected ? "Connected" : "Disconnected"));
-    document.getElementById("val-bssid").textContent = wifi.bssid || (isEthernet ? "Ethernet Interface" : "N/A");
+    let defaultSsid = "Connected Network";
+    if (isEthernet) {
+      defaultSsid = "Wired Ethernet Connection";
+    } else if (wifi.connected) {
+      defaultSsid = wifi.ssid || (hasActiveWifiIface ? "Wi-Fi Connected (Unmanaged)" : "Wi-Fi Connected");
+    } else {
+      defaultSsid = "Disconnected";
+    }
+
+    let defaultBssid = isEthernet ? "Ethernet Interface" : "Restricted by Chrome Sandbox";
+    document.getElementById("val-ssid").textContent = defaultSsid;
+    document.getElementById("val-bssid").textContent = wifi.bssid || defaultBssid;
+
     if (!isEthernet) {
       document.getElementById("val-rssi").textContent = wifi.rssi_dbm ? `${wifi.rssi_dbm} dBm (${wifi.signal_strength_pct || '--'}%)` : "--";
       document.getElementById("val-channel").textContent = wifi.channel ? `Ch ${wifi.channel} (${wifi.frequency_mhz || '--'} MHz)` : "--";
     }
-    document.getElementById("band-tag").textContent = isEthernet ? "Ethernet" : (wifi.band || (wifi.connected ? "Active" : "Offline"));
+    document.getElementById("band-tag").textContent = isEthernet ? "Ethernet" : (wifi.band || (wifi.connected ? "Wi-Fi" : "Offline"));
   }
 
   // Local Host IP Binding
@@ -298,4 +318,17 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   }
+
+  // Auto-refresh snapshot when online/offline network events fire
+  window.addEventListener("online", () => refreshSnapshot());
+  window.addEventListener("offline", () => refreshSnapshot());
+
+  // Poll for background snapshot updates every 3 seconds while popup / popout is visible
+  const pollInterval = setInterval(() => {
+    refreshSnapshot();
+  }, 3000);
+
+  window.addEventListener("unload", () => {
+    clearInterval(pollInterval);
+  });
 });
