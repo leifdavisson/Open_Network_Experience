@@ -2,6 +2,17 @@
 
 All notable changes to the Open Network Experience (OpenUX) platform will be documented in this file.
 
+## [0.7.7] — 2026-09-13
+
+### Added & Refactored
+- **Fixed Edge Sensor Fleet Table UX Optimization**:
+  - Combined redundant `PCAP` and `Speedtest` table action buttons into a single unified `⚡ Live Diag` action button ([Issue #24](https://github.com/leifdavisson/Open_Network_Experience/issues/24)).
+  - Implemented `openLiveDiagnosticsForSensor(sensorId, testType)` to smoothly switch views to the Live Diagnostics action center, automatically populate the target sensor dropdown, and dynamically fetch/cache the sensor's network footprint (gateway and local DNS resolvers).
+  - Streamlined sensor detail modal action buttons to provide quick PCAP capture and direct Live Diagnostics jump.
+- **Architecture Documentation (ADR-014)**:
+  - Formally codified [ADR-014: Chromebook Sensor MV3 Architecture](docs/adr/ADR-014_CHROMEBOOK_SENSOR_MV3_ARCHITECTURE.md) covering Chromium userspace sandbox boundaries, physical Layer 1 indeterminacy, zero-guessing truthfulness principles, and Chrome Local Network Access (LNA) compliance.
+  - Appended Section 12 to master [ADR_AND_DECISION_LOG.md](docs/ADR_AND_DECISION_LOG.md).
+
 ## [0.7.6] — 2026-09-13
 
 ### Added & Refactored

@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=flat-square" alt="License: AGPL v3"></a>
   <a href="https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/leifdavisson/Open_Network_Experience/ci.yml?branch=main&label=CI%20Build&style=flat-square" alt="CI"></a>
   <a href="https://github.com/leifdavisson/Open_Network_Experience/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/leifdavisson/Open_Network_Experience/security.yml?branch=main&label=Security%20SAST&style=flat-square" alt="Security"></a>
-  <img src="https://img.shields.io/badge/Release-v0.7.6-00F0FF?style=flat-square" alt="Release v0.7.6">
+  <img src="https://img.shields.io/badge/Release-v0.7.7-00F0FF?style=flat-square" alt="Release v0.7.7">
   <img src="https://img.shields.io/badge/Architecture-Dual--NIC%20%2B%20ChromeOS-10B981?style=flat-square" alt="Dual-NIC Architecture">
 </p>
 
