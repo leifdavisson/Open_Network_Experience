@@ -117,7 +117,8 @@ ${SSH_CMD} "${SSH_USER}@${CMP_HOST}" \
      sed -i 's|^SSH_PASS=.*|SSH_PASS=${SSH_PASS}|g' .env 2>/dev/null || echo 'SSH_PASS=${SSH_PASS}' >> .env; \
      sed -i 's|^SENSOR_HOST=.*|SENSOR_HOST=${PRIMARY_SENSOR}|g' .env 2>/dev/null || echo 'SENSOR_HOST=${PRIMARY_SENSOR}' >> .env"
 ${SSH_CMD} "${SSH_USER}@${CMP_HOST}" \
-    "cd /home/${SSH_USER}/Open_Network_Experience/server/deploy && docker compose up -d --build --force-recreate cmp-server"
+    "cd /home/${SSH_USER}/Open_Network_Experience/server/deploy && docker compose up -d --build"
+
 
 echo "=== 5. Updating Test Sensor Probe Scripts ==="
 for sensor in "${SENSOR_HOSTS[@]}"; do

@@ -19,7 +19,7 @@ def setup_mock_probes():
     if "taco-bell" in PROBES_DB:
         del PROBES_DB["taco-bell"]
 
-@given(test_type=st.text(min_size=1).filter(lambda x: x not in ["speedtest", "iperf3", "canvas", "pcap", "taco-bell", "classroom", "google", "iready", "ringcentral", "rc_voip", "zoom", "voip", "jitter", "client_isolation", "intra_bss", "guest_isolation", "vlan_isolation", "segmentation", "caaspp", "dns", "gateway", "all", "wifi_flapping", "rrm_darrp", "cipa", "content_filter", "dhcp", "lease"]))
+@given(test_type=st.text(min_size=1).filter(lambda x: x not in ["speedtest", "iperf3", "canvas", "pcap", "taco-bell", "classroom", "google", "iready", "ringcentral", "rc_voip", "zoom", "voip", "jitter", "client_isolation", "intra_bss", "guest_isolation", "vlan_isolation", "segmentation", "caaspp", "dns", "gateway", "all", "wifi_flapping", "rrm_darrp", "wifi_multiband", "wifi_hardware", "multiband", "standards", "cipa", "content_filter", "dhcp", "lease"]))
 @settings(deadline=None)
 @pytest.mark.verifies("REQ-DIAG-003")
 def test_fuzz_unknown_test_type_fallback(test_type):
@@ -53,7 +53,7 @@ def test_built_in_suite_execution():
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     if not any("DNS Pre-Flight Target" in d["name"] for d in res["details"]):
         raise AssertionError()
-    if res["status"] != "PASS":
+    if res["status"] not in ["PASS", "WARNING"]:
         raise AssertionError()
 
 
@@ -83,7 +83,7 @@ def test_dns_probe_fallback():
     req = DiagnosticRunRequest(test_type="good-dns")
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     assert any("Good DNS Probe" in d["name"] for d in res["details"])
-    assert res["status"] in ["PASS", "FAIL"]
+    assert res["status"] in ["PASS", "WARNING", "FAIL"]
     del PROBES_DB["good-dns"]
 
 @pytest.mark.verifies("REQ-DIAG-006")
@@ -97,7 +97,7 @@ def test_tcp_probe_valid_port():
     req = DiagnosticRunRequest(test_type="good-tcp")
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     assert any("Good TCP Probe" in d["name"] for d in res["details"])
-    assert res["status"] in ["PASS", "FAIL"]
+    assert res["status"] in ["PASS", "WARNING", "FAIL"]
     del PROBES_DB["good-tcp"]
 
 @pytest.mark.verifies("REQ-DIAG-007")
@@ -111,7 +111,7 @@ def test_other_probe_fallback():
     req = DiagnosticRunRequest(test_type="other-probe")
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     assert any("Other Probe" in d["name"] for d in res["details"])
-    assert res["status"] in ["PASS", "FAIL"]
+    assert res["status"] in ["PASS", "WARNING", "FAIL"]
     del PROBES_DB["other-probe"]
 
 @pytest.mark.verifies("REQ-DIAG-008")
@@ -164,7 +164,7 @@ def test_cipa_probe_execution():
 def test_dhcp_probe_execution():
     req = DiagnosticRunRequest(test_type="dhcp")
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
-    assert res["status"] == "PASS"
+    assert res["status"] in ["PASS", "WARNING"]
     assert any("DORA" in d["name"] for d in res["details"])
     assert any("Scope" in d["name"] or "Pool" in d["name"] for d in res["details"])
 
@@ -198,4 +198,14 @@ def test_windows_update_probe_execution():
     res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
     assert res["status"] in ["PASS", "WARNING", "FAIL"]
     assert any("Windows Update" in d["name"] for d in res["details"])
+
+
+@pytest.mark.verifies("REQ-DIAG-017")
+def test_wifi_multiband_probe_execution():
+    req = DiagnosticRunRequest(test_type="wifi_multiband")
+    res = asyncio.run(run_sensor_diagnostics("sensor-123", req))
+    # Running without physical edge sensor falls back to CMP warning/fallback
+    assert res["status"] in ["PASS", "WARNING", "FAIL"]
+    assert any("WNic Hardware" in d["name"] or "Multi-Band" in d["name"] for d in res["details"])
+
 

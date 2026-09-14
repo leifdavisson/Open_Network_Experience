@@ -47,7 +47,6 @@ regexes = [
     '''sensor-edge-key-change-me''',
     '''test-noc-key''',
     '''nowifiyet''',
-    '''Kern1234''',
     '''\{password\}''',
     '''\[REDACTED\]''',
     '''<REDACTED>''',

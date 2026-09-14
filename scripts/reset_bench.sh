@@ -65,7 +65,13 @@ echo "========================================================"
 # Check if running local-only reset
 if [[ "$LOCAL_ONLY" -eq 1 || ( -z "${CMP_HOST}" && -z "${SENSOR_HOST}" ) ]]; then
     echo "Operating in local CMP reset mode..."
-    "${ROOT_DIR}/server/deploy/bench_reset.sh"
+    DEPLOY_DIR="${ROOT_DIR}/server/deploy"
+    if [[ -d "$DEPLOY_DIR" ]]; then
+        cd "$DEPLOY_DIR"
+        docker compose down -v 2>/dev/null || docker-compose down -v 2>/dev/null || true
+    fi
+    rm -rf "${ROOT_DIR}/server/data/"* 2>/dev/null || true
+    echo "✓ Local CMP environment reset complete."
     exit 0
 fi
 
@@ -118,50 +124,38 @@ if [[ -n "${SENSOR_HOST}" ]]; then
     if ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" "echo connected" &>/dev/null; then
         echo "   ✓ Connected to ${SENSOR_HOST}"
 
-        echo " - Stopping and disabling sensor-reconciler systemd service..."
-        ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" \
-            "echo '${SSH_PASS}' | sudo -S systemctl stop sensor-reconciler 2>/dev/null || true && \
-             echo '${SSH_PASS}' | sudo -S systemctl disable sensor-reconciler 2>/dev/null || true"
-
-        echo " - Terminating any remaining python probers..."
-        ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" \
-            "echo '${SSH_PASS}' | sudo -S pkill -f 'reconciler.py' 2>/dev/null || true; \
-             echo '${SSH_PASS}' | sudo -S pkill -f '_probe.py' 2>/dev/null || true"
-
-        echo " - Removing deployed synthetic probe scripts from /usr/local/bin..."
-        ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" \
-            "echo '${SSH_PASS}' | sudo -S rm -f \
-                /usr/local/bin/reconciler.py \
-                /usr/local/bin/wizard.py \
-                /usr/local/bin/one-wizard \
-                /usr/local/bin/cipa_compliance.py \
-                /usr/local/bin/caaspp_readiness.py \
-                /usr/local/bin/iperf3_runner.py \
-                /usr/local/bin/wifi_dhcp_exporter.py \
-                /usr/local/bin/rrm_darrp_monitor.py \
-                /usr/local/bin/pcap_trigger.py \
-                /usr/local/bin/evidence_collector.py \
-                /usr/local/bin/segmentation_prober.py \
-                /usr/local/bin/dns_multi_resolver_probe.py \
-                /usr/local/bin/voip_jitter_probe.py \
-                /usr/local/bin/custom_probe_runner.py \
-                /usr/local/bin/gps_location_collector.py"
-
-        echo " - Cleaning temporary staging files and sensor caches..."
-        ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" \
-            "echo '${SSH_PASS}' | sudo -S rm -rf /tmp/sensor /tmp/*.prom /var/lib/sensor/* 2>/dev/null || true && \
-             echo '${SSH_PASS}' | sudo -S rm -f /var/lib/node_exporter/textfile_collector/*.prom 2>/dev/null || true"
-
-        echo " - Resetting sensor registration config (/etc/sensor/reconciler.json)..."
-        ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" \
-            "echo '${SSH_PASS}' | sudo -S rm -f /etc/sensor/reconciler.json 2>/dev/null || true"
-
-        echo " - Pruning Docker test containers and volumes on sensor..."
-        ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" \
-            "if command -v docker &>/dev/null; then \
-                echo '${SSH_PASS}' | sudo -S docker system prune -af --volumes 2>/dev/null || true; \
-             fi"
-
+        echo " - Resetting sensor services, binaries, and state..."
+        ${SSH_CMD} "${SSH_USER}@${SENSOR_HOST}" "echo '${SSH_PASS}' | sudo -S bash -s" << 'EOF' || true
+systemctl stop sensor-reconciler 2>/dev/null || true
+systemctl disable sensor-reconciler 2>/dev/null || true
+killall -9 python3 2>/dev/null || true
+rm -f /usr/local/bin/reconciler.py \
+      /usr/local/bin/wizard.py \
+      /usr/local/bin/one-wizard \
+      /usr/local/bin/cipa_compliance.py \
+      /usr/local/bin/caaspp_readiness.py \
+      /usr/local/bin/iperf3_runner.py \
+      /usr/local/bin/wifi_dhcp_exporter.py \
+      /usr/local/bin/wifi_multiband_probe.py \
+      /usr/local/bin/rrm_darrp_monitor.py \
+      /usr/local/bin/pcap_trigger.py \
+      /usr/local/bin/evidence_collector.py \
+      /usr/local/bin/segmentation_prober.py \
+      /usr/local/bin/dns_multi_resolver_probe.py \
+      /usr/local/bin/voip_jitter_probe.py \
+      /usr/local/bin/custom_probe_runner.py \
+      /usr/local/bin/gps_location_collector.py \
+      /usr/local/bin/m365_synthetic_probe.py \
+      /usr/local/bin/windows_update_probe.py \
+      /usr/local/bin/clever_portal_probe.py \
+      /usr/local/bin/lightspeed_filter_probe.py \
+      /usr/local/bin/ringcentral_qoe_probe.py
+rm -rf /tmp/sensor /tmp/*.prom /var/lib/sensor/* /etc/sensor /var/lib/node_exporter/textfile_collector/*.prom /etc/systemd/system/sensor-reconciler.service /etc/sudoers.d/99-one-sensor-probes 2>/dev/null || true
+systemctl daemon-reload 2>/dev/null || true
+if command -v docker &>/dev/null; then
+    docker system prune -af --volumes 2>/dev/null || true
+fi
+EOF
         echo "   ✓ Test Sensor cleanup complete."
     else
         echo "   ✗ Could not reach Sensor at ${SENSOR_HOST}. Skipping."

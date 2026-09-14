@@ -49,6 +49,7 @@ LOCATION_NOTES="Ceiling AP Drop"
 ENROLL_TOKEN=""
 WIFI_SSID=""
 WIFI_PSK=""
+CMP_SSH_PUB_KEY=""
 FORCE_INSTALL=0
 LAUNCH_WIZARD=0
 EXPLICIT_ARGS=0
@@ -162,6 +163,8 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq > /dev/null 2>&1 || true
 apt-get install -y -qq \
     wpasupplicant \
+    iw \
+    tcpdump \
     iperf3 \
     mtr-tiny \
     curl \
@@ -172,6 +175,7 @@ apt-get install -y -qq \
     iproute2 \
     systemd \
     wireless-tools \
+    jq \
     > /dev/null 2>&1 || true
 echo -e "  • Packages installed: ${GREEN}OK${NC}"
 
@@ -188,6 +192,54 @@ else
     echo -e "  • Docker engine: ${GREEN}Already installed${NC}"
 fi
 
+# Create dedicated one-sensor system user if not present
+ONE_USER="one-sensor"
+if ! id -u "$ONE_USER" >/dev/null 2>&1; then
+    echo -n "  • Creating dedicated system user '${ONE_USER}'... "
+    useradd -m -s /bin/bash -c "Open Network Experience Edge Sensor Agent" "$ONE_USER" 2>/dev/null || true
+    echo -e "${GREEN}OK${NC}"
+fi
+
+# Add one-sensor to netdev and docker groups if they exist
+for grp in netdev docker; do
+    if getent group "$grp" >/dev/null 2>&1; then
+        usermod -aG "$grp" "$ONE_USER" 2>/dev/null || true
+    fi
+done
+
+# Configure non-interactive scoped sudoers for hardware diagnostic probers (iw, tcpdump)
+if [[ -d /etc/sudoers.d ]]; then
+    cat << EOF > /etc/sudoers.d/99-one-sensor-probes
+# Open Network Experience: scoped privileges for one-sensor diagnostics
+${ONE_USER} ALL=(ALL) NOPASSWD: /usr/sbin/iw, /usr/bin/iw, /usr/bin/tcpdump, /usr/sbin/tcpdump, /usr/bin/python3 /usr/local/bin/*
+ALL ALL=(ALL) NOPASSWD: /usr/sbin/iw, /usr/bin/iw, /usr/bin/tcpdump, /usr/sbin/tcpdump, /usr/bin/python3 /usr/local/bin/*
+EOF
+    chmod 0440 /etc/sudoers.d/99-one-sensor-probes
+    echo -e "  • Hardware Prober Sudoers Permissions: ${GREEN}OK${NC}"
+fi
+
+# Configure passwordless SSH delegation from CMP
+if [[ -n "$CMP_SSH_PUB_KEY" ]]; then
+    for SSH_HOME in "/home/${ONE_USER}" "/root" "/home/${SUDO_USER:-}" "${HOME}"; do
+        if [[ -d "$SSH_HOME" ]]; then
+            mkdir -p "${SSH_HOME}/.ssh"
+            chmod 700 "${SSH_HOME}/.ssh"
+            AUTH_FILE="${SSH_HOME}/.ssh/authorized_keys"
+            touch "$AUTH_FILE"
+            if ! grep -Fq "$CMP_SSH_PUB_KEY" "$AUTH_FILE" 2>/dev/null; then
+                echo "$CMP_SSH_PUB_KEY" >> "$AUTH_FILE"
+            fi
+            chmod 600 "$AUTH_FILE"
+            if [[ "$SSH_HOME" == "/home/${ONE_USER}" ]]; then
+                chown -R "${ONE_USER}:${ONE_USER}" "${SSH_HOME}/.ssh" 2>/dev/null || true
+            elif [[ -n "${SUDO_USER:-}" && "$SSH_HOME" == "/home/${SUDO_USER}" ]]; then
+                chown -R "${SUDO_USER}:${SUDO_USER}" "${SSH_HOME}/.ssh" 2>/dev/null || true
+            fi
+        fi
+    done
+    echo -e "  • CMP Passwordless SSH Delegation Key: ${GREEN}Authorized (${ONE_USER})${NC}"
+fi
+
 # Prepare Sensor Directories
 mkdir -p /etc/sensor
 mkdir -p /etc/wpa_supplicant
@@ -195,6 +247,10 @@ mkdir -p /usr/local/bin
 mkdir -p /var/lib/node_exporter/textfile_collector
 mkdir -p /var/lib/sensor/snapshots
 mkdir -p /var/lib/sensor/evidence_bundles
+
+if id -u "$ONE_USER" >/dev/null 2>&1; then
+    chown -R "${ONE_USER}:${ONE_USER}" /etc/sensor /var/lib/sensor /var/lib/node_exporter 2>/dev/null || true
+fi
 
 # Identify Script Source (Local git repository or Remote CMP Download)
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")" 2>/dev/null || echo ".")"
@@ -208,6 +264,7 @@ echo -e "\n${BLUE}3. Deploying Edge Probes, Synthetic Engine & Setup Wizard...${
 PROBE_SCRIPTS=(
     "reconciler/reconciler.py:reconciler.py"
     "onboarding/wizard.py:wizard.py"
+    "wifi_multiband_probe.py:wifi_multiband_probe.py"
     "cipa_compliance.py:cipa_compliance.py"
     "caaspp_readiness.py:caaspp_readiness.py"
     "iperf3_runner.py:iperf3_runner.py"
@@ -220,6 +277,12 @@ PROBE_SCRIPTS=(
     "voip_jitter_probe.py:voip_jitter_probe.py"
     "custom_probe_runner.py:custom_probe_runner.py"
     "gps_location_collector.py:gps_location_collector.py"
+    "m365_connectivity_probe.py:m365_connectivity_probe.py"
+    "windows_update_do_probe.py:windows_update_do_probe.py"
+    "google_workspace_chromeos_probe.py:google_workspace_chromeos_probe.py"
+    "clever_identity_probe.py:clever_identity_probe.py"
+    "lightspeed_filter_probe.py:lightspeed_filter_probe.py"
+    "ringcentral_probe.py:ringcentral_probe.py"
 )
 
 # Base URL for downloading remote scripts if running via curl pipe
@@ -317,7 +380,7 @@ EOF
 echo -e "  • Sensor Config written to /etc/sensor/reconciler.json: ${GREEN}OK${NC}"
 
 # Install and Enable Systemd Service
-cat << 'EOF' > /etc/systemd/system/sensor-reconciler.service
+cat << EOF > /etc/systemd/system/sensor-reconciler.service
 [Unit]
 Description=Open Network Experience (ONE) Sensor Reconciler & Adaptive Prober
 After=network-online.target docker.service
@@ -325,7 +388,8 @@ Wants=network-online.target docker.service
 
 [Service]
 Type=simple
-User=root
+User=${ONE_USER}
+Group=${ONE_USER}
 ExecStart=/usr/bin/python3 /usr/local/bin/reconciler.py
 Restart=always
 RestartSec=10

@@ -20,7 +20,7 @@ That's it! Everything our automated deployment script does boils down to these t
 Before you can run the deployment, you must have the following information:
 - **The IP Addresses** of the target sensors (e.g., `10.98.2.125`, `10.98.2.141`, `10.98.2.105`).
 - **The Username** for the sensors (e.g., `kern`).
-- **The Password** for the sensors (e.g., `Kern1234`).
+- **The Password** for the sensors (e.g., `<your-sensor-password>`).
 - **The Payload**: The `bench-staging-kit.zip` downloaded from the Central Monitoring Platform (CMP).
 
 ---
@@ -44,7 +44,7 @@ TARGETS = [
     "10.98.2.105"
 ]
 USERNAME = "kern"
-PASSWORD = "Kern1234"
+PASSWORD = "<your-sensor-password>"
 ```
 
 ### Step 3: Execute the Deployment

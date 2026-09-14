@@ -46,7 +46,7 @@ Prometheus alert rules with configurable multi-day construction-period muting. A
 
 | Item | Before | After |
 |---|---|---|
-| `SSH_PASS` default | `"Kern1234"` (bench password) | `""` (empty — delegation disabled if unset) |
+| `SSH_PASS` default | `"<REDACTED>"` (set per-site) | `""` (empty — delegation disabled if unset) |
 | `SSH_USER` default | `"kern"` (bench username) | `"sensor"` (generic) |
 | Bench sensor auto-approval | `f10325921*` prefix → auto-approved, auto-IP | All sensors start `pending` regardless of ID |
 | CMP IP references | Hardcoded `10.98.2.125` | `CMP_HOST` env-var (default: `localhost`) |

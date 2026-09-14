@@ -83,7 +83,7 @@ def _get_sensor_dns(sensor: dict) -> list[str]:
     Derives the sensor's local DNS server IPs based on its registered ip_address subnet.
 
     Fixes #20: the DNS Resolver diagnostic previously used static hardcoded
-    district IPs (10.98.98.53 / 10.98.98.54) regardless of which network the
+    district IPs (<LOCAL_DNS_1> / <LOCAL_DNS_2>) regardless of which network the
     sensor was actually on.  Now we detect the subnet class:
 
     - 192.168.x.y  → local DNS at 192.168.x.1  (common home/small-office)
@@ -205,28 +205,63 @@ def _run_remote_sensor_probe(sensor_ip: str | None, cmd: str, timeout_sec: float
         return None
     ssh_user = os.environ.get("SSH_USER", "sensor")
     ssh_pass = os.environ.get("SSH_PASS", "")
-    if not ssh_pass:
-        # No password: fall back gracefully (key-based auth or skip)
-        return None
-    ssh_cmd = [
-        "sshpass", "-p", ssh_pass,
-        "ssh", "-o", "StrictHostKeyChecking=no",
-        "-o", "UserKnownHostsFile=/dev/null",
-        "-o", "PreferredAuthentications=password",
-        "-o", "PubkeyAuthentication=no",
-        "-o", "ConnectTimeout=4",
-        f"{ssh_user}@{sensor_ip}",
-        cmd
-    ]
-    try:
-        res = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout_sec)
-        if res.returncode == 0 and res.stdout.strip():
-            raw = res.stdout.strip()
-            idx = raw.find("{")
-            if idx != -1:
-                return json.loads(raw[idx:])
-    except Exception:
-        pass
+
+    # Priority 1: Zero-trust passwordless Ed25519 keypair delegation
+    key_path = os.environ.get("SSH_KEY_PATH", "")
+    if not key_path or not os.path.exists(key_path):
+        for candidate in ["/app/data/id_ed25519", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "id_ed25519"))]:
+            if os.path.exists(candidate):
+                key_path = candidate
+                break
+
+    if key_path and os.path.exists(key_path):
+        # Try one-sensor dedicated user first, then configured ssh_user (sensor/kern/etc.)
+        candidate_users = [u for u in [os.environ.get("SSH_USER"), "one-sensor", "sensor"] if u]
+        # De-duplicate while preserving order
+        candidate_users = list(dict.fromkeys(candidate_users))
+
+        for candidate_user in candidate_users:
+            ssh_cmd = [
+                "ssh", "-i", key_path,
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "BatchMode=yes",
+                "-o", "ConnectTimeout=3",
+                f"{candidate_user}@{sensor_ip}",
+                cmd
+            ]
+            try:
+                res = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout_sec)
+                if res.returncode == 0 and res.stdout.strip():
+                    raw = res.stdout.strip()
+                    idx = raw.find("{")
+                    if idx != -1:
+                        return json.loads(raw[idx:])
+            except Exception:
+                continue
+
+    # Priority 2: Fallback to SSH_PASS via sshpass if configured
+    if ssh_pass:
+        ssh_cmd = [
+            "sshpass", "-p", ssh_pass,
+            "ssh", "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "PreferredAuthentications=password",
+            "-o", "PubkeyAuthentication=no",
+            "-o", "ConnectTimeout=4",
+            f"{ssh_user}@{sensor_ip}",
+            cmd
+        ]
+        try:
+            res = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout_sec)
+            if res.returncode == 0 and res.stdout.strip():
+                raw = res.stdout.strip()
+                idx = raw.find("{")
+                if idx != -1:
+                    return json.loads(raw[idx:])
+        except Exception:
+            pass
+
     return None
 
 class DiagnosticRunRequest(BaseModel):
@@ -345,6 +380,120 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
             "[OK] RRM/DARRP spectrum health nominal.",
             "[OK] Wi-Fi RF Flapping & Dwell test completed."
         ])
+    elif tt in ("wifi_multiband", "wifi_hardware", "multiband", "standards"):
+        remote_res = _run_remote_sensor_probe(
+            sensor_ip,
+            "python3 /usr/local/bin/wifi_multiband_probe.py --json 2>/dev/null",
+            timeout_sec=25.0
+        ) if is_edge else None
+        src = f"Physical Sensor ({sensor_ip})" if is_edge else "CMP Container"
+
+        if remote_res and isinstance(remote_res, dict) and "nic_capabilities" in remote_res:
+            nic = remote_res.get("nic_capabilities", {})
+            link = remote_res.get("current_link", {})
+            bands = remote_res.get("band_evaluations", [])
+            channels = remote_res.get("channel_evaluations", [])
+            gen_mat = remote_res.get("generation_matrix", {})
+            anomalies = remote_res.get("anomalies", [])
+
+            phy_name = nic.get("phy", "phy0")
+            nic_gen = nic.get("max_generation", "Wi-Fi 5")
+            bands_str = ", ".join(nic.get("bands_supported", ["2.4GHz", "5GHz"]))
+            chains = nic.get("antenna_chains", 2)
+            max_w = nic.get("max_channel_width_mhz", 80)
+
+            link_conn = link.get("connected", False)
+            link_status = f"{link.get('band', 'N/A')} Ch {link.get('channel', 0)} ({link.get('rssi_dbm', 0)} dBm)" if link_conn else "Not Connected"
+            link_info = f"[{src}] Connected to '{link.get('ssid', 'N/A')}' @ {link.get('tx_bitrate_mbps', 0)} Mbps ({link.get('standard_generation', 'Unknown')})" if link_conn else f"[{src}] No active Wi-Fi association"
+
+            mat_status = "Nominal" if not anomalies else anomalies[0].get("type", "WARNING")
+            mat_info = anomalies[0].get("description", "") if anomalies else f"[{src}] Client NIC ({nic_gen}) ↔ AP ({gen_mat.get('connected_ap_generation', 'N/A')}) aligned"
+
+            details = [
+                {
+                    "name": f"WNic Hardware Capabilities & PHY Audit ({phy_name})",
+                    "target": f"{phy_name} ({nic_gen})",
+                    "type": "HARDWARE PHY",
+                    "passed": True,
+                    "status_code": nic_gen,
+                    "latency_ms": 1.2,
+                    "info": f"[{src}] Supported Bands: {bands_str} | Max Width: {max_w} MHz | Antennas: {chains}x{chains} MIMO"
+                },
+                {
+                    "name": "Active Association & Negotiated PHY Link",
+                    "target": f"BSSID {link.get('bssid', 'None')}",
+                    "type": "LINK PHY",
+                    "passed": link_conn and link.get("rssi_dbm", -100) >= -82,
+                    "status_code": link_status,
+                    "latency_ms": 4.5,
+                    "info": link_info
+                },
+                {
+                    "name": "Multi-Band & Per-Channel Spectrum Scan",
+                    "target": f"2.4GHz / 5GHz / 6GHz Spectrum",
+                    "type": "RF SPECTRUM",
+                    "passed": not any(c.get("health") == "FAIL" for c in channels),
+                    "status_code": f"{len(channels)} Channels Scanned",
+                    "latency_ms": 18.3,
+                    "info": f"[{src}] Bands: " + " | ".join([f"{b['band']}: {b['total_aps_observed']} APs ({b['status']})" for b in bands])
+                },
+                {
+                    "name": "Standards Generation Capability Matrix (Wi-Fi 1-7)",
+                    "target": "Standards Board & Band Steering",
+                    "type": "STANDARDS MATRIX",
+                    "passed": len(anomalies) == 0,
+                    "status_code": mat_status,
+                    "latency_ms": 8.1,
+                    "info": mat_info
+                }
+            ]
+            log_lines.extend([
+                f"[INFO] Executed Wi-Fi Multi-Band Hardware & Standards Generation audit via {src}...",
+                f"[OK] WNic Hardware: {nic_gen} | Bands: {bands_str} | Antennas: {chains}x{chains}.",
+                f"[OK] Link Status: {link_status} | Mode: {link.get('standard_generation', 'N/A')}.",
+                f"[INFO] Scanned {len(channels)} total operating channels across spectrum.",
+            ])
+            if anomalies:
+                for a in anomalies:
+                    log_lines.append(f"[WARN] {a.get('description')} -> {a.get('recommendation')}")
+            else:
+                log_lines.append("[OK] Spectrum health and client-to-AP capability matrix verified nominal.")
+        else:
+            src = "CMP Container (sensor SSH unavailable)" if is_edge else "CMP Container"
+            details = [
+                {
+                    "name": "WNic Hardware Capabilities & PHY Audit",
+                    "target": "Local Physical WNic Required",
+                    "type": "HARDWARE PHY",
+                    "passed": False,
+                    "status_code": "No WNic on CMP",
+                    "latency_ms": 0.5,
+                    "info": f"[{src}] Wi-Fi hardware audit requires physical wireless NIC on edge sensor"
+                },
+                {
+                    "name": "Active Association & Negotiated PHY Link",
+                    "target": "wlan0 / wlp1s0",
+                    "type": "LINK PHY",
+                    "passed": False,
+                    "status_code": "Fallback",
+                    "latency_ms": 0.5,
+                    "info": f"[{src}] Edge sensor SSH delegation offline; link state unverified"
+                },
+                {
+                    "name": "Multi-Band & Per-Channel Spectrum Scan",
+                    "target": "2.4GHz / 5GHz / 6GHz Radios",
+                    "type": "RF SPECTRUM",
+                    "passed": False,
+                    "status_code": "Fallback",
+                    "latency_ms": 0.5,
+                    "info": f"[{src}] RF spectrum survey requires wireless interface"
+                }
+            ]
+            log_lines.extend([
+                f"[WARN] Running Wi-Fi Multi-Band audit via {src}...",
+                "[WARN] CMP container lacks 802.11 wireless PHY; audit requires physical edge sensor.",
+                "[INFO] Please configure SSH delegation or check sensor connectivity."
+            ])
     elif tt in ("pcap", "capture"):
         # Trigger PCAP on the physical sensor via SSH
         if is_edge:
@@ -599,7 +748,7 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
                 gw_parts = list(map(int, fallback_gw.split(".")))
                 peer1_ip = f"{gw_parts[0]}.{gw_parts[1]}.{gw_parts[2]}.102"
             except Exception:
-                peer1_ip = f"{fallback_gw[:fallback_gw.rfind('.')]}.102" if "." in fallback_gw else "10.98.2.102"
+                peer1_ip = f"{fallback_gw[:fallback_gw.rfind('.')]}.102" if "." in fallback_gw else "10.0.0.102"
 
             src = "CMP Container (sensor SSH unavailable)" if is_edge else "CMP Container"
             gw_probe = _live_probe_tcp(fallback_gw, 443, timeout=0.3)
@@ -943,10 +1092,24 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
 
     total_latency = sum(d["latency_ms"] for d in details)
     all_passed = all(d.get("passed", True) for d in details)
-    final_status = "PASS" if all_passed else "FAIL"
-    final_state = "GREEN (PASS)" if all_passed else "RED (FAIL)"
+    has_cmp_fallback = any("CMP Container" in str(d.get("info", "")) for d in details)
+
+    if not all_passed:
+        final_status = "FAIL"
+        final_state = "RED (FAIL)"
+    elif has_cmp_fallback:
+        final_status = "WARNING"
+        final_state = "AMBER (WARNING: Sensor Unavailable — Fallback Probed from CMP)"
+        log_lines.append(
+            "[WARN] Edge sensor hardware probe unavailable; results reflect CMP container fallback. "
+            "Status demoted from GREEN to AMBER/WARNING."
+        )
+    else:
+        final_status = "PASS"
+        final_state = "GREEN (PASS)"
 
     log_lines.append(f"[INFO] Diagnostics completed in {total_latency:.2f}ms. State: {final_state}.")
+
 
     return {
         "status": final_status,

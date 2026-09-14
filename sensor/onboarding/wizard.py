@@ -459,6 +459,34 @@ def register_sensor_direct(
 
     return {"success": False, "error": "Unknown response from CMP"}
 
+def authorize_cmp_ssh_key(cmp_url: str) -> bool:
+    """Fetches CMP Ed25519 public key and appends it to ~/.ssh/authorized_keys for passwordless probe delegation."""
+    try:
+        base_url = cmp_url.replace('/api/v1', '')
+        pub_url = f"{base_url}/api/v1/auth/cmp.pub"
+        req = urllib.request.Request(pub_url, headers={"User-Agent": "ONE-EdgeSensor-Wizard/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                pub_key = resp.read().decode("utf-8").strip()
+                if pub_key.startswith("ssh-"):
+                    for home_dir in ["/home/one-sensor", "/root", os.path.expanduser("~")]:
+                        if os.path.isdir(home_dir):
+                            ssh_dir = os.path.join(home_dir, ".ssh")
+                            os.makedirs(ssh_dir, mode=0o700, exist_ok=True)
+                            auth_path = os.path.join(ssh_dir, "authorized_keys")
+                            existing = ""
+                            if os.path.exists(auth_path):
+                                with open(auth_path, "r") as f:
+                                    existing = f.read()
+                            if pub_key not in existing:
+                                with open(auth_path, "a") as f:
+                                    f.write(f"\n{pub_key}\n")
+                            os.chmod(auth_path, 0o600)
+                    return True
+    except Exception:
+        pass
+    return False
+
 def save_sensor_configuration(config: Dict[str, Any], path: Optional[str] = None) -> bool:
     """Writes /etc/sensor/reconciler.json configuration file."""
     target_path = path or CONFIG_PATH
@@ -685,6 +713,9 @@ def run_interactive_wizard():
 
     # STEP 6: Save Configuration & Activate Daemon
     print_step(6, "Finalizing Setup & Systemd Service")
+    if authorize_cmp_ssh_key(cmp_url):
+        print_success("CMP Ed25519 public key authorized for passwordless probe execution")
+
     final_config = {
         "cmp_url": cmp_url,
         "sensor_id": sensor_id,
@@ -768,6 +799,7 @@ def run_non_interactive(args):
     }
 
     if not args.check_only:
+        authorize_cmp_ssh_key(cmp_url)
         save_sensor_configuration(config)
         if is_root():
             manage_systemd_service()

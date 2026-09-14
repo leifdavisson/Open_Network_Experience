@@ -338,7 +338,7 @@ During the development of on-demand diagnostic probes, a fundamental architectur
 - **Resolution:** All on-demand probe handlers were rewritten to use SSH delegation (`_run_remote_sensor_probe()`) to execute scripts directly on the physical sensor, parsing the JSON stdout. This restored architectural truthfulness to the diagnostic data.
 
 ### 13.2 Hardcoded Credentials & Lab Bench Artifacts
-During rapid prototyping, lab bench IP addresses (`10.98.2.125`, `10.98.2.105`) and credentials (`SSH_USER=kern`, `SSH_PASS=Kern1234`) were inadvertently hardcoded into core routing logic, state initializers, and fallbacks.
+During rapid prototyping, lab bench IP addresses and credentials were inadvertently hardcoded into core routing logic, state initializers, and fallbacks.
 - **Lesson:** Hardcoded environment-specific variables create technical debt, security vulnerabilities, and brittle systems that fail when deployed to production or new environments.
 - **Resolution:** A comprehensive credential scrub was performed. All hardcoded IPs were replaced with environment variables (`CMP_HOST`, `CMP_PORT`) injected via `docker-compose.yml`. Passwords were removed from default arguments, and fallback IPs in responses were replaced with `null` or `"unknown"`. The `deploy_bench.sh` script was updated to handle dynamic environment injection without polluting the codebase.
 

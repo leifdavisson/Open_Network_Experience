@@ -922,6 +922,15 @@ export async function updateDiagTargetHint(footprint) {
                 { label: 'Primary SSID (District-WiFi)', val: 'District-WiFi' }
             ]
         },
+        'wifi_multiband': {
+            placeholder: 'e.g. wlp1s0 (leave blank for auto-detected radio)',
+            badge: 'Safe Default: Full 2.4/5/6GHz & Wi-Fi 1-7 Generation Audit',
+            presets: [
+                { label: 'Auto-Detect Radio & Bands', val: '' },
+                { label: 'Interface wlp1s0', val: 'wlp1s0' },
+                { label: 'Interface wlan0', val: 'wlan0' }
+            ]
+        },
         'vlan_isolation': {
             placeholder: 'e.g. 10.98.1.1:443 (Admin Switch)',
             badge: 'Safe Default: East-West Lateral & VLAN Hopping Defense',
@@ -1063,12 +1072,13 @@ export async function executeSelectedDiagnostic() {
             statusPill.className = "result-chip status-online";
             statusPill.style.background = "";
             statusPill.style.color = "";
-            statusPill.innerText = "🟢 PASS (SLA Compliant)";
+            statusPill.innerText = "🟢 PASS (Hardware Edge Verified)";
         } else if (data.status === 'WARNING') {
-            statusPill.className = "result-chip";
-            statusPill.style.background = "rgba(245, 158, 11, 0.15)";
+            statusPill.className = "result-chip status-warning";
+            statusPill.style.background = "rgba(245, 158, 11, 0.2)";
             statusPill.style.color = "var(--warning)";
-            statusPill.innerText = "⚠️ WARNING";
+            statusPill.style.border = "1px solid var(--warning)";
+            statusPill.innerText = "⚠️ WARNING (CMP Fallback — Sensor Unavailable)";
         } else {
             statusPill.className = "result-chip status-offline";
             statusPill.style.background = "";
@@ -1081,10 +1091,16 @@ export async function executeSelectedDiagnostic() {
 
         const rows = (data.details || []).map(d => {
             const rowPassed = d.passed !== undefined ? d.passed : (d.status === 'PASS' || d.status === 'ok');
+            const isFallback = (d.info || '').includes('CMP Container');
             const statusCode = d.status_code || (rowPassed ? '200 OK' : 'Failed');
-            const passBadge = rowPassed ?
-                `<span class="status-pill status-online">✓ ${statusCode}</span>` :
-                `<span class="status-pill status-offline">✗ ${statusCode}</span>`;
+            let passBadge;
+            if (!rowPassed) {
+                passBadge = `<span class="status-pill status-offline">✗ ${statusCode}</span>`;
+            } else if (isFallback) {
+                passBadge = `<span class="status-pill status-warning">⚠ ${statusCode} (Fallback)</span>`;
+            } else {
+                passBadge = `<span class="status-pill status-online">✓ ${statusCode}</span>`;
+            }
             return `
                 <tr>
                     <td><strong>${d.name || d.target || 'Probe Target'}</strong><br><code style="font-size:11px; color:var(--text-muted);">${d.target || d.name || '--'}</code></td>
@@ -1093,6 +1109,7 @@ export async function executeSelectedDiagnostic() {
                     <td><code>${d.latency_ms !== undefined ? d.latency_ms : '--'} ms</code></td>
                     <td style="color:var(--text-muted); font-size:12px;">${d.info || ''}</td>
                 </tr>
+
             `;
         });
         tableBody.innerHTML = rows.length > 0 ? rows.join('') : '<tr><td colspan="5" style="text-align:center;">Action queued on edge sensor.</td></tr>';

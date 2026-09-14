@@ -1,0 +1,288 @@
+#!/usr/bin/env bash
+#
+# Open Network Experience (ONE) - Unified Platform CLI Helper (`./one`)
+#
+# Copyright (C) 2026 Open Network Experience Authors.
+# Licensed under the GNU Affero General Public License v3.0 (AGPLv3).
+# See LICENSE in the project root for full license details.
+#
+# Usage:
+#   ./one cmp [up|down|restart|status|logs]
+#   ./one sensor [add|list|offboard]
+#   ./one reset [--cmp|--sensor <ip>|--all]
+#
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPLOY_DIR="${SCRIPT_DIR}/server/deploy"
+DATA_DIR="${SCRIPT_DIR}/server/data"
+
+# Load .env if present
+if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+    # shellcheck disable=SC1090
+    source "${SCRIPT_DIR}/.env"
+fi
+
+# ANSI Styling
+BOLD='\033[1m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+print_banner() {
+    echo -e "${CYAN}================================================================${NC}"
+    echo -e "${CYAN}  🚀 Open Network Experience (ONE) — Control & Staging Helper   ${NC}"
+    echo -e "${CYAN}================================================================${NC}"
+}
+
+usage() {
+    print_banner
+    echo -e "${BOLD}Usage:${NC} ./one <command> [subcommand] [options]"
+    echo ""
+    echo -e "${BOLD}Commands:${NC}"
+    echo -e "  ${GREEN}cmp up${NC}                   Start CMP services (Docker Compose stack)"
+    echo -e "  ${GREEN}cmp down${NC}                 Stop CMP services"
+    echo -e "  ${GREEN}cmp restart${NC}              Restart CMP services"
+    echo -e "  ${GREEN}cmp status${NC}               Check CMP health, readiness, and running containers"
+    echo -e "  ${GREEN}cmp logs [service]${NC}       Tail logs for CMP services (e.g. cmp-server)"
+    echo ""
+    echo -e "  ${GREEN}sensor add [opts]${NC}        Generate 1-line curl command or onboard sensor via SSH"
+    echo -e "  ${GREEN}sensor list${NC}              List registered sensors and their live health"
+    echo -e "  ${GREEN}sensor offboard <ip>${NC}     De-provision sensor appliance and return to baseline"
+    echo ""
+    echo -e "  ${GREEN}reset [--cmp|--all]${NC}      Wipe state/databases for a pristine re-test"
+    echo ""
+    echo -e "${BOLD}Examples:${NC}"
+    echo "  ./one cmp up"
+    echo "  ./one cmp status"
+    echo "  ./one sensor add --sensor 10.98.2.105"
+    echo "  ./one reset --all"
+    exit 0
+}
+
+# Determine Docker Compose command
+get_compose_cmd() {
+    if docker compose version &>/dev/null; then
+        echo "docker compose"
+    elif docker-compose version &>/dev/null; then
+        echo "docker-compose"
+    else
+        echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' found.${NC}" >&2
+        exit 1
+    fi
+}
+
+cmd_cmp() {
+    local action="${1:-status}"
+    shift || true
+    local compose
+    compose=$(get_compose_cmd)
+
+    case "$action" in
+        up|start)
+            print_banner
+            echo -e "${BLUE}Starting ONE CMP Stack in ${DEPLOY_DIR}...${NC}"
+            mkdir -p "${DATA_DIR}"
+            (cd "${DEPLOY_DIR}" && $compose up -d)
+            echo -e "${GREEN}✓ CMP Services Started.${NC}"
+            echo -e "  Dashboard: ${BOLD}http://localhost:8000${NC}"
+            echo -e "  Grafana:   ${BOLD}http://localhost:3000${NC} (admin/admin)"
+            ;;
+        down|stop)
+            print_banner
+            echo -e "${YELLOW}Stopping ONE CMP Stack...${NC}"
+            (cd "${DEPLOY_DIR}" && $compose down)
+            echo -e "${GREEN}✓ CMP Services Stopped.${NC}"
+            ;;
+        restart)
+            print_banner
+            echo -e "${YELLOW}Restarting ONE CMP Stack...${NC}"
+            (cd "${DEPLOY_DIR}" && $compose restart "$@")
+            echo -e "${GREEN}✓ CMP Services Restarted.${NC}"
+            ;;
+        logs)
+            (cd "${DEPLOY_DIR}" && $compose logs -f "$@")
+            ;;
+        status)
+            print_banner
+            echo -e "${BOLD}Container Status:${NC}"
+            (cd "${DEPLOY_DIR}" && $compose ps)
+            echo ""
+            echo -e "${BOLD}Health Probe Check:${NC}"
+            local health_url="http://localhost:8000/api/v1/health"
+            if command -v curl &>/dev/null; then
+                local res
+                res=$(curl -sSL --connect-timeout 2 "$health_url" 2>/dev/null || true)
+                if [[ -n "$res" ]]; then
+                    echo -e "  CMP API:   ${GREEN}ONLINE${NC}"
+                    echo -e "  Response:  ${CYAN}${res}${NC}"
+                else
+                    echo -e "  CMP API:   ${RED}OFFLINE or UNREACHABLE${NC} (Check 'cmp up' or logs)"
+                fi
+            fi
+            ;;
+        *)
+            echo -e "${RED}Unknown cmp command: '${action}'${NC}"
+            echo "Available: up, down, restart, status, logs"
+            exit 1
+            ;;
+    esac
+}
+
+cmd_sensor() {
+    local action="${1:-list}"
+    shift || true
+
+    case "$action" in
+        add)
+            print_banner
+            local target_sensor=""
+            local site_name="Main Campus"
+            local room_name="Room 101"
+            local cmp_ip="${CMP_HOST:-}"
+
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --sensor|-s) target_sensor="$2"; shift 2 ;;
+                    --site) site_name="$2"; shift 2 ;;
+                    --room) room_name="$2"; shift 2 ;;
+                    --cmp) cmp_ip="$2"; shift 2 ;;
+                    *) shift ;;
+                esac
+            done
+
+            if [[ -z "$cmp_ip" ]]; then
+                # Auto-detect local IP reachable
+                cmp_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
+            fi
+
+            echo -e "${BOLD}Option 1: 1-Line Zero-Touch Terminal Command (Run on Edge Sensor)${NC}"
+            echo -e "Copy and paste this command onto your sensor terminal / SSH session:"
+            echo ""
+            echo -e "  ${YELLOW}curl -sSL http://${cmp_ip}:8000/install.sh | sudo bash -s -- --site \"${site_name}\" --room \"${room_name}\"${NC}"
+            echo ""
+            echo -e "${BOLD}Option 2: Interactive Technician Wizard (one-wizard)${NC}"
+            echo -e "  ${YELLOW}curl -sSL http://${cmp_ip}:8000/install.sh | sudo bash -s -- --wizard${NC}"
+            echo ""
+            echo -e "${BOLD}Option 3: USB Offline Staging Kit${NC}"
+            echo -e "Download the offline staging bundle from CMP:"
+            echo -e "  ${BLUE}http://${cmp_ip}:8000/api/v1/onboarding/usb-pack?site=MainCampus${NC}"
+            echo ""
+
+            if [[ -n "$target_sensor" ]]; then
+                echo -e "${BLUE}Target Sensor IP specified: ${target_sensor}${NC}"
+                read -r -p "Deploy automatically over SSH to ${target_sensor}? [y/N]: " CONFIRM || CONFIRM="n"
+                if [[ "$CONFIRM" =~ ^[yY] ]]; then
+                    "${SCRIPT_DIR}/scripts/deploy_bench.sh" --sensor "$target_sensor"
+                fi
+            fi
+            ;;
+        list)
+            print_banner
+            local cmp_ip="${CMP_HOST:-127.0.0.1}"
+            echo -e "${BOLD}Querying Registered Edge Sensors from CMP...${NC}"
+            if command -v curl &>/dev/null; then
+                local res
+                res=$(curl -sSL --connect-timeout 2 "http://${cmp_ip}:8000/api/v1/sensors" 2>/dev/null || true)
+                if [[ -n "$res" ]]; then
+                    if command -v jq &>/dev/null; then
+                        echo "$res" | jq -r '.[] | "• \(.sensor_id) | \(.hostname // "unknown") | \(.location.site // "unknown") / \(.location.room // "") | Status: \(.status) | IP: \(.ip_address // "N/A")"' 2>/dev/null || echo "$res"
+                    else
+                        echo "$res"
+                    fi
+                else
+                    echo -e "${RED}Unable to query CMP sensors at http://${cmp_ip}:8000/api/v1/sensors${NC}"
+                fi
+            fi
+            ;;
+        offboard)
+            if [[ $# -lt 1 ]]; then
+                echo -e "${RED}Usage: ./one sensor offboard <SENSOR_IP> [USERNAME] [CREDENTIALS_FILE]${NC}"
+                exit 1
+            fi
+            local dev_ip="$1"
+            local user="${2:-${SSH_USER:-sensor}}"
+            local cred_file="${3:-}"
+
+            if [[ -z "$cred_file" ]]; then
+                # Check for CMP private key or password
+                if [[ -f "${DATA_DIR}/id_ed25519" ]]; then
+                    cred_file="${DATA_DIR}/id_ed25519"
+                elif [[ -n "${SSH_PASS:-}" ]]; then
+                    local tmp_pass="/tmp/.one_sensor_pass_tmp"
+                    echo "SSH_PASS=${SSH_PASS}" > "$tmp_pass"
+                    chmod 0600 "$tmp_pass"
+                    cred_file="$tmp_pass"
+                else
+                    echo -e "${RED}Error: Provide credentials file or set SSH_PASS in .env${NC}" >&2
+                    exit 1
+                fi
+            fi
+
+            "${SCRIPT_DIR}/scripts/offboard.sh" "$dev_ip" "$user" "$cred_file" --wipe
+            ;;
+        *)
+            echo -e "${RED}Unknown sensor command: '${action}'${NC}"
+            echo "Available: add, list, offboard"
+            exit 1
+            ;;
+    esac
+}
+
+cmd_reset() {
+    print_banner
+    local mode="${1:---help}"
+    shift || true
+
+    case "$mode" in
+        --cmp|cmp)
+            echo -e "${YELLOW}Wiping local CMP Docker containers, volumes, and SQLite database...${NC}"
+            local compose
+            compose=$(get_compose_cmd)
+            (cd "${DEPLOY_DIR}" && $compose down -v 2>/dev/null || true)
+            rm -rf "${DATA_DIR}/"* 2>/dev/null || true
+            echo -e "${GREEN}✓ Local CMP environment reset complete.${NC}"
+            ;;
+        --all|all|bench)
+            echo -e "${RED}${BOLD}Resetting complete lab bench (CMP and test sensor nodes)...${NC}"
+            "${SCRIPT_DIR}/scripts/reset_bench.sh" "$@"
+            ;;
+        *)
+            echo -e "${BOLD}Usage:${NC} ./one reset [--cmp | --all]"
+            echo "  --cmp: Reset only the local CMP Docker stack and database"
+            echo "  --all: Reset the entire lab bench via scripts/reset_bench.sh"
+            exit 1
+            ;;
+    esac
+}
+
+# Root Command Dispatch
+if [[ $# -eq 0 ]]; then
+    usage
+fi
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    cmp)
+        cmd_cmp "$@"
+        ;;
+    sensor)
+        cmd_sensor "$@"
+        ;;
+    reset)
+        cmd_reset "$@"
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    *)
+        echo -e "${RED}Unknown command: '${COMMAND}'${NC}"
+        usage
+        ;;
+esac
