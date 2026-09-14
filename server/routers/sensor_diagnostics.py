@@ -207,8 +207,11 @@ def _run_remote_sensor_probe(sensor_ip: str | None, cmd: str, timeout_sec: float
     ssh_pass = os.environ.get("SSH_PASS", "")
 
     # Priority 1: Zero-trust passwordless Ed25519 keypair delegation
-    key_path = os.environ.get("SSH_KEY_PATH", "")
-    if not key_path or not os.path.exists(key_path):
+    explicit_key = os.environ.get("SSH_KEY_PATH")
+    if explicit_key is not None:
+        key_path = explicit_key if os.path.exists(explicit_key) else ""
+    else:
+        key_path = ""
         for candidate in ["/app/data/id_ed25519", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "id_ed25519"))]:
             if os.path.exists(candidate):
                 key_path = candidate

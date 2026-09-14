@@ -55,7 +55,7 @@ async def health_check():
     delegation_ok = bool(ssh_pass) or has_key
     return {
         "status": "ok",
-        "version": "0.6.1",
+        "version": "0.7.8",
         "timestamp": int(time.time()),
         "active_sensors": len(SENSORS_DB),
         "district": "Unified School District",

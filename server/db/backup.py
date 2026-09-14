@@ -31,7 +31,7 @@ def export_backup_json() -> dict:
 
     backup_payload = {
         "platform": "Open Network Experience",
-        "version": "0.6.1",
+        "version": "0.7.8",
         "exported_at": int(time.time()),
         "export_date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "sensors": sensors,

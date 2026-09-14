@@ -251,7 +251,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Open Network Experience (ONE) — Central Monitoring Platform API",
     description="Zero-Trust High-Assurance Control Plane for Edge Sensors & Chromebook Fleet",
-    version="0.6.1",
+    version="0.7.8",
     lifespan=lifespan
 )
 
