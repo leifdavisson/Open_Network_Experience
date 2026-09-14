@@ -379,6 +379,12 @@ cat << EOF > /etc/sensor/reconciler.json
 EOF
 echo -e "  • Sensor Config written to /etc/sensor/reconciler.json: ${GREEN}OK${NC}"
 
+if id -u "$ONE_USER" >/dev/null 2>&1; then
+    chown -R "${ONE_USER}:${ONE_USER}" /etc/sensor /etc/wpa_supplicant /var/lib/sensor /var/lib/node_exporter 2>/dev/null || true
+    chmod 664 /etc/sensor/reconciler.json 2>/dev/null || true
+    chmod -R 775 /etc/wpa_supplicant 2>/dev/null || true
+fi
+
 # Install and Enable Systemd Service
 cat << EOF > /etc/systemd/system/sensor-reconciler.service
 [Unit]
