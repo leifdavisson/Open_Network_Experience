@@ -249,6 +249,7 @@ PROBE_BINARIES=(
     "caaspp_readiness.py"
     "iperf3_runner.py"
     "wifi_dhcp_exporter.py"
+    "wifi_multiband_probe.py"
     "rrm_darrp_monitor.py"
     "pcap_trigger.py"
     "evidence_collector.py"
@@ -257,11 +258,16 @@ PROBE_BINARIES=(
     "voip_jitter_probe.py"
     "custom_probe_runner.py"
     "gps_location_collector.py"
+    "m365_synthetic_probe.py"
+    "windows_update_probe.py"
+    "clever_portal_probe.py"
+    "lightspeed_filter_probe.py"
+    "ringcentral_qoe_probe.py"
 )
 for bin in "${PROBE_BINARIES[@]}"; do
     sudo rm -f "/usr/local/bin/${bin}"
 done
-echo "  ✓ Purged 15 prober binaries from /usr/local/bin"
+echo "  ✓ Purged ${#PROBE_BINARIES[@]} prober binaries from /usr/local/bin"
 
 if [[ -f /etc/sensor/reconciler.json ]]; then
     if command -v shred &>/dev/null; then

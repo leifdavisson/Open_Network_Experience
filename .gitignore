@@ -169,3 +169,10 @@ desktop.ini
 .vscode/
 *.sublime-project
 *.sublime-workspace
+
+# ------------------------------------------------------------------------------
+# 10. Local E2E & UAT Artifacts (Prevents internal test runs / IPs leaking)
+# ------------------------------------------------------------------------------
+uat-results/
+e2e/
+

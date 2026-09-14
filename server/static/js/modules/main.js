@@ -1020,6 +1020,27 @@ async function loadDashboardData() {
             console.warn("Could not load evidence data:", e);
         }
 
+        try {
+            const resHealth = await apiClient('/api/v1/health');
+            if (resHealth.ok) {
+                const healthData = await resHealth.json();
+                const banner = document.getElementById('cmp-env-warning-banner');
+                const textEl = document.getElementById('cmp-env-warning-text');
+                if (banner) {
+                    if (healthData.env_configured === false) {
+                        banner.style.display = 'flex';
+                        if (textEl && healthData.env_warnings && healthData.env_warnings.length > 0) {
+                            textEl.textContent = healthData.env_warnings[0];
+                        }
+                    } else {
+                        banner.style.display = 'none';
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Could not check CMP health/env status:", e);
+        }
+
         renderDashboard(SENSORS_CACHE, probes, liveStats, CHROMEBOOKS_CACHE, ROAMING_TRAIL_CACHE);
         renderAnalyticsCharts(liveStats);
         loadAlertCenterData();
@@ -1135,18 +1156,50 @@ function updateBootstrapCommand() {
 function copyBootstrapCommand() {
     const previewEl = document.getElementById('ob-command-preview');
     if (!previewEl) return;
-    navigator.clipboard.writeText(previewEl.innerText);
+    const text = previewEl.innerText;
     const btn = document.getElementById('btn-copy-bootstrap');
-    if (btn) {
-        const originalText = btn.innerText;
-        btn.innerText = '✔ Copied!';
-        btn.style.background = 'var(--success)';
-        setTimeout(() => {
-            btn.innerText = originalText;
-            btn.style.background = 'var(--accent)';
-        }, 2000);
+
+    function showSuccess() {
+        if (btn) {
+            const originalText = btn.innerText;
+            btn.innerText = '✔ Copied!';
+            btn.style.background = 'var(--success)';
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = 'var(--accent)';
+            }, 2000);
+        }
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(showSuccess).catch(() => fallbackCopy(text));
+    } else {
+        fallbackCopy(text);
+    }
+
+    function fallbackCopy(str) {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = str;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+                showSuccess();
+            } else {
+                prompt("Press Ctrl+C to copy sensor bootstrap command:", str);
+            }
+        } catch (err) {
+            prompt("Press Ctrl+C to copy sensor bootstrap command:", str);
+        }
     }
 }
+
 
 function downloadUsbKit() {
     const campus = (document.getElementById('ob-campus')?.value || '').trim();

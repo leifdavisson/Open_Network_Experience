@@ -99,9 +99,19 @@
                 <a href="/docs" target="_blank" class="btn btn-outline btn-sm">📖 Swagger ↗</a>
             </div>
         </header>
-
+ 
+        <!-- CMP Environment Status Alert Banner -->
+        <div id="cmp-env-warning-banner" style="display:none; background:rgba(245,158,11,0.15); border-bottom:1px solid var(--warning); color:var(--warning); padding:10px 24px; font-size:13px; font-weight:600; display:none; align-items:center; justify-content:space-between; gap:12px; z-index:100;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:16px;">⚠️</span>
+                <span id="cmp-env-warning-text">Environment Incomplete: Edge sensor SSH delegation is not configured. On-demand probes will run via CMP container fallback.</span>
+            </div>
+            <a href="/docs" target="_blank" class="btn btn-sm btn-outline" style="color:var(--warning); border-color:var(--warning); white-space:nowrap;">View Configuration Guide</a>
+        </div>
+ 
         <!-- Dynamic Content Body -->
         <main class="content-area">
+
 
             <!-- VIEW 1: MONITOR - NOC OVERVIEW (SLIDESHOW PRESENTATION MODE) -->
             <div class="view-section active-view" id="view-monitor-noc">
@@ -556,25 +566,41 @@
                         <div class="form-group">
                             <label>2. Diagnostic Probe / Action</label>
                             <select id="diag-test-select" onchange="updateDiagTargetHint()">
-                                <optgroup label="Built-in Standard Tests">
+                                <optgroup label="🚀 Comprehensive Suites">
                                     <option value="all">🚀 Run Full 7-Layer OSI & SaaS Diagnostic Suite</option>
-                                    <option value="speedtest">📊 iPerf3 Bandwidth Throughput Test</option>
-                                    <option value="caaspp">🎓 CAASPP / Cambium TDS State Testing Readiness</option>
-                                    <option value="dns">🌐 Multi-Resolver DNS Benchmark (Internal + Public)</option>
+                                </optgroup>
+                                <optgroup label="📶 Wi-Fi & RF Spectrum">
+                                    <option value="wifi_multiband">📶 Wi-Fi Multi-Band (2.4/5/6GHz) & Standards (Wi-Fi 1-7) Audit</option>
+                                    <option value="wifi_flapping">📡 Wi-Fi RF Flapping & Dwell Test (802.11k/v/r)</option>
+                                </optgroup>
+                                <optgroup label="🏥 Core Infrastructure & Health (L1 - L4)">
                                     <option value="gateway">🔍 Security Gateway Latency (eno1 vs wlp1s0)</option>
-                                    <option value="canvas">📚 Canvas LMS (Instructure) Synthetic Probe</option>
+                                    <option value="dhcp">⏱️ DHCP DORA 4-Way Lease Timing</option>
+                                    <option value="dns">🌐 Multi-Resolver DNS Benchmark (Internal + Public)</option>
+                                    <option value="speedtest">📊 iPerf3 Bandwidth Throughput Test</option>
+                                    <option value="captive_portal">🚪 Captive Portal & Walled-Garden Egress Check</option>
+                                </optgroup>
+                                <optgroup label="🔒 Security & Zero Trust Isolation">
+                                    <option value="client_isolation">🛡️ Wi-Fi Client Isolation & Intra-BSS Peer Defense</option>
+                                    <option value="vlan_isolation">🔒 East-West Lateral VLAN Isolation & Subnet Escape Check</option>
+                                </optgroup>
+                                <optgroup label="📜 Compliance & Content Filtering">
+                                    <option value="cipa">🛡️ CIPA Compliance Content Filter Probe</option>
+                                    <option value="caaspp">🎓 CAASPP / Cambium TDS State Testing Readiness</option>
+                                </optgroup>
+                                <optgroup label="☁️ SaaS, Collaboration & Voice">
                                     <option value="classroom">💻 Google Classroom & Docs Probe</option>
+                                    <option value="m365">🏢 Microsoft 365 & Teams Connectivity Probe</option>
+                                    <option value="canvas">📚 Canvas LMS (Instructure) Synthetic Probe</option>
                                     <option value="iready">📈 i-Ready Assessment Portal Probe</option>
                                     <option value="ringcentral">📞 RingCentral UCaaS SIP & Voice Quality SLA</option>
                                     <option value="zoom">🎥 Zoom Real-Time RTP Jitter & MOS Score</option>
-                                    <option value="client_isolation">🛡️ Wi-Fi Client Isolation & Intra-BSS Peer Defense</option>
-                                    <option value="vlan_isolation">🔒 East-West Lateral VLAN Isolation & Subnet Escape Check</option>
-                                    <option value="cipa">🛡️ CIPA Compliance Content Filter Probe</option>
-                                    <option value="dhcp">⏱️ DHCP DORA 4-Way Lease Timing</option>
-                                    <option value="wifi_flapping">📡 Wi-Fi RF Flapping & Dwell Test</option>
+                                    <option value="windows_update">🪟 Windows Update & Delivery Optimization</option>
+                                </optgroup>
+                                <optgroup label="📦 Forensics & On-Demand Actions">
                                     <option value="pcap">⚡ 60-Second Deep Packet Capture (PCAP)</option>
                                 </optgroup>
-                                <optgroup label="Custom EasyBuilder Probes" id="diag-custom-probes-optgroup">
+                                <optgroup label="🛠️ Custom EasyBuilder Probes" id="diag-custom-probes-optgroup">
                                 </optgroup>
                             </select>
                         </div>
@@ -2030,23 +2056,32 @@
                 <div class="form-group">
                     <label>Target Diagnostic Probe</label>
                     <select id="sch-probe" required data-change="handleProbeSelectionChange(this.value)">
-                        <optgroup label="Core Built-In Diagnostic Probes">
-                            <option value="caaspp_readiness">🎓 CAASPP / Cambium Testing Readiness (caaspp_readiness.py)</option>
-                            <option value="m365_connectivity">☁️ Microsoft 365 & Office 365 A5 (m365_connectivity_probe.py)</option>
-                            <option value="voip_jitter">🎥 VoIP & Zoom RTP Stream Monitor (voip_jitter_probe.py)</option>
+                        <optgroup label="📶 Wi-Fi & RF Spectrum">
+                            <option value="wifi_multiband">📶 Wi-Fi Multi-Band (2.4/5/6GHz) & Standards (Wi-Fi 1-7) Audit</option>
+                            <option value="rrm_darrp">📡 Wi-Fi RF Flapping & DARRP Monitor (rrm_darrp_monitor.py)</option>
+                            <option value="wifi_dhcp">⏱️ Wi-Fi 802.1X Auth & DHCP DORA Timer (wifi_dhcp_exporter.py)</option>
+                        </optgroup>
+                        <optgroup label="🏥 Core Infrastructure & Health (L1 - L4)">
                             <option value="dual_nic_ping">🌐 Dual-NIC Gateway Latency Ping (eth0 vs wlan0)</option>
                             <option value="dns_multi_resolver">🔍 Multi-Resolver DNS Health Probe (dns_multi_resolver.py)</option>
-                            <option value="cipa_compliance">🛡️ CIPA Safety & Content Filter Audit (cipa_compliance.py)</option>
-                            <option value="wifi_dhcp">⏱️ Wi-Fi 802.1X Auth & DHCP DORA Timer (wifi_dhcp_exporter.py)</option>
-                            <option value="rrm_darrp">📡 Wi-Fi RF Flapping & DARRP Monitor (rrm_darrp_monitor.py)</option>
-                            <option value="segmentation">🔒 East-West Lateral VLAN Isolation Sweep (segmentation_prober.py)</option>
-                            <option value="windows_update_do">🔄 Windows Update, BITS & Delivery Optimization (windows_update_do_probe.py)</option>
-                            <option value="google_workspace">🌐 Google Workspace & ChromeOS (google_workspace_chromeos_probe.py)</option>
-                            <option value="clever_identity">🎓 Clever K-12 Identity, Badges & SSO (clever_identity_probe.py)</option>
-                            <option value="lightspeed_filter">🛡️ Lightspeed Systems Filter & Classroom (lightspeed_filter_probe.py)</option>
                             <option value="iperf3">📊 Off-Peak iperf3 Bandwidth Throughput (iperf3_runner.py)</option>
                         </optgroup>
-                        <optgroup label="WYSIWYG EasyBuilder Custom Probes" id="sch-custom-probes-optgroup">
+                        <optgroup label="🔒 Security & Zero Trust Isolation">
+                            <option value="segmentation">🔒 East-West Lateral VLAN Isolation Sweep (segmentation_prober.py)</option>
+                        </optgroup>
+                        <optgroup label="📜 Compliance & Content Filtering">
+                            <option value="cipa_compliance">🛡️ CIPA Safety & Content Filter Audit (cipa_compliance.py)</option>
+                            <option value="lightspeed_filter">🛡️ Lightspeed Systems Filter & Classroom (lightspeed_filter_probe.py)</option>
+                            <option value="caaspp_readiness">🎓 CAASPP / Cambium Testing Readiness (caaspp_readiness.py)</option>
+                        </optgroup>
+                        <optgroup label="☁️ SaaS, Collaboration & Voice">
+                            <option value="google_workspace">🌐 Google Workspace & ChromeOS (google_workspace_chromeos_probe.py)</option>
+                            <option value="m365_connectivity">☁️ Microsoft 365 & Office 365 A5 (m365_connectivity_probe.py)</option>
+                            <option value="clever_identity">🎓 Clever K-12 Identity, Badges & SSO (clever_identity_probe.py)</option>
+                            <option value="voip_jitter">🎥 VoIP & Zoom RTP Stream Monitor (voip_jitter_probe.py)</option>
+                            <option value="windows_update_do">🔄 Windows Update, BITS & Delivery Optimization (windows_update_do_probe.py)</option>
+                        </optgroup>
+                        <optgroup label="🛠️ WYSIWYG EasyBuilder Custom Probes" id="sch-custom-probes-optgroup">
                             <!-- Populated dynamically -->
                         </optgroup>
                     </select>

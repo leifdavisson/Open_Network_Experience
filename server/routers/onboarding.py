@@ -25,8 +25,46 @@ def _sanitize_shell_param(value: Optional[str]) -> Optional[str]:
     """
     if value is None:
         return None
-    # shlex.quote wraps the value in single quotes and escapes internal single quotes
     return shlex.quote(value)
+
+
+def get_or_create_cmp_ssh_key() -> tuple[str, str]:
+    """Ensures an Ed25519 SSH keypair exists for zero-trust passwordless edge sensor delegation.
+    Returns (private_key_path, public_key_content)."""
+    data_dir = os.environ.get("DATA_DIR", "/app/data")
+    if not os.path.exists(data_dir):
+        data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+    os.makedirs(data_dir, exist_ok=True)
+    priv_path = os.path.join(data_dir, "id_ed25519")
+    pub_path = f"{priv_path}.pub"
+
+    if not os.path.exists(priv_path) or not os.path.exists(pub_path):
+        import subprocess
+        try:
+            subprocess.run(
+                ["ssh-keygen", "-t", "ed25519", "-N", "", "-C", "one-cmp-delegation", "-f", priv_path],
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            os.chmod(priv_path, 0o600)
+        except Exception:
+            pass
+
+    pub_content = ""
+    if os.path.exists(pub_path):
+        try:
+            with open(pub_path, "r") as f:
+                pub_content = f.read().strip()
+        except Exception:
+            pass
+    return priv_path, pub_content
+
+
+@router.get("/api/v1/auth/cmp.pub", summary="CMP Public SSH Key for Edge Sensor Delegation")
+async def get_cmp_public_key():
+    """Serves the CMP server's Ed25519 public key for passwordless sensor authorization."""
+    _, pub = get_or_create_cmp_ssh_key()
+    return PlainTextResponse(pub, media_type="text/plain")
+
 
 @router.get("/install.sh", summary="1-Line Sensor SSH Installer Script")
 @router.get("/bootstrap.sh", summary="1-Line Sensor SSH Installer Script")
@@ -48,12 +86,14 @@ async def get_install_script(
     base_url = str(request.base_url).rstrip("/")
     sensor_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sensor"))
     install_file = os.path.join(sensor_root, "install.sh")
-    import shlex
 
     if os.path.exists(install_file):
         with open(install_file, "r") as f:
             content = f.read()
             content = content.replace("http://central-monitoring-platform.local/api/v1", f"{base_url}/api/v1")
+            _, cmp_pub = get_or_create_cmp_ssh_key()
+            if cmp_pub:
+                content = content.replace('CMP_SSH_PUB_KEY=""', f'CMP_SSH_PUB_KEY={shlex.quote(cmp_pub)}')
             target_site = site or campus
             if target_site:
                 content = content.replace('SITE_NAME="Main Campus"', f'SITE_NAME={shlex.quote(target_site)}')
@@ -196,7 +236,14 @@ HOW TO RAPID-STAGE SENSORS:
             ("dns_multi_resolver_probe.py", os.path.join(sensor_dir, "dns_multi_resolver_probe.py")),
             ("voip_jitter_probe.py", os.path.join(sensor_dir, "voip_jitter_probe.py")),
             ("custom_probe_runner.py", os.path.join(sensor_dir, "custom_probe_runner.py")),
-            ("gps_location_collector.py", os.path.join(sensor_dir, "gps_location_collector.py"))
+            ("gps_location_collector.py", os.path.join(sensor_dir, "gps_location_collector.py")),
+            ("wifi_multiband_probe.py", os.path.join(sensor_dir, "wifi_multiband_probe.py")),
+            ("m365_connectivity_probe.py", os.path.join(sensor_dir, "m365_connectivity_probe.py")),
+            ("windows_update_do_probe.py", os.path.join(sensor_dir, "windows_update_do_probe.py")),
+            ("google_workspace_chromeos_probe.py", os.path.join(sensor_dir, "google_workspace_chromeos_probe.py")),
+            ("clever_identity_probe.py", os.path.join(sensor_dir, "clever_identity_probe.py")),
+            ("lightspeed_filter_probe.py", os.path.join(sensor_dir, "lightspeed_filter_probe.py")),
+            ("ringcentral_probe.py", os.path.join(sensor_dir, "ringcentral_probe.py"))
         ]
 
         for arcname, fpath in files_to_pack:

@@ -42,14 +42,31 @@ def query_vm_instant(query_str: str) -> List[dict]:
 @router.get("/api/v1/health", summary="CMP Health & Readiness Probe")
 @router.get("/health", summary="CMP Health & Readiness Probe")
 async def health_check():
-    """Returns platform status, active sensors count, and server timestamp."""
+    """Returns platform status, active sensors count, and server configuration health."""
+    ssh_pass = os.environ.get("SSH_PASS", "")
+    ssh_user = os.environ.get("SSH_USER", "")
+    key_path = os.environ.get("SSH_KEY_PATH", "")
+    if not key_path or not os.path.exists(key_path):
+        for candidate in ["/app/data/id_ed25519", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "id_ed25519"))]:
+            if os.path.exists(candidate):
+                key_path = candidate
+                break
+    has_key = bool(key_path and os.path.exists(key_path))
+    delegation_ok = bool(ssh_pass) or has_key
     return {
         "status": "ok",
-        "version": "0.6.1",
+        "version": "0.7.8",
         "timestamp": int(time.time()),
         "active_sensors": len(SENSORS_DB),
-        "district": "Unified School District"
+        "district": "Unified School District",
+        "env_configured": delegation_ok,
+        "ssh_delegation_configured": delegation_ok,
+        "delegation_mode": "key" if has_key else ("password" if ssh_pass else "none"),
+        "env_warnings": [] if delegation_ok else [
+            "Neither SSH private key nor SSH_PASS is configured. Edge sensor remote delegation is disabled, forcing probes to run on CMP fallback."
+        ]
     }
+
 
 @router.get("/api/v1/wallboard/live-stats", summary="Live Wallboard Telemetry & PromQL Aggregation")
 async def get_wallboard_live_stats():

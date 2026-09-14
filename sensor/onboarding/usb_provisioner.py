@@ -283,11 +283,14 @@ def deploy_bundled_probe_scripts(usb_root: str, target_bin_dir: str = "/usr/loca
     ]
 
     target_scripts = [
-        "reconciler.py", "wizard.py", "cipa_compliance.py", "caaspp_readiness.py",
-        "iperf3_runner.py", "wifi_dhcp_exporter.py", "rrm_darrp_monitor.py",
-        "pcap_trigger.py", "evidence_collector.py", "segmentation_prober.py",
-        "dns_multi_resolver_probe.py", "voip_jitter_probe.py", "custom_probe_runner.py",
-        "gps_location_collector.py"
+        "reconciler.py", "wizard.py", "wifi_multiband_probe.py", "cipa_compliance.py",
+        "caaspp_readiness.py", "iperf3_runner.py", "wifi_dhcp_exporter.py",
+        "rrm_darrp_monitor.py", "pcap_trigger.py", "evidence_collector.py",
+        "segmentation_prober.py", "dns_multi_resolver_probe.py", "voip_jitter_probe.py",
+        "custom_probe_runner.py", "gps_location_collector.py",
+        "m365_connectivity_probe.py", "windows_update_do_probe.py",
+        "google_workspace_chromeos_probe.py", "clever_identity_probe.py",
+        "lightspeed_filter_probe.py", "ringcentral_probe.py"
     ]
 
     os.makedirs(target_bin_dir, exist_ok=True)
@@ -310,6 +313,17 @@ def deploy_bundled_probe_scripts(usb_root: str, target_bin_dir: str = "/usr/loca
                     deployed_count += 1
                 except Exception:
                     pass
+
+    # Configure non-interactive sudoers for hardware diagnostic probers
+    try:
+        sudoers_dir = "/etc/sudoers.d"
+        if os.path.exists(sudoers_dir):
+            sudoers_file = os.path.join(sudoers_dir, "99-one-sensor-probes")
+            with open(sudoers_file, "w") as sf:
+                sf.write("# Open Network Experience: allow non-interactive hardware diagnostics\nALL ALL=(ALL) NOPASSWD: /usr/sbin/iw, /usr/bin/iw, /usr/bin/tcpdump, /usr/sbin/tcpdump, /usr/bin/python3 /usr/local/bin/*\n")
+            os.chmod(sudoers_file, 0o440)
+    except Exception:
+        pass
 
     # Create one-wizard symlink
     wizard_bin = os.path.join(target_bin_dir, "wizard.py")

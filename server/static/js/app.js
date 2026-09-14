@@ -2423,6 +2423,27 @@
                     console.warn("Could not load evidence data:", e);
                 }
 
+                try {
+                    const resHealth = await fetch('/api/v1/health');
+                    if (resHealth.ok) {
+                        const healthData = await resHealth.json();
+                        const banner = document.getElementById('cmp-env-warning-banner');
+                        const textEl = document.getElementById('cmp-env-warning-text');
+                        if (banner) {
+                            if (healthData.env_configured === false) {
+                                banner.style.display = 'flex';
+                                if (textEl && healthData.env_warnings && healthData.env_warnings.length > 0) {
+                                    textEl.textContent = healthData.env_warnings[0];
+                                }
+                            } else {
+                                banner.style.display = 'none';
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Could not check CMP health/env status:", e);
+                }
+
                 renderDashboard(SENSORS_CACHE, probes, liveStats, CHROMEBOOKS_CACHE, ROAMING_TRAIL_CACHE);
                 renderAnalyticsCharts(liveStats);
                 loadAlertCenterData();
@@ -3334,6 +3355,15 @@
                         { label: 'Primary SSID (District-WiFi)', val: 'District-WiFi' }
                     ]
                 },
+                'wifi_multiband': {
+                    placeholder: 'e.g. wlp1s0 (leave blank for auto-detected radio)',
+                    badge: 'Safe Default: Full 2.4/5/6GHz & Wi-Fi 1-7 Generation Audit',
+                    presets: [
+                        { label: 'Auto-Detect Radio & Bands', val: '' },
+                        { label: 'Interface wlp1s0', val: 'wlp1s0' },
+                        { label: 'Interface wlan0', val: 'wlan0' }
+                    ]
+                },
                 'vlan_isolation': {
                     placeholder: 'e.g. 10.98.1.1:443 (Admin Switch)',
                     badge: 'Safe Default: East-West Lateral & VLAN Hopping Defense',
@@ -3457,12 +3487,13 @@
                     statusPill.className = "result-chip status-online";
                     statusPill.style.background = "";
                     statusPill.style.color = "";
-                    statusPill.innerText = "🟢 PASS (SLA Compliant)";
+                    statusPill.innerText = "🟢 PASS (Hardware Edge Verified)";
                 } else if (data.status === 'WARNING') {
-                    statusPill.className = "result-chip";
-                    statusPill.style.background = "rgba(245, 158, 11, 0.15)";
+                    statusPill.className = "result-chip status-warning";
+                    statusPill.style.background = "rgba(245, 158, 11, 0.2)";
                     statusPill.style.color = "var(--warning)";
-                    statusPill.innerText = "⚠️ WARNING";
+                    statusPill.style.border = "1px solid var(--warning)";
+                    statusPill.innerText = "⚠️ WARNING (CMP Fallback — Sensor Unavailable)";
                 } else {
                     statusPill.className = "result-chip status-offline";
                     statusPill.style.background = "";
@@ -3475,10 +3506,16 @@
 
                 const rows = (data.details || []).map(d => {
                     const rowPassed = d.passed !== undefined ? d.passed : (d.status === 'PASS' || d.status === 'ok');
+                    const isFallback = (d.info || '').includes('CMP Container');
                     const statusCode = d.status_code || (rowPassed ? '200 OK' : 'Failed');
-                    const passBadge = rowPassed ?
-                        `<span class="status-pill status-online">✓ ${statusCode}</span>` :
-                        `<span class="status-pill status-offline">✗ ${statusCode}</span>`;
+                    let passBadge;
+                    if (!rowPassed) {
+                        passBadge = `<span class="status-pill status-offline">✗ ${statusCode}</span>`;
+                    } else if (isFallback) {
+                        passBadge = `<span class="status-pill status-warning">⚠ ${statusCode} (Fallback)</span>`;
+                    } else {
+                        passBadge = `<span class="status-pill status-online">✓ ${statusCode}</span>`;
+                    }
                     return `
                         <tr>
                             <td><strong>${d.name || d.target || 'Probe Target'}</strong><br><code style="font-size:11px; color:var(--text-muted);">${d.target || d.name || '--'}</code></td>
@@ -3489,6 +3526,7 @@
                         </tr>
                     `;
                 });
+
                 tableBody.innerHTML = rows.length > 0 ? rows.join('') : '<tr><td colspan="5" style="text-align:center;">Action queued on edge sensor.</td></tr>';
             } catch (err) {
                 runBtn.disabled = false;
@@ -3793,18 +3831,50 @@
         function copyBootstrapCommand() {
             const previewEl = document.getElementById('ob-command-preview');
             if (!previewEl) return;
-            navigator.clipboard.writeText(previewEl.innerText);
+            const text = previewEl.innerText;
             const btn = document.getElementById('btn-copy-bootstrap');
-            if (btn) {
-                const originalText = btn.innerText;
-                btn.innerText = '✔ Copied!';
-                btn.style.background = 'var(--success)';
-                setTimeout(() => {
-                    btn.innerText = originalText;
-                    btn.style.background = 'var(--accent)';
-                }, 2000);
+
+            function showSuccess() {
+                if (btn) {
+                    const originalText = btn.innerText;
+                    btn.innerText = '✔ Copied!';
+                    btn.style.background = 'var(--success)';
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.style.background = 'var(--accent)';
+                    }, 2000);
+                }
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(showSuccess).catch(() => fallbackCopy(text));
+            } else {
+                fallbackCopy(text);
+            }
+
+            function fallbackCopy(str) {
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = str;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-999999px";
+                    textArea.style.top = "-999999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    if (successful) {
+                        showSuccess();
+                    } else {
+                        prompt("Press Ctrl+C to copy sensor bootstrap command:", str);
+                    }
+                } catch (err) {
+                    prompt("Press Ctrl+C to copy sensor bootstrap command:", str);
+                }
             }
         }
+
 
         function downloadUsbKit() {
             const campus = (document.getElementById('ob-campus')?.value || '').trim();

@@ -438,7 +438,7 @@ class TestCMPFlow(unittest.TestCase):
         self.assertIn("sensors", backup_data)
         self.assertIn("probes", backup_data)
         self.assertIn("version", backup_data)
-        self.assertEqual(backup_data["version"], "0.6.1")
+        self.assertEqual(backup_data["version"], "0.7.8")
 
         # 2. Restore backup
         code, restore_res = self.make_request("/system/restore", method="POST", body=backup_data, headers={"X-API-Key": ADMIN_KEY})
