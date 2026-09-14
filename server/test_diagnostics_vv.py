@@ -119,6 +119,7 @@ def test_dynamic_gateway_derivation():
     # Setup sensor with specific subnet IP 10.98.2.141
     sensor = get_or_create_sensor("sensor-141")
     sensor["ip_address"] = "10.98.2.141"
+    db.save_sensor(sensor)
 
     req = DiagnosticRunRequest(test_type="gateway")
     res = asyncio.run(run_sensor_diagnostics("sensor-141", req))

@@ -131,7 +131,7 @@ def audit_nic_capabilities(phy: str) -> Dict[str, Any]:
     if not out:
         out = run_cmd(["iw", "list"])
 
-    caps = {
+    caps: Dict[str, Any] = {
         "phy": phy,
         "bands_supported": [],
         "standards_supported": [],
@@ -279,7 +279,7 @@ def scan_channels_and_bands(iface: str) -> Dict[str, Any]:
     """
     out = run_cmd(["iw", "dev", iface, "scan"], timeout=15.0)
 
-    bands = {
+    bands: Dict[str, Dict[str, Any]] = {
         "2.4GHz": {"total_aps": 0, "channels": {}, "best_rssi": -100, "generation_counts": {}},
         "5GHz": {"total_aps": 0, "channels": {}, "best_rssi": -100, "generation_counts": {}},
         "6GHz": {"total_aps": 0, "channels": {}, "best_rssi": -100, "generation_counts": {}}

@@ -11,7 +11,7 @@ def mock_env():
         os.makedirs(bin_dir)
 
         # We will mock the following commands
-        commands = ['ssh', 'scp', 'sshpass', 'stat']
+        commands = ['ssh', 'scp', 'sshpass', 'stat', 'sudo']
         for cmd in commands:
             cmd_path = os.path.join(bin_dir, cmd)
             with open(cmd_path, 'w') as f:
@@ -20,6 +20,8 @@ def mock_env():
                     f.write("echo 600\n")
                 elif cmd == 'sshpass':
                     f.write('eval "${@: -1}"\n')
+                elif cmd == 'sudo':
+                    f.write('exec "$@"\n')
                 else:
                     f.write("echo 'Mocked {}'\n".format(cmd))
             os.chmod(cmd_path, 0o755)
