@@ -56,8 +56,9 @@ def test_query_vm_instant_malformed_json(mock_urlopen):
     assert mock_urlopen.call_count == 3  # nosec B101
 
 @verifies("REQ-TEL-002")
+@patch("server.routers.telemetry.query_vm_range", return_value=[])
 @patch("server.routers.telemetry.query_vm_instant")
-def test_get_wallboard_live_stats_success(mock_query):
+def test_get_wallboard_live_stats_success(mock_query, mock_range):
     """Test wallboard returns SaaS health derived from PromQL."""
     def fake_query(q):
         if "probe_duration_seconds" in q and "saas" in q:
@@ -80,8 +81,9 @@ def test_get_wallboard_live_stats_success(mock_query):
     assert data["saas"]["canvas"]["is_up"] is True  # nosec B101
 
 @verifies("REQ-TEL-002")
+@patch("server.routers.telemetry.query_vm_range", return_value=[])
 @patch("server.routers.telemetry.query_vm_instant")
-def test_get_wallboard_live_stats_tsdb_unreachable(mock_query):
+def test_get_wallboard_live_stats_tsdb_unreachable(mock_query, mock_range):
     """Test wallboard returns defaults when TSDB is unreachable."""
     mock_query.return_value = []
 
@@ -91,7 +93,8 @@ def test_get_wallboard_live_stats_tsdb_unreachable(mock_query):
 
     assert "saas" in data  # nosec B101
     assert data["saas"]["canvas"]["rtt_ms"] == 105.0  # nosec B101
-    assert data["slas"]["gateway_wired_ms"] == 1.18  # nosec B101
+    # When TSDB is unreachable and no edge sensor reports, gateway_wired_ms is truthfully None (unmonitored)
+    assert data["slas"]["gateway_wired_ms"] is None  # nosec B101
 
 @verifies("REQ-TEL-002")
 def test_health_endpoint():
