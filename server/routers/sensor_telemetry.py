@@ -423,7 +423,7 @@ async def list_chromebook_fleet(campus: str | None = None):
             webrtc = probes.get("webrtc", {})
             apps = probes.get("synthetic_http", [])
             app_success_count = sum(1 for a in apps if a.get("success"))
-            app_sla = round((app_success_count / len(apps)) * 100, 1) if apps else 100.0
+            app_sla = round((app_success_count / len(apps)) * 100, 1) if apps else None
 
             gw = s.get("gateway_probe") or {}
             dns = s.get("dns_benchmark") or {}

@@ -269,11 +269,53 @@ export function renderDashboard(sensors, probes, liveStats, chromebooks, roaming
     const cbKpiMosSub = document.getElementById('cb-kpi-mos-sub');
     if (cbKpiMosSub) cbKpiMosSub.innerText = cbMosCount > 0 ? 'VoIP Quality: Excellent' : 'No Active Sessions';
 
-    const cbKpiSla = document.getElementById('cb-kpi-sla');
-    if (cbKpiSla) cbKpiSla.innerText = cbOnlineCount > 0 ? '100%' : '--%';
+    // Calculate real Chromebook App SLA and Managed Device count from active fleet
+    let cbTotalAppSla = 0;
+    let cbAppSlaCount = 0;
+    let cbManagedCount = 0;
 
+    cbList.forEach(cb => {
+        const isOnline = Boolean(cb.is_online);
+        if (isOnline && cb.is_managed) {
+            cbManagedCount++;
+        }
+        if (isOnline && typeof cb.app_sla_pct === 'number') {
+            cbTotalAppSla += cb.app_sla_pct;
+            cbAppSlaCount++;
+        }
+    });
+
+    const cbKpiManaged = document.getElementById('cb-kpi-managed');
+    if (cbKpiManaged) {
+        if (cbOnlineCount > 0) {
+            const mgdPct = Math.round((cbManagedCount / cbOnlineCount) * 100);
+            cbKpiManaged.innerText = `${mgdPct}% Managed`;
+        } else {
+            cbKpiManaged.innerText = '--% Managed';
+        }
+    }
+
+    const cbKpiSla = document.getElementById('cb-kpi-sla');
     const cbKpiSlaSub = document.getElementById('cb-kpi-sla-sub');
-    if (cbKpiSlaSub) cbKpiSlaSub.innerText = cbOnlineCount > 0 ? '0 Failures' : 'Awaiting Feeds';
+
+    if (cbOnlineCount === 0) {
+        if (cbKpiSla) cbKpiSla.innerText = '--%';
+        if (cbKpiSlaSub) cbKpiSlaSub.innerText = 'Awaiting Feeds';
+    } else if (cbAppSlaCount > 0) {
+        const avgSla = cbTotalAppSla / cbAppSlaCount;
+        if (cbKpiSla) cbKpiSla.innerText = `${avgSla.toFixed(1)}%`;
+        if (cbKpiSlaSub) {
+            if (avgSla >= 99.0) {
+                cbKpiSlaSub.innerText = '0 Failures';
+            } else {
+                cbKpiSlaSub.innerText = `${(100 - avgSla).toFixed(1)}% Probe Errors`;
+            }
+        }
+    } else {
+        // Honest unmonitored state per Issue #40
+        if (cbKpiSla) cbKpiSla.innerText = 'N/A';
+        if (cbKpiSlaSub) cbKpiSlaSub.innerText = 'Client Probing Not Enforced';
+    }
 
     // Populate Slide 6 Roaming Feed
     const roamTrail = roamingTrail || ROAMING_TRAIL_CACHE || [];

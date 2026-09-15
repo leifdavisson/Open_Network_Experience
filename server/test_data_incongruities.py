@@ -36,6 +36,8 @@ def test_01_empty_fleet_zero_state_truth_invariants():
     assert '<div class="metric-value" id="cb-kpi-sla">--%</div>' in html_content  # nosec B101
     assert 'id="cb-kpi-rssi-sub">No Active Stream<' in html_content  # nosec B101
     assert 'id="cb-kpi-mos-sub">No Active Sessions<' in html_content  # nosec B101
+    assert 'id="cb-kpi-managed">--% Managed<' in html_content  # nosec B101
+    assert 'id="cb-kpi-sla-sub">Awaiting Feeds<' in html_content  # nosec B101
 
 def test_02_offline_sensor_data_masking_in_schema_and_ui():
     """Verify that an offline sensor does not present active streaming indicators."""
@@ -68,6 +70,7 @@ def test_02_offline_sensor_data_masking_in_schema_and_ui():
     assert "`<span style=\"color:var(--text-muted);\">-- (Offline)</span>`" in js_code  # nosec B101
     assert "`<span style=\"color:var(--text-muted);\">-- (N/A)</span>`" in js_code  # nosec B101
     assert "`<span style=\"color:var(--text-muted);\">Disconnected</span>" in js_code  # nosec B101
+    assert "Client Probing Not Enforced" in js_code  # nosec B101
 
 def test_03_database_to_api_schema_fidelity():
     """Verify that database records translate without data loss or type mutation to API models."""
