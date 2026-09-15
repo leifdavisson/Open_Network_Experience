@@ -21,7 +21,7 @@ from server.common.errors import NotFoundException, BadRequestException
 from fastapi import APIRouter, HTTPException, Query, Request, status
 
 import server.db as db
-from server.state import EVIDENCE_DB
+from server.state import EVIDENCE_DB, SENSORS_DB
 from server.schemas import (
     AlertRecord,
     AlertAcknowledgeRequest,
@@ -64,10 +64,20 @@ def _generate_pcap_evidence_bundle(
     description: str,
     probe_id: Optional[str]
 ) -> dict:
-    """Simulates an edge-sensor freezing its 32MB circular RAM ring-buffer into an immutable PCAP evidence bundle."""
+    """Generates a forensic PCAP evidence record for an incident alarm, flagged as simulated fallback if no live capture daemon is attached."""
     now = int(time.time())
     b_id = f"ev-pcap-{now}-{uuid.uuid4().hex[:6]}"
     target_sensor = sensor_id or "pi5-edge-noc-01"
+
+    # Derive real interfaces and client IP from registered sensor if available
+    s_obj = SENSORS_DB.get(target_sensor) or {}
+    sensor_ip = s_obj.get("ip_address") or "10.0.0.15"
+    iface_list = list(s_obj.get("interfaces", {}).keys()) if s_obj.get("interfaces") else ["eno1", "wlp1s0"]
+
+    gateway_ip = "10.0.0.1"
+    if "." in sensor_ip:
+        octets = sensor_ip.split(".")
+        gateway_ip = f"{octets[0]}.{octets[1]}.{octets[2]}.1"
 
     bundle = {
         "id": b_id,
@@ -82,18 +92,19 @@ def _generate_pcap_evidence_bundle(
         "pcap_file": f"/var/log/open-ux/captures/{b_id}.pcap",
         "pcap_size_bytes": 1843200,
         "packets_captured": 4500,
-        "interfaces": ["eno1", "wlp1s0"],
+        "interfaces": iface_list,
         "sha256": uuid.uuid4().hex,
         "ring_buffer_seconds": 60,
+        "is_simulated": True,
         "dissection": {
             "protocols": ["ETH", "IP", "TCP", "TLSv1.3", "DNS", "ICMP"],
             "top_talkers": [
-                {"src": "10.100.4.15", "dst": "10.100.0.1", "packets": 480, "bytes": 624000},
-                {"src": "10.100.4.15", "dst": "8.8.8.8", "packets": 210, "bytes": 158000}
+                {"src": sensor_ip, "dst": gateway_ip, "packets": 480, "bytes": 624000},
+                {"src": sensor_ip, "dst": "8.8.8.8", "packets": 210, "bytes": 158000}
             ],
             "tcp_flags": {"SYN": 45, "ACK": 1200, "RST": 12, "FIN": 38},
             "anomalies_detected": [
-                "TCP Retransmission Rate > 4.2%",
+                f"TCP Retransmission Rate > 4.2% on {probe_id or alertname}",
                 "TLS ServerHello Certificate Issuer: Self-Signed / SSL-Inspection Proxy"
             ]
         },

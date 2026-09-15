@@ -514,8 +514,10 @@ def test_10_pcap_evidence_automatic_freeze_and_endpoints():
     ev_data = ev_res.json()
     assert ev_data["id"] == evidence_id  # nosec B101
     assert ev_data["sensor_id"] == "pi5-science-01"  # nosec B101
+    assert ev_data.get("is_simulated") is True  # nosec B101
     assert "dissection" in ev_data  # nosec B101
     assert "protocols" in ev_data["dissection"]  # nosec B101
+    assert "top_talkers" in ev_data["dissection"]  # nosec B101
 
     # 3. Trigger manual PCAP freeze on existing alert
     cap_res = client.post(f"/api/v1/alerts/{alert_id}/capture-pcap")

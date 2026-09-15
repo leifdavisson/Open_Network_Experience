@@ -1516,7 +1516,8 @@
                 }
 
                 CURRENT_ACTIVE_EVIDENCE = evidence;
-                document.getElementById('evidence-modal-title').innerText = `📦 PCAP Forensic Inspector: ${evidence.id || evidence.bundle_id}`;
+                const isSimulated = Boolean(evidence.is_simulated);
+                document.getElementById('evidence-modal-title').innerHTML = `📦 PCAP Forensic Inspector: ${evidence.id || evidence.bundle_id} ${isSimulated ? '<span class="status-pill status-warning" style="font-size:11px; margin-left:8px;">⚠️ Simulated PCAP Evidence (Fallback Mode)</span>' : ''}`;
                 const modalBody = document.getElementById('evidence-modal-body');
 
                 const diss = evidence.dissection || {};
@@ -1527,7 +1528,14 @@
                     </span>
                 `).join(' ');
 
+                const simNotice = isSimulated ? `
+                    <div style="background:rgba(245,158,11,0.12); border:1px solid var(--warning); padding:8px 12px; border-radius:6px; margin-bottom:12px; font-size:12px; color:var(--text-main);">
+                        <strong style="color:var(--warning);">⚠️ Simulated Forensic Trace:</strong> This evidence bundle was generated via synthetic fallback because a remote packet capture daemon (tcpdump/dumpcap) was not actively streaming from this edge sensor during the alert event.
+                    </div>
+                ` : '';
+
                 modalBody.innerHTML = `
+                    ${simNotice}
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
                         <div style="background:var(--bg-input); padding:10px; border-radius:6px; border:1px solid var(--border);">
                             <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Capture Specs</div>
