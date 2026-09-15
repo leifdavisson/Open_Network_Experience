@@ -422,3 +422,51 @@ def test_16_helpdesk_teacher_quickview_truthfulness():
     assert 'id="helpdesk-wifi-status">⚪ Checking Wi-Fi...' in dash_html  # nosec B101
     assert 'id="helpdesk-cipa-status">⚪ Checking Safety Filter...' in dash_html  # nosec B101
 
+def test_17_edge_sensor_details_modal_wifi_generation_and_ip():
+    """Verify Edge Sensor Details modal dynamically resolves Wi-Fi generations and displays wireless IPv4."""
+    main_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "main.js"
+    with open(main_js_path, "r", encoding="utf-8") as f:
+        main_js = f.read()
+
+    app_js_path = TEMPLATES_DIR.parent / "static" / "js" / "app.js"
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        app_js = f.read()
+
+    # Invariants for Issue #42:
+    for code in [main_js, app_js]:
+        assert "formatWifiGeneration" in code, "Must dynamically format Wi-Fi generation standard"  # nosec B101
+        assert "IPv4 Address:" in code, "Must display wireless IPv4 address line"  # nosec B101
+        assert "Unassigned (DHCP Pending)" in code, "Must provide fallback when wireless DHCP is unassigned"  # nosec B101
+        assert "wlp1.ip_address" in code, "Must reference wlp1.ip_address"  # nosec B101
+
+    # Verify backend sensor_crud endpoint exposes wireless IP and interface attributes
+    from fastapi.testclient import TestClient
+    from server.main import app
+    import server.state as state
+
+    state.SENSORS_DB["pi5-test-wifi-sensor"] = {
+        "sensor_id": "pi5-test-wifi-sensor",
+        "hostname": "pi5-science-hall",
+        "os": "linux",
+        "status": "approved",
+        "last_seen": int(time.time()),
+        "wifi_telemetry": {
+            "interface": "wlan0",
+            "protocol": "802.11ax",
+            "band": "6 GHz",
+            "ip_address": "10.98.2.144",
+            "ssid": "District-Secure-WiFi"
+        }
+    }
+
+    client = TestClient(app)
+    resp = client.get("/api/v1/sensors/pi5-test-wifi-sensor", headers={"X-API-Key": "admin-noc-key-change-me"})
+    assert resp.status_code == 200  # nosec B101
+    s_data = resp.json()
+    assert "interfaces" in s_data  # nosec B101
+    wlan = s_data["interfaces"]["wlp1s0"]
+    assert wlan["ip_address"] == "10.98.2.144"  # nosec B101
+    assert wlan["protocol"] == "802.11ax"  # nosec B101
+    assert wlan["band"] == "6 GHz"  # nosec B101
+
+

@@ -857,10 +857,22 @@ async function openSensorDetailModal(sensorId) {
         if (title) title.innerText = `📡 Edge Sensor Diagnostic Inspector [NODE: ${data.hostname || sensorId}]`;
         const hw = data.hardware || {};
         const ifaces = data.interfaces || {};
-        const eno1 = ifaces.eno1 || {};
-        const wlp1 = ifaces.wlp1s0 || {};
+        const eno1 = ifaces.eno1 || ifaces.eth0 || Object.values(ifaces).find(i => i.type && i.type.includes('Ethernet')) || {};
+        const wlp1 = ifaces.wlp1s0 || ifaces.wlan0 || Object.values(ifaces).find(i => (i.type && i.type.includes('Wi-Fi')) || i.ssid) || {};
         const metrics = data.live_metrics || {};
         const loc = data.location || {};
+
+        function formatWifiGeneration(protoOrType, band) {
+            const str = `${protoOrType || ''} ${band || ''}`.toLowerCase();
+            if (str.includes('802.11be') || str.includes('wi-fi 7') || str.includes('wifi 7')) return 'Wi-Fi 7';
+            if (str.includes('802.11ax') && (str.includes('6ghz') || str.includes('6 ghz'))) return 'Wi-Fi 6E';
+            if (str.includes('802.11ax') || str.includes('wi-fi 6') || str.includes('wifi 6')) return 'Wi-Fi 6';
+            if (str.includes('802.11ac') || str.includes('wi-fi 5') || str.includes('wifi 5')) return 'Wi-Fi 5';
+            if (str.includes('802.11n') || str.includes('wi-fi 4') || str.includes('wifi 4')) return 'Wi-Fi 4';
+            return 'Wi-Fi 6';
+        }
+
+        const wifiGen = formatWifiGeneration(wlp1.protocol || wlp1.type, wlp1.band);
 
         const bannerHtml = isOnline ? `
             <div style="background:rgba(16,185,129,0.12); border:1px solid var(--success); padding:12px 16px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
@@ -919,8 +931,9 @@ async function openSensorDetailModal(sensorId) {
                 </div>
 
                 <div style="background:var(--bg-input); padding:14px; border-radius:8px; border:1px solid var(--border);">
-                    <strong style="color:var(--accent); font-size:13px;">📶 Wi-Fi 6 Radio (${wlp1.name || 'wlp1s0'})</strong>
+                    <strong style="color:var(--accent); font-size:13px;">📶 ${wifiGen} Radio (${wlp1.name || 'wlp1s0'})</strong>
                     <div style="font-size:12px; margin-top:8px; line-height:1.7;">
+                        • IPv4 Address: <code>${wlp1.ip_address || 'Unassigned (DHCP Pending)'}</code><br>
                         • Associated SSID: <b>${wlp1.ssid || 'District-Secure-WiFi'}</b><br>
                         • BSSID / Band: <code>${wlp1.bssid || '00:11:22:33:44:55'}</code> (${wlp1.band || '5 GHz'})<br>
                         • RF Channel / Width: <b>Ch ${wlp1.channel || 165} (${wlp1.channel_width_mhz || 80} MHz)</b><br>

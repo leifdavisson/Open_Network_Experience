@@ -182,20 +182,21 @@ async def get_sensor_detail(sensor_id: str):
                 "tx_bytes": 892041100
             },
             "wlp1s0": {
-                "name": "wlp1s0",
-                "type": "Wi-Fi 6 (802.11ax Dual-Band 2x2 MIMO)",
-                "ip_address": None,
-                "mac_address": "unknown",
-                "ssid": "District-Secure-WiFi",
-                "bssid": "00:11:22:33:44:55",
-                "band": "5 GHz",
-                "channel": 165,
-                "channel_width_mhz": 80,
-                "rssi_dbm": -55,
-                "snr_db": 38,
-                "tx_rate_mbps": 866.7,
-                "rx_rate_mbps": 866.7,
-                "security": "WPA2-Enterprise (802.1X PEAP-MSCHAPv2)"
+                "name": (sensor.get("wifi_telemetry") or {}).get("interface") or (sensor.get("wifi") or {}).get("interface") or "wlp1s0",
+                "type": (sensor.get("wifi_telemetry") or {}).get("standard") or "Wi-Fi 6 (802.11ax Dual-Band 2x2 MIMO)",
+                "protocol": (sensor.get("wifi_telemetry") or {}).get("protocol") or "802.11ax",
+                "ip_address": (sensor.get("wifi_telemetry") or {}).get("ip_address") or (sensor.get("wifi") or {}).get("ip_address") or sensor.get("wireless_ip") or None,
+                "mac_address": (sensor.get("wifi_telemetry") or {}).get("mac_address") or "unknown",
+                "ssid": (sensor.get("wifi_telemetry") or {}).get("ssid") or (sensor.get("wifi") or {}).get("ssid") or "District-Secure-WiFi",
+                "bssid": (sensor.get("wifi_telemetry") or {}).get("bssid") or (sensor.get("wifi") or {}).get("bssid") or "00:11:22:33:44:55",
+                "band": (sensor.get("wifi_telemetry") or {}).get("band") or (sensor.get("wifi") or {}).get("band") or "5 GHz",
+                "channel": (sensor.get("wifi_telemetry") or {}).get("channel") or (sensor.get("wifi") or {}).get("channel") or 165,
+                "channel_width_mhz": (sensor.get("wifi_telemetry") or {}).get("channel_width_mhz") or 80,
+                "rssi_dbm": (sensor.get("wifi_telemetry") or {}).get("rssi_dbm") or (sensor.get("wifi") or {}).get("rssi_dbm") or -55,
+                "snr_db": (sensor.get("wifi_telemetry") or {}).get("snr_db") or 38,
+                "tx_rate_mbps": (sensor.get("wifi_telemetry") or {}).get("tx_rate_mbps") or 866.7,
+                "rx_rate_mbps": (sensor.get("wifi_telemetry") or {}).get("rx_rate_mbps") or 866.7,
+                "security": (sensor.get("wifi_telemetry") or {}).get("security") or "WPA2-Enterprise (802.1X PEAP-MSCHAPv2)"
             }
         },
         "live_metrics": {
