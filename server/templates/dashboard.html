@@ -226,11 +226,14 @@
                                 <span style="font-size:11px; color:var(--text-muted);">Last 30 Days</span>
                             </div>
                             <div style="height: 160px; position: relative;">
+                                <div id="alarm-empty-state-banner" style="display:none; position:absolute; inset:0; z-index:2; align-items:center; justify-content:center; background:rgba(15, 23, 42, 0.75); color:var(--text-muted); font-size:12px; border-radius:6px; text-align:center; padding:12px;">
+                                    🛡️ No alarms logged in trailing 30 days (0 Active / 0 Resolved)
+                                </div>
                                 <canvas id="chart-alarm-overview"></canvas>
                             </div>
                             <div style="display:flex; justify-content:center; gap:16px; font-size:12px; margin-top:8px;">
-                                <span style="color:var(--accent);">● Resolved (100%)</span>
-                                <span style="color:var(--warning);">● Active (0)</span>
+                                <span id="alarm-legend-resolved" style="color:var(--accent);">● Resolved (0)</span>
+                                <span id="alarm-legend-active" style="color:var(--warning);">● Active (0)</span>
                             </div>
                         </div>
                     </div>

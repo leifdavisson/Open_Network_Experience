@@ -261,13 +261,13 @@ def get_alerts_summary() -> dict:
     """Returns aggregate summary counts across all alerts.
 
     PERFORMANCE OPTIMIZATION:
-    Combines 8 individual COUNT queries into a single query using conditional
+    Combines individual COUNT queries into a single query using conditional
     aggregations (COUNT CASE WHEN ...). Reduces SQLite query execution overhead
-    from 8 roundtrips to 1 roundtrip, speeding up dashboard/telemetry response times
-    by ~80-87%.
+    from multiple roundtrips to 1 roundtrip, speeding up dashboard/telemetry response times.
     """
     now = int(time.time())
     one_day_ago = now - 86400
+    thirty_days_ago = now - (30 * 86400)
     with get_connection() as conn:
         row = conn.execute("""
             SELECT
@@ -278,9 +278,11 @@ def get_alerts_summary() -> dict:
                 COUNT(CASE WHEN status IN ('firing', 'acknowledged') AND severity = 'warning' THEN 1 END) AS warning_count,
                 COUNT(CASE WHEN status IN ('firing', 'acknowledged') AND severity = 'info' THEN 1 END) AS info_count,
                 COUNT(CASE WHEN status = 'resolved' AND (ends_at >= ? OR updated_at >= ?) THEN 1 END) AS resolved_24h_count,
+                COUNT(CASE WHEN status = 'resolved' AND (ends_at >= ? OR updated_at >= ? OR starts_at >= ?) THEN 1 END) AS resolved_30d_count,
+                COUNT(CASE WHEN status IN ('firing', 'acknowledged') AND starts_at >= ? THEN 1 END) AS active_30d_count,
                 COUNT(*) AS total_count
             FROM alerts;
-        """, (one_day_ago, one_day_ago)).fetchone()
+        """, (one_day_ago, one_day_ago, thirty_days_ago, thirty_days_ago, thirty_days_ago, thirty_days_ago)).fetchone()
 
     return {
         "open_count": row["open_count"],
@@ -290,6 +292,8 @@ def get_alerts_summary() -> dict:
         "warning_count": row["warning_count"],
         "info_count": row["info_count"],
         "resolved_24h_count": row["resolved_24h_count"],
+        "resolved_30d_count": row["resolved_30d_count"],
+        "active_30d_count": row["active_30d_count"],
         "total_count": row["total_count"]
     }
 

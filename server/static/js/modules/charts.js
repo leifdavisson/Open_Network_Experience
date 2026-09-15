@@ -113,18 +113,49 @@ export function renderAnalyticsCharts(liveStats) {
         });
     }
 
-    // 3. Alarm Overview Donut (New vs Closed)
+    // 3. Alarm Overview Donut (Issue #36: Real 30-Day Resolution History)
     const ctxAlarm = document.getElementById('chart-alarm-overview');
+    const alarmEmptyBanner = document.getElementById('alarm-empty-state-banner');
     if (ctxAlarm) {
         if (chartAlarm) chartAlarm.destroy();
-        const activeAlarms = (liveStats && liveStats.kpis) ? liveStats.kpis.alarms : 0;
+
+        const overview = (liveStats && liveStats.kpis && liveStats.kpis.alarm_overview_30d) ? liveStats.kpis.alarm_overview_30d : null;
+        const resolved30d = overview ? overview.resolved_30d : 0;
+        const activeAlarms = overview ? overview.active : ((liveStats && liveStats.kpis) ? (liveStats.kpis.alarms || 0) : 0);
+        const totalAlarms = resolved30d + activeAlarms;
+        const hasData = totalAlarms > 0;
+
+        const resLegend = document.getElementById('alarm-legend-resolved');
+        const actLegend = document.getElementById('alarm-legend-active');
+
+        if (resLegend) {
+            const pctText = hasData ? ` (${Math.round((resolved30d / totalAlarms) * 100)}%)` : '';
+            resLegend.textContent = `● Resolved: ${resolved30d}${pctText}`;
+        }
+        if (actLegend) {
+            actLegend.textContent = `● Active: ${activeAlarms}`;
+        }
+
+        if (!hasData) {
+            if (alarmEmptyBanner) alarmEmptyBanner.style.display = 'flex';
+            ctxAlarm.style.opacity = '0.35';
+        } else {
+            if (alarmEmptyBanner) alarmEmptyBanner.style.display = 'none';
+            ctxAlarm.style.opacity = '1.0';
+        }
+
+        // When no data has been recorded yet, render a subtle placeholder arc
+        const chartLabels = hasData ? ['Resolved (30d)', 'Active'] : ['No Alarms Logged'];
+        const chartData = hasData ? [resolved30d, activeAlarms] : [1];
+        const chartColors = hasData ? ['#38bdf8', '#f59e0b'] : ['rgba(148, 163, 184, 0.25)'];
+
         chartAlarm = new Chart(ctxAlarm, {
             type: 'doughnut',
             data: {
-                labels: ['Resolved', 'Active'],
+                labels: chartLabels,
                 datasets: [{
-                    data: [100, activeAlarms],
-                    backgroundColor: ['#38bdf8', '#f59e0b'],
+                    data: chartData,
+                    backgroundColor: chartColors,
                     borderWidth: 0
                 }]
             },
@@ -138,3 +169,4 @@ export function renderAnalyticsCharts(liveStats) {
         });
     }
 }
+

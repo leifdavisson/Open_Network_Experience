@@ -575,6 +575,8 @@ class AlertSummaryResponse(BaseModel):
     warning_count: int
     info_count: int
     resolved_24h_count: int
+    resolved_30d_count: int = 0
+    active_30d_count: int = 0
     total_count: int
 
 class CustomAlertRuleSpec(BaseModel):

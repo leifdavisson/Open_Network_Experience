@@ -288,3 +288,43 @@ def test_12_query_vm_range_helper_contract():
     res = query_vm_range("probe_duration_seconds", 1700000000, 1700086400, "1h")
     assert isinstance(res, list)  # nosec B101
 
+def test_13_alarm_overview_30d_resolution_truthfulness():
+    """Verify Alarm Overview computes real 30-day resolved/active counts and avoids hardcoded 100 constant."""
+    from fastapi.testclient import TestClient
+    from server.main import app
+    import server.db as db
+
+    client = TestClient(app)
+    resp = client.get("/api/v1/wallboard/live-stats")
+    assert resp.status_code == 200  # nosec B101
+    data = resp.json()
+
+    assert "alarm_overview_30d" in data["kpis"], "liveStats.kpis must contain alarm_overview_30d"  # nosec B101
+    ao = data["kpis"]["alarm_overview_30d"]
+    assert "resolved_30d" in ao  # nosec B101
+    assert "active" in ao  # nosec B101
+    assert "total_30d" in ao  # nosec B101
+    assert "resolved_pct" in ao  # nosec B101
+
+    # Verify summary endpoint also contains resolved_30d_count
+    sum_resp = client.get("/api/v1/alerts/summary")
+    assert sum_resp.status_code == 200  # nosec B101
+    summary = sum_resp.json()
+    assert "resolved_30d_count" in summary  # nosec B101
+    assert "active_30d_count" in summary  # nosec B101
+
+    # Check charts.js does NOT contain the hardcoded [100, activeAlarms] dataset
+    charts_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "charts.js"
+    with open(charts_js_path, "r", encoding="utf-8") as f:
+        js_code = f.read()
+
+    assert "data: [100, activeAlarms]" not in js_code, "Frontend must not hardcode 100 resolved alarms in chart dataset"  # nosec B101
+    assert "alarm_overview_30d" in js_code, "Frontend must ingest real alarm_overview_30d metrics"  # nosec B101
+
+    # Check app.js does NOT contain the hardcoded [100, activeAlarms] dataset
+    app_js_path = TEMPLATES_DIR.parent / "static" / "js" / "app.js"
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        app_js_code = f.read()
+
+    assert "data: [100, activeAlarms]" not in app_js_code, "app.js must not hardcode 100 resolved alarms in chart dataset"  # nosec B101
+

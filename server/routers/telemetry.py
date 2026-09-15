@@ -412,6 +412,19 @@ async def get_wallboard_live_stats():
             "time_str": time_str
         })
 
+    # 3. 30-Day Alarm Resolution Overview (Issue #36)
+    resolved_30d = alert_summary.get("resolved_30d_count", 0)
+    total_30d = resolved_30d + active_alarms_count
+    resolved_pct = round((resolved_30d / total_30d * 100.0), 1) if total_30d > 0 else 100.0
+
+    alarm_overview_30d = {
+        "resolved_30d": resolved_30d,
+        "active": active_alarms_count,
+        "total_30d": total_30d,
+        "resolved_pct": resolved_pct,
+        "has_data": total_30d > 0
+    }
+
     return {
         "saas": saas_map,
         "slas": {
@@ -428,6 +441,7 @@ async def get_wallboard_live_stats():
             "offline": offline_count,
             "faults": degraded_count,
             "alarms": active_alarms_count,
+            "alarm_overview_30d": alarm_overview_30d,
             "compliance_7d_pct": compliant_pct,
             "fault_7d_pct": fault_pct,
             "sla_percentage": round((online_count / total_count * 100.0), 1) if total_count > 0 else 100.0
