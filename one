@@ -54,12 +54,15 @@ usage() {
     echo -e "  ${GREEN}sensor list${NC}              List registered sensors and their live health"
     echo -e "  ${GREEN}sensor offboard <ip>${NC}     De-provision sensor appliance and return to baseline"
     echo ""
+    echo -e "  ${GREEN}test [unit|e2e|all]${NC}      Run regression test suites (alerts, telemetry, data)"
+    echo -e "  ${GREEN}bench [stage|check]${NC}      Stage/verify updates on lab bench sensors (--sensor <ip>)"
     echo -e "  ${GREEN}reset [--cmp|--all]${NC}      Wipe state/databases for a pristine re-test"
     echo ""
     echo -e "${BOLD}Examples:${NC}"
     echo "  ./one cmp up"
     echo "  ./one cmp status"
-    echo "  ./one sensor add --sensor 10.98.2.105"
+    echo "  ./one test all"
+    echo "  ./one bench stage --sensor 10.98.2.105"
     echo "  ./one reset --all"
     exit 0
 }
@@ -260,6 +263,66 @@ cmd_reset() {
     esac
 }
 
+cmd_test() {
+    print_banner
+    local suite="${1:-all}"
+    shift || true
+
+    echo -e "${BLUE}Running ONE Test Suite (${suite})...${NC}"
+    case "$suite" in
+        unit)
+            pytest -v "${SCRIPT_DIR}/sensor/reconciler/test_reconciler.py" "$@"
+            ;;
+        telemetry)
+            pytest -v "${SCRIPT_DIR}/server/test_telemetry_hardening.py" "$@"
+            ;;
+        alerts)
+            pytest -v "${SCRIPT_DIR}/server/test_alerts.py" "$@"
+            ;;
+        data|incongruity|incongruities)
+            pytest -v "${SCRIPT_DIR}/server/test_data_incongruities.py" "$@"
+            ;;
+        all)
+            pytest -v \
+                "${SCRIPT_DIR}/sensor/reconciler/test_reconciler.py" \
+                "${SCRIPT_DIR}/server/test_telemetry_hardening.py" \
+                "${SCRIPT_DIR}/server/test_data_incongruities.py" "$@"
+            ;;
+        *)
+            pytest -v "${SCRIPT_DIR}/server" "$@"
+            ;;
+    esac
+}
+
+cmd_bench() {
+    local action="${1:-stage}"
+    shift || true
+
+    case "$action" in
+        stage|deploy)
+            print_banner
+            echo -e "${BLUE}Triggering Lab Bench Deployment Harness...${NC}"
+            "${SCRIPT_DIR}/scripts/deploy_bench.sh" "$@"
+            ;;
+        check|smoke)
+            print_banner
+            echo -e "${BLUE}Running CMP Health Smoke Checks...${NC}"
+            local cmp_ip="${CMP_HOST:-127.0.0.1}"
+            echo -n " - Checking CMP Web UI (http://${cmp_ip}:8000)... "
+            curl -sf -o /dev/null "http://${cmp_ip}:8000/" && echo -e "${GREEN}✓ OK${NC}" || echo -e "${RED}✗ FAIL${NC}"
+            echo -n " - Checking Dynamic Prometheus SD (/api/v1/telemetry/prometheus-sd)... "
+            curl -sf "http://${cmp_ip}:8000/api/v1/telemetry/prometheus-sd" | grep -q "targets" && echo -e "${GREEN}✓ OK${NC}" || echo -e "${RED}✗ FAIL${NC}"
+            echo -n " - Checking Live Telemetry SLAs (/api/v1/telemetry/live)... "
+            curl -sf "http://${cmp_ip}:8000/api/v1/telemetry/live" | grep -q "slas" && echo -e "${GREEN}✓ OK${NC}" || echo -e "${RED}✗ FAIL${NC}"
+            ;;
+        *)
+            echo -e "${RED}Unknown bench command: '${action}'${NC}"
+            echo "Available: stage, check"
+            exit 1
+            ;;
+    esac
+}
+
 # Root Command Dispatch
 if [[ $# -eq 0 ]]; then
     usage
@@ -274,6 +337,12 @@ case "$COMMAND" in
         ;;
     sensor)
         cmd_sensor "$@"
+        ;;
+    test)
+        cmd_test "$@"
+        ;;
+    bench)
+        cmd_bench "$@"
         ;;
     reset)
         cmd_reset "$@"

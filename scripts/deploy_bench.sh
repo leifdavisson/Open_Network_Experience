@@ -176,6 +176,40 @@ fi
 echo -n " - Checking VictoriaMetrics TSDB (http://${CMP_HOST}:8428)... "
 curl -sf "http://${CMP_HOST}:8428/api/v1/query?query=cipa_compliance_status" | grep -q "result" && echo "✓ OK" || echo "✗ FAIL"
 
+echo -n " - Checking Prometheus Dynamic HTTP Service Discovery (/api/v1/telemetry/prometheus-sd)... "
+SD_RESP=$(curl -sf "http://${CMP_HOST}:8000/api/v1/telemetry/prometheus-sd" 2>/dev/null || true)
+if [[ -n "$SD_RESP" && "$SD_RESP" == *"targets"* ]]; then
+    echo "✓ PASS (Dynamic SD Active)"
+else
+    echo "✗ FAIL: Unable to retrieve Prometheus HTTP SD configuration"
+fi
+
+if [[ -n "$SENSOR_ID" ]]; then
+    echo -n " - Checking Wi-Fi Survey API (/api/v1/sensors/${SENSOR_ID}/wifi/survey)... "
+    WIFI_SURVEY=$(curl -sf -H "X-API-Key: ${ADMIN_API_KEY}" "http://${CMP_HOST}:8000/api/v1/sensors/${SENSOR_ID}/wifi/survey" 2>/dev/null || true)
+    if [[ -n "$WIFI_SURVEY" && "$WIFI_SURVEY" == *"networks"* ]]; then
+        echo "✓ PASS (RF Scan Available)"
+    else
+        echo "⚠ WARNING (Wi-Fi Survey endpoint returned empty or non-200)"
+    fi
+
+    echo -n " - Checking Captive Portal Multi-Canary Detection (/wifi/portal-status)... "
+    PORTAL_RESP=$(curl -sf -H "X-API-Key: ${ADMIN_API_KEY}" "http://${CMP_HOST}:8000/api/v1/sensors/${SENSOR_ID}/wifi/portal-status" 2>/dev/null || true)
+    if [[ -n "$PORTAL_RESP" && "$PORTAL_RESP" == *"captive_portal_detected"* ]]; then
+        echo "✓ PASS (Canary Active)"
+    else
+        echo "⚠ WARNING (Portal status endpoint returned empty)"
+    fi
+fi
+
+echo -n " - Checking Live SLA & Telemetry Truthfulness (/api/v1/telemetry/live)... "
+LIVE_TELEMETRY=$(curl -sf "http://${CMP_HOST}:8000/api/v1/telemetry/live" 2>/dev/null || true)
+if [[ -n "$LIVE_TELEMETRY" && "$LIVE_TELEMETRY" == *"slas"* && "$LIVE_TELEMETRY" == *"trends"* ]]; then
+    echo "✓ PASS (Authentic Telemetry Streaming)"
+else
+    echo "✗ FAIL: Live telemetry missing SLAs or trend history"
+fi
+
 # Wait and retry for Node Exporter metrics to propagate
 for sensor in "${SENSOR_HOSTS[@]}"; do
     echo -n " - Checking Sensor Metrics on ${sensor} (http://${sensor}:9100)... "
