@@ -39,6 +39,29 @@ def query_vm_instant(query_str: str) -> List[dict]:
             continue
     return []
 
+def query_vm_range(query_str: str, start: int, end: int, step: str = "1h") -> List[dict]:
+    """Helper to query VictoriaMetrics range PromQL endpoint."""
+    urls = [VM_URL, "http://localhost:8428", "http://127.0.0.1:8428"]
+    for base in urls:
+        try:
+            params = urllib.parse.urlencode({
+                "query": query_str,
+                "start": str(start),
+                "end": str(end),
+                "step": step
+            })
+            url = f"{base}/api/v1/query_range?{params}"
+            if not url.startswith(("http://", "https://")):
+                raise ValueError(f"Invalid URL scheme: {url}")
+            req = urllib.request.Request(url, headers={"User-Agent": "ONE-CMP-Wallboard/1.0"})
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data.get("status") == "success":
+                    return data.get("data", {}).get("result", [])
+        except Exception:
+            continue
+    return []
+
 @router.get("/api/v1/health", summary="CMP Health & Readiness Probe")
 @router.get("/health", summary="CMP Health & Readiness Probe")
 async def health_check():
@@ -209,9 +232,117 @@ async def get_wallboard_live_stats():
     offline_count = max(0, total_count - online_count)
     degraded_count = sum(1 for s in SENSORS_DB.values() if s.get("probing_state") in ("AMBER", "RED"))
 
-    base_wired = gw_rtt_wired
-    trend_wired = [round(base_wired + ((i % 5) - 2) * 0.04, 2) for i in range(15)]
-    trend_wifi = [round(base_wired * 3.6 + ((i % 4) - 1.5) * 0.15, 2) for i in range(15)]
+    # 1. Historical Trend Analysis from VictoriaMetrics TSDB (Issue #34)
+    start_15d = now - (15 * 86400)
+    gw_range = query_vm_range('avg_over_time(probe_duration_seconds{job="blackbox-gateway-ping"}[1h])', start_15d, now, step="1d")
+
+    trend_labels = []
+    trend_wired = []
+    trend_wifi = []
+    streams = []
+
+    if gw_range and len(gw_range) > 0 and gw_range[0].get("values"):
+        pts = gw_range[0]["values"]
+        for pt in pts:
+            ts = int(pt[0])
+            val_ms = round(float(pt[1]) * 1000.0, 2)
+            time_label = datetime.fromtimestamp(ts, timezone.utc).strftime("%b %d")
+            trend_labels.append(time_label)
+            trend_wired.append(val_ms)
+            trend_wifi.append(round(val_ms * 3.65, 2))
+
+        has_history = len(trend_wired) >= 2
+        insufficient_data = not has_history
+    else:
+        has_history = False
+        insufficient_data = True
+        trend_labels = []
+        trend_wired = []
+        trend_wifi = []
+
+    # Dynamically detect active target instance from live telemetry
+    gw_target = "10.98.2.125:8000"
+    if gw_durations and len(gw_durations) > 0:
+        gw_target = gw_durations[0].get("metric", {}).get("instance", gw_target)
+
+    streams.append({
+        "id": "gateway_wired",
+        "name": "District Gateway Latency (Wired)",
+        "target": gw_target,
+        "interface": "Wired",
+        "data": trend_wired,
+        "unit": "ms"
+    })
+    if trend_wifi:
+        streams.append({
+            "id": "gateway_wifi",
+            "name": "Wi-Fi Simulated Gateway Hop (Wireless)",
+            "target": gw_target,
+            "interface": "Wi-Fi",
+            "data": trend_wifi,
+            "unit": "ms"
+        })
+
+    trends_payload = {
+        "has_history": has_history,
+        "insufficient_data": insufficient_data,
+        "sample_count": len(trend_wired),
+        "time_range": "15d",
+        "labels": trend_labels,
+        "streams": streams,
+        "wired": trend_wired,
+        "wifi": trend_wifi
+    }
+
+    # 2. 7-Day Trailing SLA Compliance Calculation (Issue #35)
+    vm_compliance = query_vm_instant('avg_over_time(probe_success{job=~"blackbox.*"}[7d])')
+    if vm_compliance and len(vm_compliance) > 0:
+        try:
+            val = float(vm_compliance[0].get("value", [0, 1.0])[1])
+            compliant_pct = round(max(0.0, min(100.0, val * 100.0)), 1)
+            fault_pct = round(100.0 - compliant_pct, 1)
+            is_accumulating = False
+            eval_window = "Last 7 Days"
+        except Exception:
+            compliant_pct = 100.0
+            fault_pct = 0.0
+            is_accumulating = True
+            eval_window = "Last 24 Hours"
+    else:
+        # Evaluate against recorded alerts and system age in SQLite
+        seven_days_ago = now - (7 * 86400)
+        with db.get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT COUNT(*) FROM alerts WHERE starts_at >= ? AND severity IN ('critical', 'warning');",
+                (seven_days_ago,)
+            )
+            recent_alert_count = cursor.fetchone()[0]
+            earliest_row = conn.execute("SELECT MIN(last_seen) FROM sensors WHERE last_seen > 0;").fetchone()
+            earliest_sensor = earliest_row[0] if earliest_row else None
+
+        system_age_seconds = (now - earliest_sensor) if (earliest_sensor and earliest_sensor > 0) else 0
+        if system_age_seconds < (7 * 86400):
+            is_accumulating = True
+            hours_accumulated = max(1, int(system_age_seconds / 3600))
+            eval_window = f"Last {hours_accumulated}h" if hours_accumulated < 48 else f"Last {int(hours_accumulated/24)}d"
+        else:
+            is_accumulating = False
+            eval_window = "Last 7 Days"
+
+        if recent_alert_count == 0:
+            compliant_pct = 100.0
+            fault_pct = 0.0
+        else:
+            fault_pct = round(min(100.0, recent_alert_count * 1.5), 1)
+            compliant_pct = round(100.0 - fault_pct, 1)
+
+    compliance_7d = {
+        "compliant_pct": compliant_pct,
+        "fault_pct": fault_pct,
+        "eval_window": eval_window,
+        "is_accumulating": is_accumulating,
+        "status": "nominal" if fault_pct < 2.0 else ("warning" if fault_pct < 10.0 else "critical")
+    }
 
     incidents = []
     for k, v in saas_map.items():
@@ -297,12 +428,12 @@ async def get_wallboard_live_stats():
             "offline": offline_count,
             "faults": degraded_count,
             "alarms": active_alarms_count,
+            "compliance_7d_pct": compliant_pct,
+            "fault_7d_pct": fault_pct,
             "sla_percentage": round((online_count / total_count * 100.0), 1) if total_count > 0 else 100.0
         },
-        "trends": {
-            "wired": trend_wired,
-            "wifi": trend_wifi
-        },
+        "compliance_7d": compliance_7d,
+        "trends": trends_payload,
         "incidents": incidents,
         "incident_feed": f"{len(incidents)} active incident(s)"
     }

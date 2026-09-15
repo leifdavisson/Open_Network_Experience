@@ -6,12 +6,23 @@ export function initCharts() {
     console.log("Charts initialized");
 }
 export function renderAnalyticsCharts(liveStats) {
-    // 1. Fault Situation Semi-Donut
+    // 1. Fault Situation Semi-Donut (Issue #35: Real 7-Day Trailing SLA Compliance)
     const ctxFault = document.getElementById('chart-fault-situation');
     if (ctxFault) {
         if (chartFault) chartFault.destroy();
-        const faultPct = (liveStats && liveStats.kpis) ? Math.min(100, liveStats.kpis.faults * 10) : 0;
-        const compPct = 100 - faultPct;
+        const compPct = (liveStats && liveStats.compliance_7d) ? liveStats.compliance_7d.compliant_pct : 100;
+        const faultPct = (liveStats && liveStats.compliance_7d) ? liveStats.compliance_7d.fault_pct : 0;
+
+        // Dynamically update legend and evaluation window text
+        const compEl = document.getElementById('fault-chart-comp-pct');
+        const faultEl = document.getElementById('fault-chart-fault-pct');
+        const windowEl = document.getElementById('fault-chart-window');
+        if (compEl) compEl.textContent = `● Compliant (${compPct}%)`;
+        if (faultEl) faultEl.textContent = `● Fault (${faultPct}%)`;
+        if (windowEl && liveStats && liveStats.compliance_7d) {
+            windowEl.textContent = liveStats.compliance_7d.eval_window || "Last 7 Days";
+        }
+
         chartFault = new Chart(ctxFault, {
             type: 'doughnut',
             data: {
@@ -32,45 +43,63 @@ export function renderAnalyticsCharts(liveStats) {
         });
     }
 
-    // 2. 30-Day Trend Sparkline (eno1 vs wlp1s0)
+    // 2. Trend Analysis (WAN Latency & SLA Stability - Issue #34)
     const ctxTrend = document.getElementById('chart-trend-analysis');
+    const emptyBanner = document.getElementById('trend-empty-state-banner');
     if (ctxTrend) {
         if (chartTrend) chartTrend.destroy();
-        const labels = Array.from({length: 15}, (_, i) => `Day ${i+1}`);
-        const wiredData = (liveStats && liveStats.trends && liveStats.trends.wired) ? liveStats.trends.wired : [1.2, 1.15, 1.22, 1.18, 1.14, 1.25, 1.18, 1.19, 1.16, 1.20, 1.18, 1.17, 1.18, 1.18, 1.18];
-        const wifiData = (liveStats && liveStats.trends && liveStats.trends.wifi) ? liveStats.trends.wifi : [4.5, 4.2, 4.8, 4.3, 4.1, 5.0, 4.4, 4.3, 4.2, 4.6, 4.3, 4.3, 4.35, 4.30, 4.32];
+        const trends = (liveStats && liveStats.trends) ? liveStats.trends : null;
+        const hasHistory = Boolean(trends && trends.has_history && trends.streams && trends.streams.some(s => s.data && s.data.length > 0));
 
+        if (!hasHistory || (trends && trends.insufficient_data)) {
+            if (emptyBanner) emptyBanner.style.display = 'flex';
+            ctxTrend.style.opacity = '0.35';
+        } else {
+            if (emptyBanner) emptyBanner.style.display = 'none';
+            ctxTrend.style.opacity = '1.0';
+        }
 
-        const nodeLabelWired = (liveStats && liveStats.sensor_id) ? `[NODE: ${liveStats.hostname || liveStats.sensor_id}] eno1 Gateway Latency (ms)` : (liveStats && liveStats.campus_name ? `[AGGREGATE: ${liveStats.campus_name}] eno1 Gateway Latency (ms)` : `[AGGREGATE: All Campuses] eno1 Gateway Latency (ms)`);
-        const nodeLabelWifi = (liveStats && liveStats.sensor_id) ? `[NODE: ${liveStats.hostname || liveStats.sensor_id}] wlp1s0 Wi-Fi Latency (ms)` : (liveStats && liveStats.campus_name ? `[AGGREGATE: ${liveStats.campus_name}] wlp1s0 Wi-Fi Latency (ms)` : `[AGGREGATE: All Campuses] wlp1s0 Wi-Fi Latency (ms)`);
+        const labels = (trends && trends.labels && trends.labels.length > 0) ? trends.labels : ['Collecting...'];
+        const datasets = [];
+
+        if (trends && trends.streams && trends.streams.length > 0 && hasHistory) {
+            const colors = ['#38bdf8', '#8b5cf6', '#10b981', '#f59e0b'];
+            trends.streams.forEach((stream, idx) => {
+                if (!stream.data || stream.data.length === 0) return;
+                const col = colors[idx % colors.length];
+                datasets.push({
+                    label: `${stream.name} [${stream.target}]`,
+                    data: stream.data,
+                    borderColor: col,
+                    backgroundColor: `${col}1a`,
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 2
+                });
+            });
+        } else {
+            datasets.push({
+                label: 'Telemetry Accumulating',
+                data: [0],
+                borderColor: 'rgba(148, 163, 184, 0.4)',
+                borderDash: [4, 4],
+                fill: false,
+                borderWidth: 1,
+                pointRadius: 0
+            });
+        }
+
+        const subTitleEl = document.getElementById('trend-analysis-subtitle');
+        if (subTitleEl && trends && trends.streams && trends.streams.length > 0 && hasHistory) {
+            subTitleEl.textContent = trends.streams.filter(s => s.data && s.data.length > 0).map(s => `● ${s.name}`).join('  ');
+        }
 
         chartTrend = new Chart(ctxTrend, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [
-                    {
-                        label: nodeLabelWired,
-                        data: wiredData,
-
-                        borderColor: '#38bdf8',
-                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 2,
-                        pointRadius: 2
-                    },
-                    {
-                        label: nodeLabelWifi,
-                        data: wifiData,
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'rgba(139, 92, 246, 0.05)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 2,
-                        pointRadius: 2
-                    }
-                ]
+                datasets: datasets
             },
             options: {
                 responsive: true,

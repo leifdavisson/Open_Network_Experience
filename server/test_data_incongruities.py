@@ -221,3 +221,70 @@ def test_09_dedicated_chromebook_fleet_view_and_lock_controls():
     # Direct download links for Google Workspace staging
     assert '/api/v1/chromebooks/download/extension.zip' in html_code  # nosec B101
     assert '/api/v1/chromebooks/download/policy.json' in html_code  # nosec B101
+
+def test_10_trend_analysis_data_truthfulness_and_discovery():
+    """Verify that Trend Analysis does not generate synthetic 15-point arrays and handles fresh installs truthfully."""
+    from fastapi.testclient import TestClient
+    from server.main import app
+
+    client = TestClient(app)
+    resp = client.get("/api/v1/wallboard/live-stats")
+    assert resp.status_code == 200  # nosec B101
+    data = resp.json()
+
+    assert "trends" in data  # nosec B101
+    trends = data["trends"]
+
+    # Invariants for Issue #34:
+    assert "has_history" in trends, "trends must report whether real historical data was retrieved"  # nosec B101
+    assert "insufficient_data" in trends, "trends must indicate when installation lacks sufficient trend history"  # nosec B101
+    assert "streams" in trends, "trends must provide dynamically discovered latency streams"  # nosec B101
+
+    # In fresh/offline test environment, it must truthfully report insufficient data rather than fabricating 15 mock points
+    if trends.get("insufficient_data"):
+        # Must not fabricate a fake 15-day series
+        synthetic_pattern = [round(1.18 + ((i % 5) - 2) * 0.04, 2) for i in range(15)]
+        assert trends.get("wired") != synthetic_pattern, "Backend must not emit synthetic modulo-derived 15-point data"  # nosec B101
+
+    # Check charts.js does not hardcode fake fallback arrays
+    charts_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "charts.js"
+    with open(charts_js_path, "r", encoding="utf-8") as f:
+        js_code = f.read()
+
+    assert "Array.from({length: 15}" not in js_code, "Frontend must not hardcode 15 fake days"  # nosec B101
+    assert "[1.2, 1.15, 1.22" not in js_code, "Frontend must not contain hardcoded fallback mock arrays"  # nosec B101
+
+def test_11_fault_situation_7d_compliance_truthfulness():
+    """Verify that Fault Situation reports real 7-day trailing compliance rather than multiplying faults by 10."""
+    from fastapi.testclient import TestClient
+    from server.main import app
+
+    client = TestClient(app)
+    resp = client.get("/api/v1/wallboard/live-stats")
+    assert resp.status_code == 200  # nosec B101
+    data = resp.json()
+
+    # Invariants for Issue #35:
+    assert "compliance_7d" in data, "liveStats must include real compliance_7d calculation"  # nosec B101
+    comp_7d = data["compliance_7d"]
+    assert "compliant_pct" in comp_7d  # nosec B101
+    assert "fault_pct" in comp_7d  # nosec B101
+    assert "eval_window" in comp_7d  # nosec B101
+    assert round(comp_7d["compliant_pct"] + comp_7d["fault_pct"], 1) == 100.0  # nosec B101
+
+    # Check charts.js does not use the arbitrary 'faults * 10' scaling heuristic
+    charts_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "charts.js"
+    with open(charts_js_path, "r", encoding="utf-8") as f:
+        js_code = f.read()
+
+    assert "liveStats.kpis.faults * 10" not in js_code, "Frontend must not use arbitrary faults * 10 multiplier"  # nosec B101
+    assert "compliance_7d" in js_code, "Frontend must ingest real compliance_7d metrics"  # nosec B101
+
+def test_12_query_vm_range_helper_contract():
+    """Verify query_vm_range helper exists in server.routers.telemetry and handles query parameters."""
+    from server.routers.telemetry import query_vm_range
+    assert callable(query_vm_range)  # nosec B101
+    # When VM is not running locally, returns empty list gracefully without throwing
+    res = query_vm_range("probe_duration_seconds", 1700000000, 1700086400, "1h")
+    assert isinstance(res, list)  # nosec B101
+

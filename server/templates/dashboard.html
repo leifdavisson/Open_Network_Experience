@@ -196,23 +196,26 @@
                         <div class="analytics-card">
                             <div class="analytics-title">
                                 <span>Fault Situation [AGGREGATE: District-Wide]</span>
-                                <span style="font-size:11px; color:var(--text-muted);">Last 7 Days</span>
+                                <span id="fault-chart-window" style="font-size:11px; color:var(--text-muted);">Last 7 Days</span>
                             </div>
                             <div style="height: 160px; position: relative;">
                                 <canvas id="chart-fault-situation"></canvas>
                             </div>
                             <div style="display:flex; justify-content:center; gap:16px; font-size:12px; margin-top:8px;">
-                                <span style="color:var(--success);">● Compliant (100%)</span>
-                                <span style="color:var(--danger);">● Fault (0%)</span>
+                                <span id="fault-chart-comp-pct" style="color:var(--success);">● Compliant (100%)</span>
+                                <span id="fault-chart-fault-pct" style="color:var(--danger);">● Fault (0%)</span>
                             </div>
                         </div>
 
                         <div class="analytics-card">
                             <div class="analytics-title">
                                 <span>Trend Analysis (WAN Latency & SLA Stability) [AGGREGATE: District-Wide]</span>
-                                <span style="font-size:11px; color:var(--accent);">● Wired (eno1)  ● Wi-Fi (wlp1s0)</span>
+                                <span id="trend-analysis-subtitle" style="font-size:11px; color:var(--accent);">● Gateway & WAN Latency Streams</span>
                             </div>
                             <div style="height: 160px; position: relative;">
+                                <div id="trend-empty-state-banner" style="display:none; position:absolute; inset:0; z-index:2; align-items:center; justify-content:center; background:rgba(15, 23, 42, 0.75); color:var(--text-muted); font-size:12px; border-radius:6px; text-align:center; padding:12px;">
+                                    ⏳ Collecting telemetry history... insufficient samples for 15-day trend
+                                </div>
                                 <canvas id="chart-trend-analysis"></canvas>
                             </div>
                         </div>
