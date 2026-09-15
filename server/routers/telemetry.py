@@ -206,23 +206,122 @@ async def get_wallboard_live_stats():
                 except Exception:
                     pass
 
+    # 1. Gateway & AP Latency (Wired vs Wi-Fi)
     gw_durations = query_vm_instant('probe_duration_seconds{job="blackbox-gateway-ping"}')
-    gw_rtt_wired = 1.18
+    gw_rtt_wired = None
+    gw_rtt_wifi = None
     if gw_durations:
+        for item in gw_durations:
+            inst = item.get("metric", {}).get("instance", "")
+            try:
+                val = round(float(item.get("value", [0, 0])[1]) * 1000.0, 2)
+                if val > 0:
+                    if "wlan" in inst or "wifi" in inst:
+                        gw_rtt_wifi = val
+                    elif gw_rtt_wired is None:
+                        gw_rtt_wired = val
+            except Exception:
+                pass
+
+    # Check active sensors for wireless latency if not queried via blackbox
+    if gw_rtt_wifi is None:
+        wifi_latencies = [
+            s["live_metrics"]["gateway_ping_ms"]
+            for s in SENSORS_DB.values()
+            if s.get("live_metrics", {}).get("gateway_ping_ms") is not None
+            and (s.get("interfaces", {}).get("wlp1s0", {}).get("is_up") or s.get("wifi", {}).get("connected"))
+        ]
+        if wifi_latencies:
+            gw_rtt_wifi = round(sum(wifi_latencies) / len(wifi_latencies), 2)
+
+    # 2. DNS Resolution Timing (Primary & Secondary Resolvers)
+    dns_durations = query_vm_instant('probe_duration_seconds{job="blackbox-dns-probes"}')
+    dns_primary_ms = None
+    dns_secondary_ms = None
+    if dns_durations:
+        for item in dns_durations:
+            inst = item.get("metric", {}).get("instance", "")
+            try:
+                val = round(float(item.get("value", [0, 0])[1]) * 1000.0, 2)
+                if val > 0:
+                    if inst in ("1.1.1.1", "district-primary") or dns_primary_ms is None:
+                        dns_primary_ms = val
+                    elif inst in ("8.8.8.8", "9.9.9.9", "district-secondary") or dns_secondary_ms is None:
+                        dns_secondary_ms = val
+            except Exception:
+                pass
+
+    # Check sensors live_metrics fallback for DNS if VM empty
+    if dns_primary_ms is None:
+        sensor_dns = [
+            s["live_metrics"]["dns_resolution_ms"]
+            for s in SENSORS_DB.values()
+            if s.get("live_metrics", {}).get("dns_resolution_ms") is not None
+        ]
+        if sensor_dns:
+            dns_primary_ms = round(sum(sensor_dns) / len(sensor_dns), 2)
+
+    # 3. VoIP & Zoom Media MOS (Real STUN / WebRTC jitter calculations)
+    voip_metrics = query_vm_instant('openux_voip_mos_score')
+    voip_mos = None
+    if voip_metrics:
         try:
-            gw_rtt_wired = round(float(gw_durations[0].get("value", [0, 0])[1]) * 1000.0, 2)
-            if gw_rtt_wired <= 0:
-                gw_rtt_wired = 1.18
+            val = round(float(voip_metrics[0].get("value", [0, 0])[1]), 2)
+            if val > 0:
+                voip_mos = val
         except Exception:
             pass
 
-    dns_durations = query_vm_instant('probe_duration_seconds{job="blackbox-dns-probes"}')
-    dns_rtt = 2.36
-    if dns_durations:
+    if voip_mos is None:
+        sensor_mos = [
+            s["live_metrics"]["voip_mos_score"]
+            for s in SENSORS_DB.values()
+            if s.get("live_metrics", {}).get("voip_mos_score") is not None
+        ]
+        if sensor_mos:
+            voip_mos = round(sum(sensor_mos) / len(sensor_mos), 2)
+
+    # 4. DHCP 4-Way DORA Lease Timing
+    dhcp_metrics = query_vm_instant('wifi_dhcp_lease_duration_seconds')
+    dhcp_dora_ms = None
+    if dhcp_metrics:
         try:
-            dns_rtt = round(float(dns_durations[0].get("value", [0, 0])[1]) * 1000.0, 2)
-            if dns_rtt <= 0:
-                dns_rtt = 2.36
+            val_sec = float(dhcp_metrics[0].get("value", [0, 0])[1])
+            if val_sec > 0:
+                dhcp_dora_ms = round(val_sec * 1000.0)
+        except Exception:
+            pass
+
+    # 5. Wi-Fi RF Flapping / RRM (Syslog Roam Thrashing / Flaps)
+    rrm_metrics = query_vm_instant('rate(openux_wifi_roams_total[1h])')
+    wifi_flaps = None
+    if rrm_metrics:
+        try:
+            val = float(rrm_metrics[0].get("value", [0, 0])[1])
+            wifi_flaps = round(val * 3600.0, 1)
+        except Exception:
+            pass
+    else:
+        # Check active alerts in DB for wifi_flapping or rrm_darrp in trailing 1h
+        now_ts = int(time.time())
+        one_hour_ago = now_ts - 3600
+        with db.get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT COUNT(*) FROM alerts WHERE starts_at >= ? AND probe_id IN ('rrm_darrp', 'wifi_flapping');",
+                (one_hour_ago,)
+            )
+            flaps_row = cursor.fetchone()
+            flapping_alert_count = flaps_row[0] if flaps_row else 0
+            if len(SENSORS_DB) > 0:
+                wifi_flaps = flapping_alert_count
+
+    # 6. Lateral VLAN Isolation
+    vlan_metrics = query_vm_instant('openux_vlan_isolation_dropped_ratio')
+    vlan_isolation_pct = None
+    if vlan_metrics:
+        try:
+            val = float(vlan_metrics[0].get("value", [0, 0])[1])
+            vlan_isolation_pct = round(val * 100.0, 1)
         except Exception:
             pass
 
@@ -429,12 +528,13 @@ async def get_wallboard_live_stats():
         "saas": saas_map,
         "slas": {
             "gateway_wired_ms": gw_rtt_wired,
-            "gateway_wifi_ms": round(gw_rtt_wired * 3.65, 2),
-            "dns_ms": dns_rtt,
-            "voip_mos": 4.41,
-            "dhcp_dora_ms": 482,
-            "wifi_flaps": 0,
-            "vlan_isolation_pct": 100.0
+            "gateway_wifi_ms": gw_rtt_wifi,
+            "dns_ms": dns_primary_ms,
+            "dns_secondary_ms": dns_secondary_ms,
+            "voip_mos": voip_mos,
+            "dhcp_dora_ms": dhcp_dora_ms,
+            "wifi_flaps": wifi_flaps,
+            "vlan_isolation_pct": vlan_isolation_pct
         },
         "kpis": {
             "online": online_count,

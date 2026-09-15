@@ -328,3 +328,40 @@ def test_13_alarm_overview_30d_resolution_truthfulness():
 
     assert "data: [100, activeAlarms]" not in app_js_code, "app.js must not hardcode 100 resolved alarms in chart dataset"  # nosec B101
 
+def test_14_executive_sla_wallboard_truthfulness():
+    """Verify Executive SLA Wallboard renders measured metrics or honest unmonitored states."""
+    from fastapi.testclient import TestClient
+    from server.main import app
+
+    client = TestClient(app)
+    resp = client.get("/api/v1/wallboard/live-stats")
+    assert resp.status_code == 200  # nosec B101
+    data = resp.json()
+    assert "slas" in data, "liveStats must contain slas"  # nosec B101
+    slas = data["slas"]
+
+    # Invariants for Issue #37:
+    # 1. WiFi latency must not be a hardcoded 3.65x multiplier of wired latency
+    if slas.get("gateway_wired_ms") is not None and slas.get("gateway_wifi_ms") is not None:
+        assert slas["gateway_wifi_ms"] != round(slas["gateway_wired_ms"] * 3.65, 2), \
+            "gateway_wifi_ms must not be synthesized with a 3.65x multiplier"  # nosec B101
+
+    # 2. Frontend must not synthesize secondary DNS with 1.04x multiplier
+    sensors_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "sensors.js"
+    with open(sensors_js_path, "r", encoding="utf-8") as f:
+        sensors_code = f.read()
+    assert "slas.dns_ms * 1.04" not in sensors_code, "Frontend must not synthesize secondary DNS with 1.04x multiplier"  # nosec B101
+
+    app_js_path = TEMPLATES_DIR.parent / "static" / "js" / "app.js"
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        app_code = f.read()
+    assert "slas.dns_ms * 1.04" not in app_code, "app.js must not synthesize secondary DNS with 1.04x multiplier"  # nosec B101
+
+    # 3. Frontend must dynamically update DHCP, Wi-Fi Flapping, and VLAN Isolation
+    assert "sla-val-dhcp" in sensors_code  # nosec B101
+    assert "sla-val-rrm" in sensors_code  # nosec B101
+    assert "sla-val-vlan" in sensors_code  # nosec B101
+    assert "sla-val-dhcp" in app_code  # nosec B101
+    assert "sla-val-rrm" in app_code  # nosec B101
+    assert "sla-val-vlan" in app_code  # nosec B101
+

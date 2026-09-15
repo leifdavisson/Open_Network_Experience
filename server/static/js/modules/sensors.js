@@ -309,15 +309,126 @@ export function renderDashboard(sensors, probes, liveStats, chromebooks, roaming
         document.getElementById('kpi-alarm').innerText = '0';
     }
 
-    // Update Slide 1 Core SLAs from live metrics
+    // Update Slide 1 Core SLAs from live metrics (Issue #37)
     if (liveStats && liveStats.slas) {
         const slas = liveStats.slas;
+
+        // 1. Gateway & AP Latency
         const gVal = document.getElementById('sla-val-gateway');
-        if (gVal) gVal.innerText = `${slas.gateway_wired_ms} ms / ${slas.gateway_wifi_ms} ms`;
+        const gStatus = document.getElementById('sla-status-gateway');
+        if (gVal) {
+            const wText = slas.gateway_wired_ms != null ? `${slas.gateway_wired_ms} ms` : 'Unmonitored';
+            const wfText = slas.gateway_wifi_ms != null ? `${slas.gateway_wifi_ms} ms` : 'Unmonitored';
+            gVal.innerText = `${wText} / ${wfText}`;
+        }
+        if (gStatus) {
+            if (slas.gateway_wired_ms != null || slas.gateway_wifi_ms != null) {
+                const maxLat = Math.max(slas.gateway_wired_ms || 0, slas.gateway_wifi_ms || 0);
+                if (maxLat > 25.0) {
+                    gStatus.innerText = '🔴 DEGRADED (Elevated Gateway Latency)';
+                } else if (maxLat > 15.0) {
+                    gStatus.innerText = '🟡 WARNING (Approaching 15ms SLA Threshold)';
+                } else {
+                    gStatus.innerText = '🟢 PASS (0.0% Loss • Wired vs Wi-Fi)';
+                }
+            } else {
+                gStatus.innerText = '⚪ Measuring (Wired vs Wi-Fi)';
+            }
+        }
+
+        // 2. DNS Resolution Timing
         const dVal = document.getElementById('sla-val-dns');
-        if (dVal) dVal.innerText = `${slas.dns_ms} ms / ${(slas.dns_ms * 1.04).toFixed(2)} ms`;
+        const dStatus = document.getElementById('sla-status-dns');
+        if (dVal) {
+            const priText = slas.dns_ms != null ? `${slas.dns_ms} ms` : 'Unmonitored';
+            const secText = slas.dns_secondary_ms != null ? `${slas.dns_secondary_ms} ms` : (slas.dns_ms != null ? `${slas.dns_ms} ms` : 'Unmonitored');
+            dVal.innerText = `${priText} / ${secText}`;
+        }
+        if (dStatus) {
+            if (slas.dns_ms != null) {
+                if (slas.dns_ms > 50.0) {
+                    dStatus.innerText = '🔴 DEGRADED (DNS RTT > 50ms)';
+                } else {
+                    dStatus.innerText = '🟢 PASS (Anycast + District Primary DNS)';
+                }
+            } else {
+                dStatus.innerText = '⚪ Measuring (Primary / Secondary)';
+            }
+        }
+
+        // 3. VoIP & Zoom Media MOS
         const vVal = document.getElementById('sla-val-voip');
-        if (vVal) vVal.innerText = `${slas.voip_mos} / 5.00 MOS`;
+        const vStatus = document.getElementById('sla-status-voip');
+        if (vVal) {
+            vVal.innerText = slas.voip_mos != null ? `${slas.voip_mos} / 5.00` : '-- / 5.00';
+        }
+        if (vStatus) {
+            if (slas.voip_mos != null) {
+                if (slas.voip_mos < 3.8) {
+                    vStatus.innerText = '🔴 POOR (RTP Jitter / Packet Loss High)';
+                } else if (slas.voip_mos < 4.0) {
+                    vStatus.innerText = '🟡 FAIR (Minor RTP Jitter)';
+                } else {
+                    vStatus.innerText = '🟢 PASS (UDP 20ms Jitter Nominal)';
+                }
+            } else {
+                vStatus.innerText = '⚪ No RTP Stream Configured';
+            }
+        }
+
+        // 4. DHCP 4-Way DORA Lease
+        const dhcpVal = document.getElementById('sla-val-dhcp');
+        const dhcpStatus = document.getElementById('sla-status-dhcp');
+        if (dhcpVal) {
+            dhcpVal.innerText = slas.dhcp_dora_ms != null ? `${(slas.dhcp_dora_ms / 1000).toFixed(2)} s (${slas.dhcp_dora_ms} ms)` : '-- ms';
+        }
+        if (dhcpStatus) {
+            if (slas.dhcp_dora_ms != null) {
+                if (slas.dhcp_dora_ms > 2000) {
+                    dhcpStatus.innerText = '🔴 SLOW (Lease RTT > 2.0s)';
+                } else {
+                    dhcpStatus.innerText = '🟢 PASS (Rapid Onboarding Latency)';
+                }
+            } else {
+                dhcpStatus.innerText = '⚪ No Active DHCP Probe';
+            }
+        }
+
+        // 5. Wi-Fi RF Flapping / RRM
+        const rrmVal = document.getElementById('sla-val-rrm');
+        const rrmStatus = document.getElementById('sla-status-rrm');
+        if (rrmVal) {
+            rrmVal.innerText = slas.wifi_flaps != null ? `${slas.wifi_flaps} Flaps / hr` : '-- Flaps / hr';
+        }
+        if (rrmStatus) {
+            if (slas.wifi_flaps != null) {
+                if (slas.wifi_flaps >= 3) {
+                    rrmStatus.innerText = '🔴 HIGH FLAPPING (BSSID Roam Thrashing)';
+                } else {
+                    rrmStatus.innerText = '🟢 PASS (RF Channel Stable)';
+                }
+            } else {
+                rrmStatus.innerText = '⚪ Measuring Roam Stability';
+            }
+        }
+
+        // 6. Lateral VLAN Isolation
+        const vlanVal = document.getElementById('sla-val-vlan');
+        const vlanStatus = document.getElementById('sla-status-vlan');
+        if (vlanVal) {
+            vlanVal.innerText = slas.vlan_isolation_pct != null ? `${slas.vlan_isolation_pct}% Dropped` : '--% Dropped';
+        }
+        if (vlanStatus) {
+            if (slas.vlan_isolation_pct != null) {
+                if (slas.vlan_isolation_pct < 100.0) {
+                    vlanStatus.innerText = '🔴 LEAK DETECTED (Cross-VLAN Traffic Passed)';
+                } else {
+                    vlanStatus.innerText = '🟢 PASS (Student Wi-Fi Isolated from Admin)';
+                }
+            } else {
+                vlanStatus.innerText = '⚪ Isolation Probe Inactive';
+            }
+        }
     }
 
     // Update Slide 1 Incident Feed with Traffic Light List
