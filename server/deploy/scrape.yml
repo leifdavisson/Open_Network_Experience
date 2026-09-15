@@ -64,6 +64,7 @@ scrape_configs:
           - "https://login.i-ready.com"
           - "https://ca.portal.cambiumtds.com"
           - "https://zoom.us"
+          - "https://aeries.net"
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

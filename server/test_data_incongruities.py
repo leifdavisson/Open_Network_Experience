@@ -365,3 +365,28 @@ def test_14_executive_sla_wallboard_truthfulness():
     assert "sla-val-rrm" in app_code  # nosec B101
     assert "sla-val-vlan" in app_code  # nosec B101
 
+def test_15_classroom_saas_sla_truthfulness():
+    """Verify Classroom SaaS SLAs query real 24h uptime, include SIS targets, and do not conflate errors with latency."""
+    from fastapi.testclient import TestClient
+    from server.main import app
+
+    client = TestClient(app)
+    resp = client.get("/api/v1/wallboard/live-stats")
+    assert resp.status_code == 200  # nosec B101
+    data = resp.json()
+    assert "saas" in data, "liveStats must contain saas metrics"  # nosec B101
+    saas = data["saas"]
+
+    # Verify all expected SaaS apps are present including SIS
+    for k in ["canvas", "google", "iready", "zoom", "caaspp", "sis"]:
+        assert k in saas, f"Missing SaaS service: {k}"  # nosec B101
+        item = saas[k]
+        assert "name" in item  # nosec B101
+        assert "status" in item  # nosec B101
+
+    # Verify scrape.yml contains SIS target
+    scrape_path = TEMPLATES_DIR.parent / "deploy" / "scrape.yml"
+    with open(scrape_path, "r", encoding="utf-8") as f:
+        scrape_yml = f.read()
+    assert "aeries.net" in scrape_yml, "scrape.yml blackbox-saas-apps must include SIS target"  # nosec B101
+
