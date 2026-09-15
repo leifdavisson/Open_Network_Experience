@@ -362,6 +362,25 @@ async def get_wallboard_live_stats():
         except Exception:
             pass
 
+    # 7. Student Safety & CIPA Filtering Status
+    cipa_metrics = query_vm_instant('openux_cipa_filter_pass_ratio')
+    cipa_filter_ok = None
+    if cipa_metrics:
+        try:
+            val = float(cipa_metrics[0].get("value", [0, 0])[1])
+            cipa_filter_ok = (val >= 0.99)
+        except Exception:
+            pass
+    else:
+        # Check active sensors live_metrics for cipa_filter_status
+        sensor_cipa = [
+            s.get("live_metrics", {}).get("cipa_filter_status")
+            for s in SENSORS_DB.values()
+            if s.get("live_metrics", {}).get("cipa_filter_status")
+        ]
+        if sensor_cipa:
+            cipa_filter_ok = any("100% Compliant" in str(stat) or "Pass" in str(stat) for stat in sensor_cipa)
+
     now = int(time.time())
     online_count = sum(1 for s in SENSORS_DB.values() if (now - s.get("last_seen", 0)) < 120 and s.get("last_seen", 0) > 0)
     total_count = len(SENSORS_DB)
@@ -571,7 +590,8 @@ async def get_wallboard_live_stats():
             "voip_mos": voip_mos,
             "dhcp_dora_ms": dhcp_dora_ms,
             "wifi_flaps": wifi_flaps,
-            "vlan_isolation_pct": vlan_isolation_pct
+            "vlan_isolation_pct": vlan_isolation_pct,
+            "cipa_filter_ok": cipa_filter_ok
         },
         "kpis": {
             "online": online_count,

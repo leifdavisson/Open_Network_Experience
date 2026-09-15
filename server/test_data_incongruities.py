@@ -390,3 +390,32 @@ def test_15_classroom_saas_sla_truthfulness():
         scrape_yml = f.read()
     assert "aeries.net" in scrape_yml, "scrape.yml blackbox-saas-apps must include SIS target"  # nosec B101
 
+def test_16_helpdesk_teacher_quickview_truthfulness():
+    """Verify Helpdesk & Teacher QuickView updates all 4 cards dynamically and evaluates WAN reachability."""
+    sensors_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "sensors.js"
+    with open(sensors_js_path, "r", encoding="utf-8") as f:
+        sensors_code = f.read()
+
+    app_js_path = TEMPLATES_DIR.parent / "static" / "js" / "app.js"
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        app_code = f.read()
+
+    dash_html_path = TEMPLATES_DIR / "dashboard.html"
+    with open(dash_html_path, "r", encoding="utf-8") as f:
+        dash_html = f.read()
+
+    # Invariants for Issue #39:
+    # 1. All 4 cards must have dynamic hooks in sensors.js and app.js
+    for el_id in ["helpdesk-internet-status", "helpdesk-testing-status", "helpdesk-wifi-status", "helpdesk-cipa-status"]:
+        assert el_id in sensors_code, f"sensors.js missing handler for {el_id}"  # nosec B101
+        assert el_id in app_code, f"app.js missing handler for {el_id}"  # nosec B101
+
+    # 2. Internet status handler must inspect WAN/gateway or DNS timing, not just sensor checkins
+    assert "slas.gateway_wired_ms" in sensors_code  # nosec B101
+    assert "slas.dns_ms" in sensors_code  # nosec B101
+
+    # 3. Initial dashboard HTML must not present hardcoded 100% passes
+    assert 'id="helpdesk-testing-status">⚪ Checking State Testing...' in dash_html  # nosec B101
+    assert 'id="helpdesk-wifi-status">⚪ Checking Wi-Fi...' in dash_html  # nosec B101
+    assert 'id="helpdesk-cipa-status">⚪ Checking Safety Filter...' in dash_html  # nosec B101
+

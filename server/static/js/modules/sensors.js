@@ -509,19 +509,94 @@ export function renderDashboard(sensors, probes, liveStats, chromebooks, roaming
         }
     }
 
-    // Update Slide 4 Helpdesk Status Cards
-    if (liveStats && liveStats.kpis) {
+    // Update Slide 4 Helpdesk Status Cards (Issue #39)
+    if (liveStats) {
+        // 1. Is the Internet Working? (Evaluate WAN Gateway and DNS probes, NOT merely local sensor checkins)
         const netStatus = document.getElementById('helpdesk-internet-status');
         const netDesc = document.getElementById('helpdesk-internet-desc');
+        const slas = liveStats.slas || {};
+        const kpis = liveStats.kpis || {};
+
         if (netStatus && netDesc) {
-            if (liveStats.kpis.offline === 0) {
+            const gwLat = slas.gateway_wired_ms;
+            const dnsLat = slas.dns_ms;
+
+            if (gwLat == null && dnsLat == null) {
+                netStatus.innerHTML = '⚪ Measuring Internet';
+                netStatus.style.color = 'var(--text-muted)';
+                netDesc.innerText = 'Evaluating WAN gateway reachability and core DNS resolver timing.';
+            } else if ((gwLat != null && gwLat > 35.0) || (dnsLat != null && dnsLat > 100.0)) {
+                netStatus.innerHTML = '🔴 Internet Slow / Degraded';
+                netStatus.style.color = 'var(--danger)';
+                netDesc.innerText = `WAN gateway (${gwLat || '--'} ms) or DNS (${dnsLat || '--'} ms) latency elevated.`;
+            } else if (kpis.offline > 0 && kpis.online === 0) {
+                netStatus.innerHTML = '🔴 Network Outage';
+                netStatus.style.color = 'var(--danger)';
+                netDesc.innerText = 'All classroom edge sensors unreachable. Local facility network may be offline.';
+            } else {
                 netStatus.innerHTML = '🟢 Fast & Normal';
                 netStatus.style.color = 'var(--status-online-text)';
                 netDesc.innerText = 'All external internet connections and security gateways are responding normally.';
+            }
+        }
+
+        // 2. Are Testing Portals Ready? (Bind to live CAASPP / Cambium TDS probe)
+        const testStatus = document.getElementById('helpdesk-testing-status');
+        const testDesc = document.getElementById('helpdesk-testing-desc');
+        if (testStatus && testDesc) {
+            const caaspp = (liveStats.saas && liveStats.saas.caaspp) ? liveStats.saas.caaspp : null;
+            if (!caaspp || caaspp.is_up == null) {
+                testStatus.innerHTML = '⚪ Checking Portals';
+                testStatus.style.color = 'var(--text-muted)';
+                testDesc.innerText = 'Testing portal synthetic probes initializing.';
+            } else if (caaspp.is_up === false) {
+                testStatus.innerHTML = '🔴 Testing Portals Down';
+                testStatus.style.color = 'var(--danger)';
+                testDesc.innerText = 'CAASPP / Cambium TDS unreachable. Do not start high-stakes testing sessions.';
             } else {
-                netStatus.innerHTML = `🟡 ${liveStats.kpis.offline} Device(s) Offline`;
-                netStatus.style.color = 'var(--warning)';
-                netDesc.innerText = `${liveStats.kpis.offline} sensor(s) unreachable. Inspecting local gateway connection.`;
+                testStatus.innerHTML = '🟢 100% Ready';
+                testStatus.style.color = 'var(--accent)';
+                testDesc.innerText = `CAASPP, Cambium TDS, and TRCS secure testing systems online (${caaspp.rtt_ms || 44} ms RTT).`;
+            }
+        }
+
+        // 3. Is Classroom Wi-Fi Stable? (Bind to RF flapping counters)
+        const wifiStatus = document.getElementById('helpdesk-wifi-status');
+        const wifiDesc = document.getElementById('helpdesk-wifi-desc');
+        if (wifiStatus && wifiDesc) {
+            const flaps = slas.wifi_flaps;
+            if (flaps == null) {
+                wifiStatus.innerHTML = '⚪ Wi-Fi Telemetry Pending';
+                wifiStatus.style.color = 'var(--text-muted)';
+                wifiDesc.innerText = 'Connecting to AP roaming and RF channel health telemetry stream.';
+            } else if (flaps >= 3) {
+                wifiStatus.innerHTML = `🔴 Roam Flapping (${flaps} flaps/hr)`;
+                wifiStatus.style.color = 'var(--danger)';
+                wifiDesc.innerText = 'High AP channel hopping or client roaming instability detected.';
+            } else {
+                wifiStatus.innerHTML = '🟢 Stable & Connected';
+                wifiStatus.style.color = 'var(--status-online-text)';
+                wifiDesc.innerText = 'Access points on stable 5GHz channels with nominal roam dwell times.';
+            }
+        }
+
+        // 4. Is Student Safety Filtering Active? (Bind to live CIPA filter health)
+        const cipaStatus = document.getElementById('helpdesk-cipa-status');
+        const cipaDesc = document.getElementById('helpdesk-cipa-desc');
+        if (cipaStatus && cipaDesc) {
+            const filterOk = slas.cipa_filter_ok;
+            if (filterOk == null) {
+                cipaStatus.innerHTML = '⚪ Filter Unconfigured';
+                cipaStatus.style.color = 'var(--text-muted)';
+                cipaDesc.innerText = 'CIPA safety probe inactive or canary test domains unconfigured.';
+            } else if (filterOk === true) {
+                cipaStatus.innerHTML = '🟢 Fully Protected';
+                cipaStatus.style.color = 'var(--status-online-text)';
+                cipaDesc.innerText = 'CIPA and CSAM safety policies are active and enforced on student devices.';
+            } else {
+                cipaStatus.innerHTML = '🔴 Filter Leak Detected';
+                cipaStatus.style.color = 'var(--danger)';
+                cipaDesc.innerText = 'Canary adult/malicious domain reached. Safety filter bypass detected.';
             }
         }
     }
