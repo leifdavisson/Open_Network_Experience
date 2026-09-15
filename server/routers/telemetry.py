@@ -68,6 +68,74 @@ async def health_check():
     }
 
 
+_PROMETHEUS_SD_CACHE = {
+    "targets": [],
+    "expires_at": 0.0
+}
+
+def invalidate_prometheus_sd_cache():
+    """Resets the Prometheus HTTP SD target cache."""
+    _PROMETHEUS_SD_CACHE["expires_at"] = 0.0
+    _PROMETHEUS_SD_CACHE["targets"] = []
+
+@router.get("/api/v1/telemetry/prometheus-sd", summary="Prometheus HTTP Service Discovery for Edge Sensors")
+@router.get("/telemetry/prometheus-sd", summary="Prometheus HTTP Service Discovery for Edge Sensors", include_in_schema=False)
+async def get_prometheus_http_sd():
+    """Dynamically serves approved Linux edge sensor targets for VictoriaMetrics/Prometheus scraping with 15s TTL cache."""
+    now = time.monotonic()
+    if now < _PROMETHEUS_SD_CACHE["expires_at"]:
+        return _PROMETHEUS_SD_CACHE["targets"]
+
+    sd_targets = []
+    for s_id, sensor in SENSORS_DB.items():
+        if sensor.get("status") != "approved":
+            continue
+
+        # Exclude Chromebooks since they push telemetry to TSDB rather than running node_exporter
+        sensor_type = (sensor.get("sensor_type") or "").lower()
+        os_val = (sensor.get("os") or "").lower()
+        if "chrome" in os_val or sensor_type == "chromebook":
+            continue
+
+        ip = sensor.get("ip_address")
+        if not ip:
+            hostname = sensor.get("hostname")
+            if hostname and hostname != "unknown":
+                ip = hostname
+            else:
+                continue
+
+        ip_str = str(ip).strip()
+        target = ip_str if ":" in ip_str else f"{ip_str}:9100"
+
+        loc = sensor.get("location")
+        if loc:
+            site = getattr(loc, "site", None) or (loc.get("site") if isinstance(loc, dict) else "Unknown")
+            room = getattr(loc, "room", None) or (loc.get("room") if isinstance(loc, dict) else "Unknown")
+        else:
+            site = "Unknown"
+            room = "Unknown"
+
+        hostname = sensor.get("hostname") or "unknown"
+        campus_id = sensor.get("campus_id") or "default"
+
+        sd_targets.append({
+            "targets": [target],
+            "labels": {
+                "sensor_id": s_id,
+                "hostname": hostname,
+                "site": site or "Unknown",
+                "room": room or "Unknown",
+                "campus_id": campus_id,
+                "job": "sensor-node-metrics"
+            }
+        })
+
+    _PROMETHEUS_SD_CACHE["targets"] = sd_targets
+    _PROMETHEUS_SD_CACHE["expires_at"] = now + 15.0
+    return sd_targets
+
+
 @router.get("/api/v1/wallboard/live-stats", summary="Live Wallboard Telemetry & PromQL Aggregation")
 async def get_wallboard_live_stats():
     """Aggregates live VictoriaMetrics PromQL metrics and edge telemetry for presentation slides."""

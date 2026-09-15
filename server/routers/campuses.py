@@ -77,4 +77,6 @@ async def batch_approve(request: BatchApprovalRequest):
             SENSORS_DB[s_id]["status"] = "approved"
             if request.campus_id:
                 SENSORS_DB[s_id]["campus_id"] = request.campus_id
+    from server.routers.telemetry import invalidate_prometheus_sd_cache
+    invalidate_prometheus_sd_cache()
     return {"status": "success", "approved_count": len(request.sensor_ids)}

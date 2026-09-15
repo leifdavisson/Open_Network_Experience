@@ -66,7 +66,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "count(chromebook_wifi_connected == 1) or vector(0)",
+          "expr": "count(chromebook_wifi_connected{sensor_id=~\"$sensor_id\"} == 1) or vector(0)",
           "instant": true,
           "legendFormat": "Active Fleet Devices",
           "refId": "A"
@@ -121,7 +121,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "avg(chromebook_wifi_rssi_dbm) or vector(-60)",
+          "expr": "avg(chromebook_wifi_rssi_dbm{sensor_id=~\"$sensor_id\"}) or vector(-60)",
           "instant": true,
           "legendFormat": "Avg Wi-Fi RSSI",
           "refId": "A"
@@ -177,7 +177,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "avg(chromebook_webrtc_mos) or vector(4.35)",
+          "expr": "avg(chromebook_webrtc_mos{sensor_id=~\"$sensor_id\"}) or vector(4.35)",
           "instant": true,
           "legendFormat": "WebRTC MOS",
           "refId": "A"
@@ -233,7 +233,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "(avg(chromebook_app_success) * 100) or vector(100)",
+          "expr": "(avg(chromebook_app_success{sensor_id=~\"$sensor_id\"}) * 100) or vector(100)",
           "instant": true,
           "legendFormat": "App SLA Success",
           "refId": "A"
@@ -286,7 +286,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "chromebook_wifi_rssi_dbm",
+          "expr": "chromebook_wifi_rssi_dbm{sensor_id=~\"$sensor_id\"}",
           "legendFormat": "{{sensor_id}} ({{bssid}} Ch{{channel}} {{band}})",
           "refId": "A"
         }
@@ -326,14 +326,14 @@
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "chromebook_webrtc_rtt_ms",
+          "expr": "chromebook_webrtc_rtt_ms{sensor_id=~\"$sensor_id\"}",
           "legendFormat": "{{sensor_id}} STUN RTT",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "chromebook_webrtc_jitter_ms",
+          "expr": "chromebook_webrtc_jitter_ms{sensor_id=~\"$sensor_id\"}",
           "legendFormat": "{{sensor_id}} Jitter",
           "refId": "B"
         }
@@ -385,7 +385,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
           "editorMode": "code",
-          "expr": "chromebook_app_latency_ms",
+          "expr": "chromebook_app_latency_ms{sensor_id=~\"$sensor_id\"}",
           "legendFormat": "{{app}} ({{category}}) - {{sensor_id}}",
           "refId": "A"
         }
@@ -398,6 +398,36 @@
   "schemaVersion": 38,
   "style": "dark",
   "tags": ["chromebook", "wifi", "webrtc", "k12", "one"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "VictoriaMetrics"
+        },
+        "definition": "label_values(chromebook_wifi_connected, sensor_id)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "sensor_id",
+        "options": [],
+        "query": {
+          "query": "label_values(chromebook_wifi_connected, sensor_id)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
   "time": {
     "from": "now-1h",
     "to": "now"

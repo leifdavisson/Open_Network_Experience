@@ -7,6 +7,9 @@ scrape_configs:
   # 1. Scrape Physical & Virtual Sensor Node Exporters
   - job_name: "sensor-node-metrics"
     scrape_interval: 10s
+    http_sd_configs:
+      - url: http://cmp-server:8000/api/v1/telemetry/prometheus-sd
+        refresh_interval: 30s
     static_configs:
       - targets: ["10.98.2.105:9100"]
         labels:

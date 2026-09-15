@@ -256,6 +256,8 @@ async def approve_sensor(sensor_id: str):
     sensor["api_key"] = f"sensor-key-{secrets.token_hex(16)}"
     sensor["status"] = "approved"
     db.save_sensor(sensor)
+    from server.routers.telemetry import invalidate_prometheus_sd_cache
+    invalidate_prometheus_sd_cache()
     return {
         "status": "success",
         "message": "Sensor approved and key generated.",
@@ -272,6 +274,8 @@ async def reject_sensor(sensor_id: str):
     if sensor_id in SENSORS_DB:
         del SENSORS_DB[sensor_id]
         db.delete_sensor(sensor_id)
+        from server.routers.telemetry import invalidate_prometheus_sd_cache
+        invalidate_prometheus_sd_cache()
         return {"status": "success", "message": "Sensor rejected/removed from registration DB."}
     raise NotFoundException(detail="Sensor not found")
 
