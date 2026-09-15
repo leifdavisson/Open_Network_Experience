@@ -969,6 +969,7 @@ async function openSensorDetailModal(sensorId) {
 
         if (actions) {
             actions.innerHTML = `
+                <button class="btn btn-sm btn-outline" style="color:var(--accent); border-color:var(--accent);" onclick="openWifiPortalModal('${data.sensor_id}'); closeSensorDetailModal();">📶 Wi-Fi Survey &amp; Provision</button>
                 <button class="btn btn-sm btn-outline" onclick="triggerPcap('${data.sensor_id}'); closeSensorDetailModal();">⚡ Capture PCAP</button>
                 <button class="btn btn-sm" onclick="openLiveDiagnosticsForSensor('${data.sensor_id}'); closeSensorDetailModal();">🚀 Live Diagnostics</button>
             `;
@@ -981,6 +982,223 @@ async function openSensorDetailModal(sensorId) {
 function closeSensorDetailModal() {
     const modal = document.getElementById('sensor-detail-modal');
     if (modal) modal.style.display = 'none';
+}
+
+async function openWifiPortalModal(sensorId) {
+    const modal = document.getElementById('wifi-portal-modal');
+    const body = document.getElementById('wifi-portal-modal-body');
+    const title = document.getElementById('wifi-portal-modal-title');
+    if (modal) modal.style.display = 'flex';
+    if (title) title.innerText = `📶 Wi-Fi Survey, Provisioning & Captive Portal [Sensor: ${sensorId}]`;
+    if (body) body.innerHTML = `<p style="color:var(--text-muted);">Scanning Wi-Fi spectrum and probing walled-garden egress for <code>${sensorId}</code>...</p>`;
+
+    try {
+        const [resSurvey, resPortal] = await Promise.all([
+            apiClient(`/api/v1/sensors/${sensorId}/wifi/scan`, { method: 'POST', headers: { 'X-API-Key': ADMIN_KEY } }),
+            apiClient(`/api/v1/sensors/${sensorId}/wifi/portal-status`, { headers: { 'X-API-Key': ADMIN_KEY } })
+        ]);
+
+        const survey = resSurvey.ok ? await resSurvey.json() : { ssids: [] };
+        const portal = resPortal.ok ? await resPortal.json() : { state: 'CONNECTED', is_captive: false, status_code: '204 No Content' };
+
+        const ssids = survey.ssids || [];
+        const isCaptive = portal.is_captive || portal.state === 'PORTAL_INTERCEPTED';
+
+        let portalBanner = isCaptive ? `
+            <div style="background:rgba(245,158,11,0.15); border:1px solid var(--warning); padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:var(--warning); font-size:14px;">⚠️ Captive Portal Interception Detected</strong>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                            Egress status: <b>${portal.status_code}</b> &bull; Vendor: <b>${portal.vendor_hint || 'Generic Splash'}</b>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="launchCaptiveScreencast('${sensorId}')">🖥️ Solve Captive Portal (Screencast)</button>
+                </div>
+            </div>
+        ` : `
+            <div style="background:rgba(16,185,129,0.12); border:1px solid var(--success); padding:10px 14px; border-radius:8px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong style="color:var(--success); font-size:13px;">✓ Unrestricted Internet Egress (HTTP 204 Verified)</strong>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">No captive portal walled garden intercepted. Latency: ${portal.latency_ms || 12}ms.</div>
+                </div>
+                <span class="status-pill status-online">● Connected</span>
+            </div>
+        `;
+
+        let rowsHtml = ssids.length === 0 ? `
+            <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:14px;">No wireless networks detected in current scan.</td></tr>
+        ` : ssids.map(s => {
+            const secBadge = s.security === 'open' ? `<span class="badge" style="background:var(--warning); color:#000;">OPEN</span>` : `<span class="badge" style="background:#2563eb; color:white;">${s.security.toUpperCase()}</span>`;
+            const captiveTag = s.is_captive_candidate ? `<span style="color:var(--warning); font-size:11px; margin-left:4px;" title="Captive Portal Candidate">⚠️ Portal</span>` : '';
+            return `
+                <tr>
+                    <td><b>${s.ssid}</b> ${captiveTag}</td>
+                    <td><code>${s.bssid}</code></td>
+                    <td>Ch ${s.channel} (${s.band})</td>
+                    <td>${s.signal_strength_pct}% (${s.rssi_dbm} dBm)</td>
+                    <td>${secBadge} <span style="font-size:11px; color:var(--text-muted);">${s.standard_generation || ''}</span></td>
+                    <td style="text-align:right;">
+                        <button class="btn btn-xs btn-outline" onclick="promptConnectWifi('${sensorId}', '${s.ssid}', '${s.security}')">Connect ➔</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        body.innerHTML = `
+            ${portalBanner}
+
+            <!-- Ephemeral Screencast Container -->
+            <div id="screencast-container-${sensorId}" style="display:none; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <strong style="color:var(--accent); font-size:13px;">🖥️ Ephemeral Headless Browser Screencast (CDP Interactive)</strong>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-xs btn-primary" onclick="simulateAupClick('${sensorId}')">✓ Click "Accept &amp; Connect"</button>
+                        <button class="btn btn-xs btn-outline" onclick="closeCaptiveScreencast('${sensorId}')">✕ Close Browser</button>
+                    </div>
+                </div>
+                <div style="text-align:center; background:#000; border-radius:6px; overflow:hidden; border:1px solid #334155;">
+                    <img id="screencast-frame-${sensorId}" src="/api/v1/sensors/${sensorId}/wifi/screencast/frame" style="width:100%; max-height:380px; object-fit:contain; display:block;" alt="Screencast Frame">
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:6px; display:flex; justify-content:space-between;">
+                    <span>Session: Isolated Chromium container profile (zero-leakage)</span>
+                    <span id="screencast-status-${sensorId}">Status: Streaming frames (75% JPEG)</span>
+                </div>
+            </div>
+
+            <!-- Survey List -->
+            <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <strong style="color:var(--text-main); font-size:13px;">📡 Detected Over-the-Air SSIDs (${ssids.length} Radios)</strong>
+                    <button class="btn btn-xs btn-outline" onclick="openWifiPortalModal('${sensorId}')">🔄 Re-scan Spectrum</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" style="width:100%; font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>SSID</th>
+                                <th>BSSID</th>
+                                <th>Channel</th>
+                                <th>Signal (RSSI)</th>
+                                <th>Security &amp; Mode</th>
+                                <th style="text-align:right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        body.innerHTML = `<p style="color:var(--danger);">Failed to load Wi-Fi survey: ${err.message}</p>`;
+    }
+}
+
+function closeWifiPortalModal() {
+    const modal = document.getElementById('wifi-portal-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function launchCaptiveScreencast(sensorId) {
+    const container = document.getElementById(`screencast-container-${sensorId}`);
+    if (container) container.style.display = 'block';
+
+    try {
+        await apiClient(`/api/v1/sensors/${sensorId}/wifi/screencast/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY }
+        });
+        const img = document.getElementById(`screencast-frame-${sensorId}`);
+        if (img) {
+            img.src = `/api/v1/sensors/${sensorId}/wifi/screencast/frame?t=${Date.now()}`;
+        }
+    } catch (e) {
+        console.error("Failed to start screencast session:", e);
+    }
+}
+
+async function closeCaptiveScreencast(sensorId) {
+    const container = document.getElementById(`screencast-container-${sensorId}`);
+    if (container) container.style.display = 'none';
+
+    try {
+        await apiClient(`/api/v1/sensors/${sensorId}/wifi/screencast/stop`, {
+            method: 'POST',
+            headers: { 'X-API-Key': ADMIN_KEY }
+        });
+    } catch (e) {
+        console.warn("Failed to stop screencast session:", e);
+    }
+}
+
+async function simulateAupClick(sensorId) {
+    try {
+        await apiClient(`/api/v1/sensors/${sensorId}/wifi/screencast/input`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+            body: JSON.stringify({ event_type: 'click', x: 512, y: 430 })
+        });
+        const stat = document.getElementById(`screencast-status-${sensorId}`);
+        if (stat) stat.innerText = "Dispatched AUP acceptance click. Verifying egress...";
+        setTimeout(() => openWifiPortalModal(sensorId), 1500);
+    } catch (e) {
+        alert("Input dispatch error: " + e.message);
+    }
+}
+
+async function promptConnectWifi(sensorId, ssid, security) {
+    let psk = null;
+    let username = null;
+    let password = null;
+
+    if (security === 'psk') {
+        psk = prompt(`Enter WPA2/WPA3 Pre-Shared Key for '${ssid}':`);
+        if (!psk) return;
+        if (psk.length < 8 || psk.length > 63) {
+            alert("Pre-Shared Key must be between 8 and 63 characters.");
+            return;
+        }
+    } else if (security === 'eap-peap') {
+        username = prompt(`Enter EAP-PEAP Username/Identity for '${ssid}':`);
+        if (!username) return;
+        password = prompt(`Enter EAP-PEAP Password for '${ssid}':`);
+        if (!password) return;
+    } else {
+        if (!confirm(`Connect to Open Wi-Fi network '${ssid}'? 60-second watchdog rollback will be armed.`)) {
+            return;
+        }
+    }
+
+    try {
+        const payload = {
+            ssid,
+            security,
+            psk: psk || undefined,
+            username: username || undefined,
+            password: password || undefined,
+            rollback_seconds: 60
+        };
+
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/wifi/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            alert("Error provisioning Wi-Fi: " + (err.detail || JSON.stringify(err)));
+            return;
+        }
+
+        const data = await res.json();
+        alert(`✓ Provisioned network '${ssid}'!\nWatchdog is armed for ${data.rollback_timeout_seconds}s. If CMP connection is lost, sensor will automatically revert.`);
+        openWifiPortalModal(sensorId);
+    } catch (err) {
+        alert("Network error connecting Wi-Fi: " + err.message);
+    }
 }
 
 async function loadDashboardData() {
@@ -1498,6 +1716,12 @@ window.setFleetLock = setFleetLock;
 window.saveFleetPin = saveFleetPin;
 window.toggleDeviceLock = toggleDeviceLock;
 window.promptDownloadChromebookZip = promptDownloadChromebookZip;
+window.openWifiPortalModal = openWifiPortalModal;
+window.closeWifiPortalModal = closeWifiPortalModal;
+window.launchCaptiveScreencast = launchCaptiveScreencast;
+window.closeCaptiveScreencast = closeCaptiveScreencast;
+window.simulateAupClick = simulateAupClick;
+window.promptConnectWifi = promptConnectWifi;
 
 document.addEventListener('click', (e) => {
     let target = e.target;

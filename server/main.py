@@ -39,7 +39,8 @@ from server.routers import (
     schedules,
     telemetry,
     alerts,
-    ui
+    ui,
+    sensor_wifi
 )
 
 @asynccontextmanager
@@ -310,6 +311,7 @@ app.include_router(probes.router)
 app.include_router(schedules.router)
 app.include_router(telemetry.router)
 app.include_router(alerts.router)
+app.include_router(sensor_wifi.router)
 app.include_router(ui.router)
 
 if __name__ == "__main__":

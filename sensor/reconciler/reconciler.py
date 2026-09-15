@@ -361,8 +361,8 @@ def reconcile_containers(target_containers):
     # 3. Clean up dangling images to save disk space
     run_cmd(["docker", "image", "prune", "-f"])
 
-def reconcile_wifi(wifi_spec, interface, config_path):
-    """Reconciles Wi-Fi settings (re-writes wpa_supplicant if changed)."""
+def reconcile_wifi(wifi_spec, interface, config_path, rollback_seconds: int = 60):
+    """Reconciles Wi-Fi settings (re-writes wpa_supplicant if changed) with watchdog rollback protection."""
     if not wifi_spec:
         return
 
@@ -399,6 +399,7 @@ def reconcile_wifi(wifi_spec, interface, config_path):
 
     # Check if existing config matches
     current_config = ""
+    backup_path = f"{config_path}.bak"
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             current_config = f.read()
@@ -406,12 +407,31 @@ def reconcile_wifi(wifi_spec, interface, config_path):
     if new_config.strip() != current_config.strip():
         print(f"Wi-Fi config change detected. Writing new config for SSID: {ssid}")
         try:
+            # Preserve previous working configuration as watchdog rollback baseline
+            if current_config.strip():
+                with open(backup_path, "w") as f_bak:
+                    f_bak.write(current_config)
+
             with open(config_path, "w") as f:
                 f.write(new_config)
 
             # Restart wpa_supplicant to apply configuration
             print("Restarting Wi-Fi interface...")
             run_cmd(["wpa_cli", "-i", interface, "reconfigure"])
+
+            # Save watchdog state with timestamp
+            watchdog_file = "/tmp/wifi_association_watchdog.json"
+            watchdog_data = {
+                "target_ssid": ssid,
+                "backup_path": backup_path,
+                "config_path": config_path,
+                "interface": interface,
+                "initiated_at": int(time.time()),
+                "rollback_seconds": rollback_seconds
+            }
+            with open(watchdog_file, "w") as f_wd:
+                json.dump(watchdog_data, f_wd)
+            print(f"Watchdog armed: if CMP uplink unreachable within {rollback_seconds}s, reverting to previous Wi-Fi config.")
         except Exception as e:
             print(f"Failed to update Wi-Fi: {e}")
 

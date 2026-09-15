@@ -2241,6 +2241,25 @@
         </div>
     </div>
 
+    <!-- Wi-Fi Survey, Safe Provisioning & Captive Portal Screencast Modal -->
+    <div class="modal-overlay" id="wifi-portal-modal" data-action="handleBackdropClick(event, 'wifi-portal-modal')">
+        <div class="modal" style="max-width: 820px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="wifi-portal-modal-title">📶 Wi-Fi Survey, Provisioning &amp; Captive Portal Traversal</h2>
+                <button type="button" class="close-btn" data-action="closeWifiPortalModal()" aria-label="Close modal" title="Close">✕</button>
+            </div>
+            <div id="wifi-portal-modal-body" style="padding: 10px 0; max-height: 75vh; overflow-y: auto;">
+                <p>Initializing Wi-Fi survey &amp; captive portal state...</p>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
+                <div id="wifi-portal-modal-status" style="font-size: 12px; color: var(--text-muted);">
+                    Watchdog rollback protection armed (60s)
+                </div>
+                <button type="button" class="btn btn-outline" data-action="closeWifiPortalModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Simulate Test Alert Modal -->
     <div class="modal-overlay" id="simulate-alert-modal" data-action="handleBackdropClick(event, 'simulate-alert-modal')">
         <div class="modal" style="max-width: 600px;">

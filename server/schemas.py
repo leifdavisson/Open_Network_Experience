@@ -641,3 +641,66 @@ class MaintenanceWindowSpec(BaseModel):
         return self
 
 MaintenanceWindowPayload = MaintenanceWindowSpec
+
+# --- Issue #33: Wi-Fi Survey, Safe Provisioning & Captive Portal Screencast Schemas ---
+
+class WifiScanResultItem(BaseModel):
+    ssid: str = Field(..., description="Detected SSID name")
+    bssid: str = Field(..., description="BSSID hardware address")
+    channel: int = Field(..., description="Primary Wi-Fi operating channel")
+    band: str = Field("5GHz", description="Frequency band (2.4GHz, 5GHz, 6GHz)")
+    signal_strength_pct: int = Field(..., description="Normalized signal quality (0-100%)")
+    rssi_dbm: int = Field(..., description="Received Signal Strength Indicator in dBm")
+    security: str = Field("open", description="Security mode: open, psk, or eap-peap")
+    is_captive_candidate: bool = Field(False, description="Whether open network likely presents a captive portal")
+    standard_generation: Optional[str] = Field("Wi-Fi 6", description="Wi-Fi generation: Wi-Fi 4 through Wi-Fi 7")
+
+class WifiSurveyResponse(BaseModel):
+    sensor_id: str
+    timestamp: int
+    interface: str = "wlp1s0"
+    source: str = "physical_edge"
+    ssids: List[WifiScanResultItem] = Field(default_factory=list)
+    total_aps: int = 0
+
+class WifiProvisionRequest(BaseModel):
+    ssid: str = Field(..., description="Target Wi-Fi SSID to associate with")
+    security: str = Field("open", description="Security type: open, psk, or eap-peap")
+    psk: Optional[str] = Field(None, description="Pre-shared key (8-63 characters)")
+    username: Optional[str] = Field(None, description="EAP Identity (e.g. for 802.1X PEAP)")
+    password: Optional[str] = Field(None, description="EAP Password")
+    rollback_seconds: int = Field(default=60, ge=15, le=300, description="Watchdog timeout to auto-revert if CMP uplink fails")
+
+    @model_validator(mode='after')
+    def validate_creds(self):
+        sec = self.security.lower()
+        if sec == 'psk':
+            if not self.psk or len(self.psk) < 8 or len(self.psk) > 63:
+                raise ValueError("psk must be between 8 and 63 characters")
+        elif sec == 'eap-peap':
+            if not self.username or not self.password:
+                raise ValueError("username and password are required for eap-peap")
+        return self
+
+class CaptivePortalStatusResponse(BaseModel):
+    sensor_id: str
+    state: str = Field("CONNECTED", description="CONNECTED | PORTAL_INTERCEPTED | UNREACHABLE")
+    is_captive: bool = Field(False, description="True if walled-garden interception is detected")
+    status_code: str = Field("204 No Content", description="Canary HTTP response status code")
+    redirect_url: Optional[str] = Field(None, description="Redirect splash page URL if intercepted")
+    vendor_hint: Optional[str] = Field(None, description="Vendor profile: meraki, aruba, cisco_ise, fortinet, generic")
+    latency_ms: float = Field(0.0, description="Canary probe latency in milliseconds")
+    info: str = Field("Direct Internet egress verified", description="Detailed diagnostic description")
+
+class ScreencastSessionRequest(BaseModel):
+    viewport_width: int = Field(default=1024, ge=320, le=1920)
+    viewport_height: int = Field(default=768, ge=240, le=1080)
+    format: str = Field(default="jpeg", description="jpeg | png")
+    quality: int = Field(default=75, ge=10, le=100)
+
+class ScreencastInputRequest(BaseModel):
+    event_type: str = Field(..., description="click | mouse_move | key_down | key_up | type_text")
+    x: Optional[int] = Field(None, ge=0)
+    y: Optional[int] = Field(None, ge=0)
+    text: Optional[str] = None
+    key: Optional[str] = None

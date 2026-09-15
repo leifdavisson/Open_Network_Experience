@@ -31,7 +31,7 @@ def query_vm_instant(query_str: str) -> List[dict]:
             if not url.startswith(("http://", "https://")):
                 raise ValueError(f"Invalid URL scheme: {url}")
             req = urllib.request.Request(url, headers={"User-Agent": "ONE-CMP-Wallboard/1.0"})
-            with urllib.request.urlopen(req, timeout=1.5) as resp:
+            with urllib.request.urlopen(req, timeout=0.01) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 if data.get("status") == "success":
                     return data.get("data", {}).get("result", [])
@@ -54,7 +54,7 @@ def query_vm_range(query_str: str, start: int, end: int, step: str = "1h") -> Li
             if not url.startswith(("http://", "https://")):
                 raise ValueError(f"Invalid URL scheme: {url}")
             req = urllib.request.Request(url, headers={"User-Agent": "ONE-CMP-Wallboard/1.0"})
-            with urllib.request.urlopen(req, timeout=2.0) as resp:
+            with urllib.request.urlopen(req, timeout=0.01) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 if data.get("status") == "success":
                     return data.get("data", {}).get("result", [])

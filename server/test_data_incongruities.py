@@ -470,3 +470,117 @@ def test_17_edge_sensor_details_modal_wifi_generation_and_ip():
     assert wlan["band"] == "6 GHz"  # nosec B101
 
 
+def test_18_wifi_provisioning_and_captive_portal():
+    """Verify Issue #33: Wi-Fi survey, safe provisioning with 60s watchdog rollback, and captive portal screencast."""
+    from fastapi.testclient import TestClient
+    from server.main import app
+    import server.state as state
+
+    client = TestClient(app)
+    headers = {"X-API-Key": "admin-noc-key-change-me"}
+
+    # Seed an edge sensor
+    test_sensor_id = "pi5-wifi-portal-test"
+    state.SENSORS_DB[test_sensor_id] = {
+        "sensor_id": test_sensor_id,
+        "hostname": "pi5-edge-portal",
+        "os": "linux",
+        "status": "approved",
+        "last_seen": int(time.time()),
+        "target_config": {
+            "wifi": {"ssid": "District-Corporate", "security": "psk", "psk": "InitialPass123"}
+        },
+        "wifi_telemetry": {
+            "ssid": "District-Corporate",
+            "interface": "wlan0",
+            "ip_address": "10.98.2.110"
+        }
+    }
+
+    # 1. Test POST /api/v1/sensors/{id}/wifi/scan
+    resp_scan = client.post(f"/api/v1/sensors/{test_sensor_id}/wifi/scan", headers=headers)
+    assert resp_scan.status_code == 200  # nosec B101
+    scan_data = resp_scan.json()
+    assert scan_data["sensor_id"] == test_sensor_id  # nosec B101
+    assert "ssids" in scan_data  # nosec B101
+    assert len(scan_data["ssids"]) >= 1  # nosec B101
+
+    # 2. Test GET /api/v1/sensors/{id}/wifi/survey
+    resp_survey = client.get(f"/api/v1/sensors/{test_sensor_id}/wifi/survey", headers=headers)
+    assert resp_survey.status_code == 200  # nosec B101
+    survey_data = resp_survey.json()
+    assert len(survey_data["ssids"]) >= 1  # nosec B101
+
+    # 3. Test POST /api/v1/sensors/{id}/wifi/connect (Watchdog provisioning)
+    prov_payload = {
+        "ssid": "District-Guest-Portal",
+        "security": "open",
+        "rollback_seconds": 60
+    }
+    resp_prov = client.post(f"/api/v1/sensors/{test_sensor_id}/wifi/connect", json=prov_payload, headers=headers)
+    assert resp_prov.status_code == 200  # nosec B101
+    prov_data = resp_prov.json()
+    assert prov_data["status"] == "provisioned"  # nosec B101
+    assert prov_data["watchdog_armed"] is True  # nosec B101
+    assert prov_data["rollback_timeout_seconds"] == 60  # nosec B101
+
+    # Invariant: sensor record in DB must have watchdog armed
+    assert state.SENSORS_DB[test_sensor_id]["wifi_provision_watchdog"]["pending"] is True  # nosec B101
+    assert state.SENSORS_DB[test_sensor_id]["wifi_provision_watchdog"]["rollback_seconds"] == 60  # nosec B101
+
+    # 4. Test GET /api/v1/sensors/{id}/wifi/portal-status
+    resp_portal = client.get(f"/api/v1/sensors/{test_sensor_id}/wifi/portal-status", headers=headers)
+    assert resp_portal.status_code == 200  # nosec B101
+    portal_data = resp_portal.json()
+    assert "state" in portal_data  # nosec B101
+    assert "is_captive" in portal_data  # nosec B101
+
+    # 5. Test Screencast Session Lifecycle
+    # Start screencast
+    resp_start = client.post(f"/api/v1/sensors/{test_sensor_id}/wifi/screencast/start", json={"viewport_width": 1024, "viewport_height": 768}, headers=headers)
+    assert resp_start.status_code == 200  # nosec B101
+    start_data = resp_start.json()
+    assert start_data["status"] == "active"  # nosec B101
+    assert "session_id" in start_data  # nosec B101
+    sess_id = start_data["session_id"]
+
+    # Check status
+    resp_stat = client.get(f"/api/v1/sensors/{test_sensor_id}/wifi/screencast/status", headers=headers)
+    assert resp_stat.status_code == 200  # nosec B101
+    assert resp_stat.json()["has_active_session"] is True  # nosec B101
+
+    # Fetch frame
+    resp_frame = client.get(f"/api/v1/sensors/{test_sensor_id}/wifi/screencast/frame?session_id={sess_id}", headers=headers)
+    assert resp_frame.status_code == 200  # nosec B101
+    assert "svg" in resp_frame.headers["content-type"]  # nosec B101
+
+    # Dispatch input
+    resp_input = client.post(f"/api/v1/sensors/{test_sensor_id}/wifi/screencast/input?session_id={sess_id}", json={"event_type": "click", "x": 512, "y": 430}, headers=headers)
+    assert resp_input.status_code == 200  # nosec B101
+    assert resp_input.json()["status"] == "dispatched"  # nosec B101
+
+    # Stop screencast
+    resp_stop = client.post(f"/api/v1/sensors/{test_sensor_id}/wifi/screencast/stop?session_id={sess_id}", headers=headers)
+    assert resp_stop.status_code == 200  # nosec B101
+    assert resp_stop.json()["status"] == "stopped"  # nosec B101
+
+    # Verify UI consistency across main.js, app.js, and dashboard.html
+    dash_html_path = TEMPLATES_DIR / "dashboard.html"
+    with open(dash_html_path, "r", encoding="utf-8") as f:
+        dash_html = f.read()
+    main_js_path = TEMPLATES_DIR.parent / "static" / "js" / "modules" / "main.js"
+    with open(main_js_path, "r", encoding="utf-8") as f:
+        main_js = f.read()
+    app_js_path = TEMPLATES_DIR.parent / "static" / "js" / "app.js"
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        app_js = f.read()
+
+    assert "wifi-portal-modal" in dash_html  # nosec B101
+    for code in [main_js, app_js]:
+        assert "openWifiPortalModal" in code  # nosec B101
+        assert "closeWifiPortalModal" in code  # nosec B101
+        assert "launchCaptiveScreencast" in code  # nosec B101
+        assert "promptConnectWifi" in code  # nosec B101
+        assert "rollback_seconds" in code  # nosec B101
+
+
