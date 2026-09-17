@@ -32,6 +32,8 @@ import shutil
 import argparse
 import subprocess
 import urllib.request
+import ssl
+import os
 import urllib.error
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -49,6 +51,18 @@ COLOR_RESET = '\033[0m'
 CONFIG_PATH = "/etc/sensor/reconciler.json"
 WIFI_CONFIG_PATH = "/etc/netplan/50-wifi.yaml"
 SERVICE_PATH = "/etc/systemd/system/sensor-reconciler.service"
+
+
+def get_ssl_context():
+    cert_path = "/opt/sensor/certs/sensor-client.crt"
+    key_path = "/opt/sensor/certs/sensor-client.key"
+    ca_path = "/opt/sensor/certs/rootCA.crt"
+    
+    if os.path.exists(cert_path) and os.path.exists(key_path) and os.path.exists(ca_path):
+        ctx = ssl.create_default_context(cafile=ca_path)
+        ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        return ctx
+    return ssl._create_unverified_context()
 
 DEFAULT_CMP_URL = "http://central-monitoring-platform.local/api/v1"
 
@@ -444,7 +458,7 @@ def register_sensor_direct(
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=8, context=get_ssl_context()) as resp:
             if resp.status == 200:
                 data = json.loads(resp.read().decode("utf-8"))
                 return {"success": True, "status": data.get("status"), "api_key": data.get("api_key")}

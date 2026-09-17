@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sshpass \
     openssh-client \
     iputils-ping \
+    chromium \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server/requirements.txt .

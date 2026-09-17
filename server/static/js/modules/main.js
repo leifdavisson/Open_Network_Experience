@@ -1436,10 +1436,14 @@ function downloadUsbKit() {
     const campus = (document.getElementById('ob-campus')?.value || '').trim();
     const building = (document.getElementById('ob-building')?.value || '').trim();
     const room = (document.getElementById('ob-room')?.value || '').trim();
+    const ssid = (document.getElementById('ob-wifi-ssid')?.value || '').trim();
+    const psk = (document.getElementById('ob-wifi-psk')?.value || '').trim();
     const params = new URLSearchParams();
     if (campus) params.append('site', campus);
     if (building) params.append('building', building);
     if (room) params.append('room', room);
+    if (ssid) params.append('wifi_ssid', ssid);
+    if (psk) params.append('wifi_psk', psk);
     window.location.href = `/api/v1/onboarding/usb-kit.zip?${params.toString()}`;
 }
 
@@ -1711,6 +1715,9 @@ window.toggleOnboardingDetails = toggleOnboardingDetails;
 window.updateBootstrapCommand = updateBootstrapCommand;
 window.copyBootstrapCommand = copyBootstrapCommand;
 window.downloadUsbKit = downloadUsbKit;
+window.openWifiProvisionModal = openWifiProvisionModal;
+window.closeWifiProvisionModal = closeWifiProvisionModal;
+window.submitWifiProvision = submitWifiProvision;
 window.fetchFleetSettings = fetchFleetSettings;
 window.setFleetLock = setFleetLock;
 window.saveFleetPin = saveFleetPin;
@@ -1823,3 +1830,51 @@ document.addEventListener('click', (e) => {
         }
     });
 });
+
+// Extension Rebuilder Action
+window.rebuildExtension = async function() {
+    const btn = document.getElementById("btn-rebuild-ext");
+    if (!btn) return;
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Building...";
+    btn.disabled = true;
+
+    try {
+        const response = await fetch("/api/v1/extension/build", {
+            method: "POST",
+            headers: { "X-API-Key": state.apiKey || "admin-noc-key-change-me" }
+        });
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+            btn.innerHTML = "✅ Build Complete!";
+            btn.style.background = "var(--success)";
+            
+            // Format host properly
+            const host = window.location.protocol + "//" + window.location.host;
+            const urlField = document.getElementById("ext-custom-url");
+            if (urlField) {
+                urlField.value = host + "/chromebook/update.xml";
+            }
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = "#8b5cf6";
+                btn.disabled = false;
+            }, 3000);
+        } else {
+            throw new Error(data.message || data.detail || "Build failed");
+        }
+    } catch (err) {
+        console.error("Rebuild failed:", err);
+        btn.innerHTML = "❌ Build Failed";
+        btn.style.background = "var(--danger)";
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = "#8b5cf6";
+            btn.disabled = false;
+        }, 3000);
+        alert("Build failed: " + err.message);
+    }
+};

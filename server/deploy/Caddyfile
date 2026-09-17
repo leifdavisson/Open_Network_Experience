@@ -1,0 +1,40 @@
+{
+    servers {
+        strict_sni_host insecure_off
+    }
+}
+
+:443 {
+    tls /etc/caddy/certs/server.crt /etc/caddy/certs/server.key {
+        protocols tls1.3
+        client_auth {
+            mode verify_if_given
+            trust_pool file /etc/caddy/certs/rootCA.crt
+        }
+    }
+
+    # Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Content-Security-Policy "frame-ancestors 'self'"
+        -Server
+    }
+
+    # Apply Basic Auth to requests that DO NOT present a valid client certificate.
+    @missing_client_cert {
+        expression `{tls_client_subject} == ""`
+    }
+    basic_auth @missing_client_cert {
+        admin $2a$14$2JMoMxsd./92nY1RUnzrTOMmwIk4LkajNUhrtrZLpMzH3o7/pFudq
+    }
+
+    handle_path /grafana* {
+        reverse_proxy grafana:3000
+    }
+
+    handle {
+        reverse_proxy cmp-server:8000
+    }
+}
