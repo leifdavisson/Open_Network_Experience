@@ -18,6 +18,8 @@ import uuid
 import time
 import subprocess
 import urllib.request
+import ssl
+import os
 import urllib.error
 from typing import Optional
 
@@ -172,6 +174,20 @@ def resolve_cmp_via_dns():
         except (socket.gaierror, Exception):
             pass
     return None
+
+
+def get_ssl_context():
+    cert_path = "/opt/sensor/certs/sensor-client.crt"
+    key_path = "/opt/sensor/certs/sensor-client.key"
+    ca_path = "/opt/sensor/certs/rootCA.crt"
+    
+    if os.path.exists(cert_path) and os.path.exists(key_path) and os.path.exists(ca_path):
+        ctx = ssl.create_default_context(cafile=ca_path)
+        ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
+        return ctx
+    # Fallback to unverified if no certs (for testing) or default
+    return ssl._create_unverified_context()
+
 
 def get_cmp_url(config):
     """
@@ -469,7 +485,7 @@ def register_sensor(config, cmp_url):
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode("utf-8"))
                 if data.get("status") == "approved":
@@ -612,7 +628,7 @@ def phone_home(config, cmp_url, probing_state: str = "GREEN"):
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=10, context=get_ssl_context()) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode("utf-8"))
                 return data
@@ -793,6 +809,8 @@ def reconcile_ota_upgrade(should_upgrade: bool, config: dict, cmp_url: str):
 
     print("OTA Upgrade Commanded! Initiating in-place Python script update...")
     import urllib.request
+    import ssl
+    import os
     import shutil
     import subprocess
     import sys
@@ -804,7 +822,8 @@ def reconcile_ota_upgrade(should_upgrade: bool, config: dict, cmp_url: str):
     try:
         # 1. Download the latest reconciler
         print(f"Downloading update from {script_url}...")
-        urllib.request.urlretrieve(script_url, tmp_path)
+        with urllib.request.urlopen(script_url, context=get_ssl_context()) as response, open(tmp_path, 'wb') as out_file:
+            out_file.write(response.read())
 
         # 2. Integrity Check (Prevent Bricking)
         print("Validating downloaded script syntax...")
@@ -819,7 +838,7 @@ def reconcile_ota_upgrade(should_upgrade: bool, config: dict, cmp_url: str):
         # 4. Acknowledge and clear the flag on the CMP so we don't boot loop
         clear_url = f"{cmp_url}/sensors/{config['sensor_id']}/upgrade/clear"
         req = urllib.request.Request(clear_url, method="POST", headers={"Content-Length": "0"})
-        urllib.request.urlopen(req, timeout=5)
+        urllib.request.urlopen(req, timeout=5, context=get_ssl_context())
 
         # 5. Clean Exit (Systemd Restart=always will relaunch the new code)
         print("OTA Upgrade complete. Exiting for systemd respawn...")
