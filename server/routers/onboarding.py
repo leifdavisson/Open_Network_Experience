@@ -245,3 +245,52 @@ async def build_chromebook_package():
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename=one-chromebook-sensor-{int(time.time())}.zip"}
     )
+
+
+
+
+@router.get("/api/v1/extension/update.xml", summary="Generate Chrome Extension Update XML")
+@router.get("/chromebook/update.xml", summary="Generate Chrome Extension Update XML")
+async def get_extension_update_xml(request: Request):
+    id_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "deploy", "chromebook-sensor.id"))
+    if not os.path.exists(id_path):
+        raise NotFoundException(detail="Extension ID file not found. Please run scripts/build_extension.sh")
+    
+    with open(id_path, "r") as f:
+        ext_id = f.read().strip()
+        
+    base_url = str(request.base_url).rstrip("/")
+    crx_url = f"{base_url}/chromebook/extension.crx"
+    
+    xml = f"""<?xml version='1.0' encoding='UTF-8'?>
+<gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
+  <app appid='{ext_id}'>
+    <updatecheck codebase='{crx_url}' version='1.0.0' />
+  </app>
+</gupdate>"""
+    return Response(content=xml, media_type="application/xml")
+
+@router.get("/api/v1/extension/extension.crx", summary="Download Packaged Chrome Extension (.crx)")
+@router.get("/chromebook/extension.crx", summary="Download Packaged Chrome Extension (.crx)")
+async def get_extension_crx():
+    from fastapi.responses import FileResponse
+    crx_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "deploy", "chromebook-sensor.crx"))
+    if not os.path.exists(crx_path):
+        raise NotFoundException(detail="Packaged CRX not found. Please run scripts/build_extension.sh")
+    
+    return FileResponse(crx_path, media_type="application/x-chrome-extension", filename="chromebook-sensor.crx")
+
+@router.post("/api/v1/extension/build", summary="Rebuild Packaged Chrome Extension (.crx)")
+@router.post("/chromebook/build", summary="Rebuild Packaged Chrome Extension (.crx)")
+async def build_extension(request: Request):
+    import subprocess
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "build_extension.sh"))
+    
+    if not os.path.exists(script_path):
+        raise NotFoundException(detail="Build script not found.")
+
+    try:
+        result = subprocess.run([script_path], capture_output=True, text=True, check=True)
+        return {"success": True, "message": "Extension built successfully", "output": result.stdout}
+    except subprocess.CalledProcessError as e:
+        return {"success": False, "message": "Build failed", "error": e.stderr or e.stdout}

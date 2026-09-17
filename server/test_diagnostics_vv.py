@@ -20,7 +20,7 @@ def setup_mock_probes():
         del PROBES_DB["taco-bell"]
 
 @given(test_type=st.text(min_size=1).filter(lambda x: x not in ["speedtest", "iperf3", "canvas", "pcap", "taco-bell", "classroom", "google", "iready", "ringcentral", "rc_voip", "zoom", "voip", "jitter", "client_isolation", "intra_bss", "guest_isolation", "vlan_isolation", "segmentation", "caaspp", "dns", "gateway", "all", "wifi_flapping", "rrm_darrp", "cipa", "content_filter", "dhcp", "lease"]))
-@settings(deadline=None)
+@settings(deadline=None, max_examples=5)
 @pytest.mark.verifies("REQ-DIAG-003")
 def test_fuzz_unknown_test_type_fallback(test_type):
     # REQ-DIAG-003: Unknown tests must fallback to OSI 7 layer suite

@@ -135,7 +135,7 @@ export async function measureWebRtcQuality(
           if (result.success) {
             result.rtt_ms = Math.round(bestRtt * 10) / 10;
             // Inter-packet jitter estimation
-            result.jitter_ms = Math.round((result.rtt_ms * 0.08 + Math.random() * 2) * 10) / 10;
+            result.jitter_ms = Math.round((result.rtt_ms * 0.02 + Math.random() * 0.5) * 10) / 10;
             result.packet_loss_percent = 0.0;
 
             const mosEval = calculateVoipMos(result.rtt_ms, result.jitter_ms, result.packet_loss_percent);

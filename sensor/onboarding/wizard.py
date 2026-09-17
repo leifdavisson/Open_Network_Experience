@@ -594,19 +594,7 @@ def run_interactive_wizard():
     # STEP 2: CMP Server Connection
     print_step(2, "CMP Control Plane Connection")
     discovered = discover_cmp_endpoints()
-    default_url = existing_config.get("cmp_url") or (discovered[0]["url"] if discovered else 
-def get_ssl_context():
-    cert_path = "/opt/sensor/certs/sensor-client.crt"
-    key_path = "/opt/sensor/certs/sensor-client.key"
-    ca_path = "/opt/sensor/certs/rootCA.crt"
-    
-    if os.path.exists(cert_path) and os.path.exists(key_path) and os.path.exists(ca_path):
-        ctx = ssl.create_default_context(cafile=ca_path)
-        ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
-        return ctx
-    return ssl._create_unverified_context()
-
-DEFAULT_CMP_URL)
+    default_url = existing_config.get("cmp_url") or (discovered[0]["url"] if discovered else DEFAULT_CMP_URL)
 
     if discovered:
         print_info(f"Auto-discovered CMP endpoint: {COLOR_GREEN}{discovered[0]['url']}{COLOR_RESET} (via {discovered[0]['source']})")
@@ -754,19 +742,7 @@ def run_non_interactive(args):
     mac, ip, iface = get_primary_mac_and_ip()
     hw = inspect_hardware()
 
-    cmp_url = args.cmp or 
-def get_ssl_context():
-    cert_path = "/opt/sensor/certs/sensor-client.crt"
-    key_path = "/opt/sensor/certs/sensor-client.key"
-    ca_path = "/opt/sensor/certs/rootCA.crt"
-    
-    if os.path.exists(cert_path) and os.path.exists(key_path) and os.path.exists(ca_path):
-        ctx = ssl.create_default_context(cafile=ca_path)
-        ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
-        return ctx
-    return ssl._create_unverified_context()
-
-DEFAULT_CMP_URL
+    cmp_url = args.cmp or DEFAULT_CMP_URL
     if not cmp_url.startswith("http://") and not cmp_url.startswith("https://"):
         cmp_url = f"http://{cmp_url}"
     if not cmp_url.endswith("/api/v1"):

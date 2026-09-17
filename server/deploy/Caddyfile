@@ -1,9 +1,15 @@
+{
+    servers {
+        strict_sni_host insecure_off
+    }
+}
+
 :443 {
     tls /etc/caddy/certs/server.crt /etc/caddy/certs/server.key {
         protocols tls1.3
         client_auth {
             mode verify_if_given
-            trusted_ca_cert_file /etc/caddy/certs/rootCA.crt
+            trust_pool file /etc/caddy/certs/rootCA.crt
         }
     }
 
@@ -17,22 +23,17 @@
     }
 
     # Apply Basic Auth to requests that DO NOT present a valid client certificate.
-    # Sensors will bypass this by providing their mTLS cert.
     @missing_client_cert {
         expression `{tls_client_subject} == ""`
     }
-    basicauth @missing_client_cert {
-        # Username: admin
-        # Password: admin (change via caddy hash-password)
+    basic_auth @missing_client_cert {
         admin $2a$14$2JMoMxsd./92nY1RUnzrTOMmwIk4LkajNUhrtrZLpMzH3o7/pFudq
     }
 
-    # Route to Grafana
     handle_path /grafana* {
         reverse_proxy grafana:3000
     }
 
-    # Route all other traffic to the CMP FastAPI server
     handle {
         reverse_proxy cmp-server:8000
     }

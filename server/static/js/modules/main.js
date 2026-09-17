@@ -956,6 +956,7 @@ async function openSensorDetailModal(sensorId) {
             actions.innerHTML = `
                 <button class="btn btn-sm btn-outline" onclick="triggerPcap('${data.sensor_id}'); closeSensorDetailModal();">⚡ Capture PCAP</button>
                 <button class="btn btn-sm btn-outline" onclick="triggerSpeedtest('${data.sensor_id}'); closeSensorDetailModal();">📊 Speedtest</button>
+                <button class="btn btn-sm btn-outline" onclick="openWifiProvisionModal('${data.sensor_id}'); closeSensorDetailModal();">📡 Provision Wi-Fi</button>
                 <button class="btn btn-sm" onclick="switchView('monitor-ondemand'); const sel=document.getElementById('diag-sensor-select'); if(sel)sel.value='${data.sensor_id}'; closeSensorDetailModal();">🚀 Live Diagnostics</button>
             `;
         }
@@ -967,6 +968,55 @@ async function openSensorDetailModal(sensorId) {
 function closeSensorDetailModal() {
     const modal = document.getElementById('sensor-detail-modal');
     if (modal) modal.style.display = 'none';
+}
+
+function openWifiProvisionModal(sensorId) {
+    const m = document.getElementById('wifi-provision-modal');
+    if(m) {
+        document.getElementById('wifi-sensor-id').value = sensorId;
+        document.getElementById('wifi-ssid').value = '';
+        document.getElementById('wifi-psk').value = '';
+        document.getElementById('wifi-security').value = 'psk';
+        m.style.display = 'flex';
+    }
+}
+
+function closeWifiProvisionModal() {
+    const m = document.getElementById('wifi-provision-modal');
+    if(m) m.style.display = 'none';
+}
+
+async function submitWifiProvision() {
+    const sensorId = document.getElementById('wifi-sensor-id').value;
+    const ssid = document.getElementById('wifi-ssid').value.trim();
+    const security = document.getElementById('wifi-security').value;
+    const psk = document.getElementById('wifi-psk').value.trim();
+
+    if (!ssid) {
+        alert("SSID is required.");
+        return;
+    }
+
+    const payload = {
+        wifi: {
+            ssid: ssid,
+            security: security,
+            psk: psk ? psk : null
+        }
+    };
+
+    try {
+        const res = await apiClient(`/api/v1/sensors/${sensorId}/config`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("Failed to update Wi-Fi config");
+        alert("Wi-Fi configuration pushed successfully!");
+        closeWifiProvisionModal();
+    } catch (err) {
+        console.error(err);
+        alert("Error pushing Wi-Fi config: " + err.message);
+    }
 }
 
 async function loadDashboardData() {
@@ -1151,10 +1201,14 @@ function downloadUsbKit() {
     const campus = (document.getElementById('ob-campus')?.value || '').trim();
     const building = (document.getElementById('ob-building')?.value || '').trim();
     const room = (document.getElementById('ob-room')?.value || '').trim();
+    const ssid = (document.getElementById('ob-wifi-ssid')?.value || '').trim();
+    const psk = (document.getElementById('ob-wifi-psk')?.value || '').trim();
     const params = new URLSearchParams();
     if (campus) params.append('site', campus);
     if (building) params.append('building', building);
     if (room) params.append('room', room);
+    if (ssid) params.append('wifi_ssid', ssid);
+    if (psk) params.append('wifi_psk', psk);
     window.location.href = `/api/v1/onboarding/usb-kit.zip?${params.toString()}`;
 }
 
@@ -1425,6 +1479,9 @@ window.toggleOnboardingDetails = toggleOnboardingDetails;
 window.updateBootstrapCommand = updateBootstrapCommand;
 window.copyBootstrapCommand = copyBootstrapCommand;
 window.downloadUsbKit = downloadUsbKit;
+window.openWifiProvisionModal = openWifiProvisionModal;
+window.closeWifiProvisionModal = closeWifiProvisionModal;
+window.submitWifiProvision = submitWifiProvision;
 window.fetchFleetSettings = fetchFleetSettings;
 window.setFleetLock = setFleetLock;
 window.saveFleetPin = saveFleetPin;
@@ -1531,3 +1588,51 @@ document.addEventListener('click', (e) => {
         }
     });
 });
+
+// Extension Rebuilder Action
+window.rebuildExtension = async function() {
+    const btn = document.getElementById("btn-rebuild-ext");
+    if (!btn) return;
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Building...";
+    btn.disabled = true;
+
+    try {
+        const response = await fetch("/api/v1/extension/build", {
+            method: "POST",
+            headers: { "X-API-Key": state.apiKey || "admin-noc-key-change-me" }
+        });
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+            btn.innerHTML = "✅ Build Complete!";
+            btn.style.background = "var(--success)";
+            
+            // Format host properly
+            const host = window.location.protocol + "//" + window.location.host;
+            const urlField = document.getElementById("ext-custom-url");
+            if (urlField) {
+                urlField.value = host + "/chromebook/update.xml";
+            }
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = "#8b5cf6";
+                btn.disabled = false;
+            }, 3000);
+        } else {
+            throw new Error(data.message || data.detail || "Build failed");
+        }
+    } catch (err) {
+        console.error("Rebuild failed:", err);
+        btn.innerHTML = "❌ Build Failed";
+        btn.style.background = "var(--danger)";
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.background = "#8b5cf6";
+            btn.disabled = false;
+        }, 3000);
+        alert("Build failed: " + err.message);
+    }
+};

@@ -812,6 +812,14 @@
                                 <option value="wizard">Interactive one-wizard CLI</option>
                             </select>
                         </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Wi-Fi SSID (Optional)</label>
+                            <input type="text" id="ob-wifi-ssid" placeholder="e.g. District-Secure" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Wi-Fi PSK (Optional)</label>
+                            <input type="password" id="ob-wifi-psk" placeholder="Leave blank if open" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px;">
+                        </div>
                     </div>
 
                     <!-- Generated Command Box -->
@@ -942,6 +950,20 @@
                             </div>
                             <div style="font-size: 11px; color: var(--accent); font-weight: 600;">
                                 ✓ Dual-PIN Offline Grace Window Active
+                            </div>
+                        </div>
+                        <!-- Control 4: Chrome Extension Packager -->
+                        <div style="background: var(--bg-input); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="color: var(--text); font-size: 13px;">🏗️ Workspace Packager</strong>
+                                <span class="badge" style="background: rgba(139, 92, 246, 0.2); color: #c4b5fd; font-size: 11px;">Native</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin: 6px 0 10px 0;">
+                                Instantly compile and sign the extension for Google Admin deployment without the Chrome Web Store.
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button class="btn btn-sm" id="btn-rebuild-ext" onclick="rebuildExtension()" style="background: #8b5cf6; color: white; padding: 6px 10px; font-size: 11px; font-weight: bold;">🚀 Rebuild & Publish (.crx)</button>
+                                <input type="text" id="ext-custom-url" readonly value="/chromebook/update.xml" style="width: 100%; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 11px;" title="Paste into Workspace Admin Custom URL" onclick="this.select();">
                             </div>
                         </div>
                     </div>
@@ -2196,6 +2218,41 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px;">
                 <div id="sensor-modal-actions" style="display: flex; gap: 8px;"></div>
                 <button type="button" class="btn btn-outline" data-action="closeSensorDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wi-Fi Provisioning Modal -->
+    <div class="modal-overlay" id="wifi-provision-modal" data-action="handleBackdropClick(event, 'wifi-provision-modal')" style="display: none;">
+        <div class="modal" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;">📡 Provision Wi-Fi Profile</h2>
+                <button type="button" class="close-btn" data-action="closeWifiProvisionModal()" aria-label="Close modal">✕</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Push a new wireless configuration to this sensor. It will attempt to connect immediately.</p>
+            <div class="form-group">
+                <label>Target Sensor ID</label>
+                <input type="text" id="wifi-sensor-id" disabled style="background: var(--bg-input);">
+            </div>
+            <div class="form-group">
+                <label>SSID</label>
+                <input type="text" id="wifi-ssid" placeholder="Network Name">
+            </div>
+            <div class="form-group">
+                <label>Security Type</label>
+                <select id="wifi-security">
+                    <option value="psk">WPA2 Personal (PSK)</option>
+                    <option value="open">Open (No Password)</option>
+                    <option value="eap-peap">WPA2 Enterprise (PEAP)</option>
+                </select>
+            </div>
+            <div class="form-group" id="wifi-psk-group">
+                <label>Pre-Shared Key (Password)</label>
+                <input type="password" id="wifi-psk" placeholder="Password">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+                <button type="button" class="btn btn-outline" data-action="closeWifiProvisionModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="submitWifiProvision()">🚀 Push Configuration</button>
             </div>
         </div>
     </div>
