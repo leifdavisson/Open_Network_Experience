@@ -401,10 +401,16 @@
                             <div style="font-size: 13px; color: var(--text-muted);" id="helpdesk-internet-desc">All external internet connections and security gateways are responding normally.</div>
                         </div>
                         <div class="metric-card" style="border-left: 4px solid var(--success); padding: 22px;">
-                            <div style="font-size: 28px; margin-bottom: 8px;">🎓</div>
-                            <div style="font-size: 16px; font-weight: 700; color: var(--text-main);">Are Testing Portals Ready?</div>
-                            <div style="font-size: 22px; font-weight: 800; color: var(--accent); margin: 8px 0;" id="helpdesk-testing-status">⚪ Checking State Testing...</div>
-                            <div style="font-size: 13px; color: var(--text-muted);" id="helpdesk-testing-desc">CAASPP, Cambium TDS, and TRCS secure testing systems verification.</div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-size: 24px; margin-bottom: 4px;">🎓</div>
+                                    <div style="font-size: 16px; font-weight: 700; color: var(--text-main);">District Apps & Portals</div>
+                                </div>
+                            </div>
+                            <div id="helpdesk-testing-status" style="display:flex; flex-wrap:wrap; gap:6px;">
+                                <span class="status-pill" style="background:var(--bg-input); color:var(--text-muted);">⚪ Fetching SaaS health...</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top:12px;" id="helpdesk-testing-desc">Active synthetic probes monitoring CAASPP, LMS, and SIS endpoints.</div>
                         </div>
                         <div class="metric-card" style="border-left: 4px solid var(--success); padding: 22px;">
                             <div style="font-size: 28px; margin-bottom: 8px;">📶</div>
@@ -2243,7 +2249,7 @@
 
     <!-- Wi-Fi Survey, Safe Provisioning & Captive Portal Screencast Modal -->
     <div class="modal-overlay" id="wifi-portal-modal" data-action="handleBackdropClick(event, 'wifi-portal-modal')">
-        <div class="modal" style="max-width: 820px;">
+        <div class="modal" style="max-width: 1000px;">
             <div class="modal-header">
                 <h2 style="font-size: 18px;" id="wifi-portal-modal-title">📶 Wi-Fi Survey, Provisioning &amp; Captive Portal Traversal</h2>
                 <button type="button" class="close-btn" data-action="closeWifiPortalModal()" aria-label="Close modal" title="Close">✕</button>
@@ -2257,6 +2263,55 @@
                 </div>
                 <button type="button" class="btn btn-outline" data-action="closeWifiPortalModal()">Close</button>
             </div>
+        </div>
+    </div>
+
+
+    <!-- Wi-Fi Provision Modal -->
+    <div class="modal-overlay" id="wifi-provision-modal" data-action="handleBackdropClick(event, 'wifi-provision-modal')">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px;" id="wifi-provision-modal-title">Connect to Wi-Fi</h2>
+                <button type="button" class="close-btn" data-action="closeWifiProvisionModal()" aria-label="Close modal" title="Close">✕</button>
+            </div>
+            <form id="wifi-provision-form" data-submit="submitWifiProvision(event)">
+                <input type="hidden" id="wifi-prov-sensor-id" />
+                <input type="hidden" id="wifi-prov-ssid" />
+                <input type="hidden" id="wifi-prov-security" />
+                
+                <div style="margin-bottom: 16px;">
+                    <p style="font-size: 14px; margin-bottom: 8px;">Network: <strong id="wifi-prov-ssid-display"></strong></p>
+                    <p style="font-size: 13px; color: var(--text-muted);">Security: <span id="wifi-prov-sec-display"></span></p>
+                </div>
+                
+                <div id="wifi-prov-psk-group" style="display: none; margin-bottom: 16px;">
+                    <label for="wifi-prov-psk">Pre-Shared Key (Password):</label>
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                        <input type="password" id="wifi-prov-psk" class="form-control" style="flex: 1;" placeholder="Enter Wi-Fi Password" minlength="8" maxlength="63">
+                        <button type="button" class="btn btn-outline" data-action="togglePasswordVisibility('wifi-prov-psk')" title="Toggle Visibility">👁</button>
+                    </div>
+                </div>
+                
+                <div id="wifi-prov-eap-group" style="display: none; margin-bottom: 16px;">
+                    <label for="wifi-prov-username">EAP-PEAP Username (Identity):</label>
+                    <input type="text" id="wifi-prov-username" class="form-control" style="width: 100%; margin-top: 4px; margin-bottom: 12px;" placeholder="Username">
+                    
+                    <label for="wifi-prov-password">EAP-PEAP Password:</label>
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                        <input type="password" id="wifi-prov-password" class="form-control" style="flex: 1;" placeholder="Password">
+                        <button type="button" class="btn btn-outline" data-action="togglePasswordVisibility('wifi-prov-password')" title="Toggle Visibility">👁</button>
+                    </div>
+                </div>
+
+                <div id="wifi-prov-open-group" style="display: none; margin-bottom: 16px;">
+                    <p style="font-size: 13px; color: var(--warning);">This is an open network. Traffic may be unencrypted.</p>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-outline" data-action="closeWifiProvisionModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="wifi-prov-submit-btn">Connect &amp; Verify</button>
+                </div>
+            </form>
         </div>
     </div>
 

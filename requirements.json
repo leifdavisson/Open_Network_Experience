@@ -1,86 +1,50 @@
 [
   {
-    "id": "REQ-DIAG-001",
-    "title": "Built-in Diagnostic Suite Execution",
-    "safety_level": "STANDARD",
-    "description": "When the diagnostics API receives a recognized built-in test type (e.g., 'speedtest', 'canvas', 'pcap'), it MUST execute the corresponding predefined diagnostic suite."
+    "id": "REQ-001",
+    "title": "Migrate Wi-Fi to Netplan",
+    "description": "Migrate Wi-Fi configuration from wpa_supplicant to Netplan (50-wifi.yaml).",
+    "safety_level": "CRITICAL"
   },
   {
-    "id": "REQ-DIAG-002",
-    "title": "Custom Probe Execution via ID Match",
-    "safety_level": "STANDARD",
-    "description": "When the requested test type is NOT a built-in test, but matches an ID in PROBES_DB, it MUST execute the target override or configured target using the custom probe's specified protocol type (http, api, dns, tcp)."
+    "id": "REQ-002",
+    "title": "Extract Wi-Fi Telemetry",
+    "description": "Add adaptive_engine and gather_wifi_telemetry to extract deep Wi-Fi metrics via iw and ip commands, feeding real-time network states back to the CMP.",
+    "safety_level": "STANDARD"
   },
   {
-    "id": "REQ-DIAG-003",
-    "title": "Fail-Closed for Unknown and Unconfigured Test Types",
-    "safety_level": "CRITICAL",
-    "description": "When the requested test type is NOT a built-in test AND does NOT match any ID in PROBES_DB, the diagnostic run MUST fall back to the default 7-Layer OSI & SaaS Suite."
+    "id": "REQ-003",
+    "title": "Prometheus Blackbox Service Discovery",
+    "description": "Replace hard-coded, static IPs in the Prometheus scrape.yml with dynamic http_sd_configs for service discovery (/api/v1/telemetry/blackbox-sd).",
+    "safety_level": "STANDARD"
   },
   {
-    "id": "REQ-DIAG-004",
-    "title": "Overall Status Degradation",
-    "safety_level": "CRITICAL",
-    "description": "If any individual diagnostic probe step fails (passed=False), the final payload status MUST be 'FAIL' and the log output MUST record 'State: RED (FAIL)'."
+    "id": "REQ-004",
+    "title": "Remote Edge Command Execution",
+    "description": "Implement _run_remote_sensor_command to SSH directly into physical edge sensors and execute real commands.",
+    "safety_level": "CRITICAL"
   },
   {
-    "id": "REQ-DIAG-005",
-    "title": "DNS Custom Probe Resolution",
-    "safety_level": "STANDARD",
-    "description": "When a custom probe with probe_type 'dns' is specified, it MUST execute DNS resolution verification for the target host."
+    "id": "REQ-005",
+    "title": "Real Remote PCAP Capture",
+    "description": "Add run_real_pcap_capture which executes tcpdump on the edge sensor, retrieves the packet capture via base64 encoding, and saves it for download.",
+    "safety_level": "STANDARD"
   },
   {
-    "id": "REQ-DIAG-006",
-    "title": "TCP Custom Probe Execution and Port Parsing",
-    "safety_level": "STANDARD",
-    "description": "When a custom probe with probe_type 'tcp' is specified, it MUST parse port configuration and execute TCP socket connection verification."
+    "id": "REQ-006",
+    "title": "WPA2-Enterprise Provisioning UI",
+    "description": "Add UI support for WPA2-Enterprise (802.1X PEAP), including fields for EAP Usernames and Passwords in the provisioning modal.",
+    "safety_level": "STANDARD"
   },
   {
-    "id": "REQ-DIAG-007",
-    "title": "Fallback Probe Protocol Handling",
-    "safety_level": "STANDARD",
-    "description": "When a custom probe with unrecognized probe_type is specified, it MUST fall back to default HTTP or TCP probe execution."
+    "id": "REQ-007",
+    "title": "PCAP Download Resolution",
+    "description": "Fix the PCAP download buttons to point to the actual saved .pcap files on the backend rather than generating a dummy blob on the client.",
+    "safety_level": "STANDARD"
   },
   {
-    "id": "REQ-DIAG-008",
-    "title": "Dynamic Default Gateway Derivation",
-    "safety_level": "CRITICAL",
-    "description": "When running diagnostic probes against a sensor without an explicit gateway override, the system MUST dynamically calculate the target gateway IP from the sensor's registered IP address subnet (e.g., 10.98.2.1 for 10.98.2.141/24) or target_config.gateway, completely avoiding static 10.0.0.1 fallbacks."
-  },
-  {
-    "id": "REQ-DIAG-009",
-    "title": "Wi-Fi RF Flapping and DARRP Probe Execution",
-    "safety_level": "STANDARD",
-    "description": "When 'wifi_flapping' or 'rrm_darrp' diagnostic test types are requested, the system MUST execute the dedicated Wi-Fi RF flapping and DARRP channel monitoring suite rather than falling back to the generic 7-Layer OSI suite."
-  },
-  {
-    "id": "REQ-DIAG-010",
-    "title": "Accurate Probe Attribution String Formatting",
-    "safety_level": "STANDARD",
-    "description": "Diagnostic probe attribution strings MUST accurately reflect the probe result status, displaying failure or unreachable status rather than misleading success messages when probes fail."
-  },
-  {
-    "id": "REQ-UI-001",
-    "title": "Live Diagnostics Custom Probe Propagation",
-    "safety_level": "STANDARD",
-    "description": "The Live Diagnostics action center MUST dynamically load and display user-created Custom Probes from PROBES_DB in the test selection dropdown."
-  },
-  {
-    "id": "REQ-UI-002",
-    "title": "EasyBuilder HTTP 422 Alert Handling",
-    "safety_level": "STANDARD",
-    "description": "The EasyBuilder save probe logic MUST catch non-OK REST responses (e.g., 422) and visually alert the user instead of failing silently."
-  },
-  {
-    "id": "REQ-UI-003",
-    "title": "Chromebook Lock Button State Binding",
-    "safety_level": "STANDARD",
-    "description": "The dedicated Chromebook fleet view MUST dynamically evaluate settings_locked for each device and render the correct Unlock/Lock toggle state."
-  },
-  {
-    "id": "REQ-UI-004",
-    "title": "Chromebook Dynamic Identity Binding",
-    "safety_level": "STANDARD",
-    "description": "The Chromebook fleet view MUST display true hostname and mac_address variables rather than hardcoded string placeholders."
+    "id": "REQ-008",
+    "title": "Captive Portal Auto-Screencast",
+    "description": "Add an auto-screencast feature that triggers if a captive portal splash page is intercepted.",
+    "safety_level": "STANDARD"
   }
 ]

@@ -361,15 +361,16 @@ wlan0     Scan completed :
 def test_configure_wpa_supplicant_open_and_error(tmp_path):
     """Validates wpa_supplicant configuration for Open Wi-Fi and permission error handling."""
     open_wpa_file = tmp_path / "open_wpa.conf"
-    assert wizard.configure_wpa_supplicant(
-        ssid="District-Open-Guest",
-        psk="",
-        security="open",
-        config_path=str(open_wpa_file)
-    ) is True
+    with patch("subprocess.run"):
+        assert wizard.configure_wpa_supplicant(
+            ssid="District-Open-Guest",
+            psk="",
+            security="open",
+            config_path=str(open_wpa_file)
+        ) is True
     content = open_wpa_file.read_text()
-    assert 'ssid="District-Open-Guest"' in content
-    assert 'key_mgmt=NONE' in content
+    assert '"District-Open-Guest":' in content
+    assert 'network: open' in content
 
     # Test error handling when target directory cannot be created
     with patch("builtins.open", side_effect=PermissionError("Permission denied")):
@@ -500,7 +501,7 @@ def test_run_interactive_wizard_full_flow(tmp_path, capsys):
 
                                                 # Verify Wi-Fi file written
                                                 assert wpa_file.exists()
-                                                assert 'ssid="Staff-Secure"' in wpa_file.read_text()
+                                                assert '"Staff-Secure":' in wpa_file.read_text()
 
 def test_run_interactive_wizard_pending_registration(tmp_path, capsys):
     """Tests interactive wizard when sensor registration returns pending approval."""

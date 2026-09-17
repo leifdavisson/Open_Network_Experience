@@ -33,7 +33,7 @@ from server.schemas import (
     WifiSpec,
 )
 from server.state import SENSORS_DB, get_or_create_sensor
-from server.routers.sensor_diagnostics import _run_remote_sensor_probe, _live_probe_captive_portal
+from server.routers.sensor_diagnostics import _run_remote_sensor_probe, _run_remote_sensor_command, _live_probe_captive_portal
 
 router = APIRouter(tags=["Wi-Fi & Captive Portal Management"])
 
@@ -84,34 +84,86 @@ async def trigger_wifi_scan(sensor_id: str):
     # Try live SSH probe on physical edge sensor
     remote_res = None
     if is_edge:
-        cmd = "python3 /usr/local/bin/wifi_multiband_probe.py --json 2>/dev/null || nmcli -t -f SSID,BSSID,CHAN,SIGNAL,SECURITY dev wifi list --rescan yes 2>/dev/null"
-        remote_res = _run_remote_sensor_probe(sensor_ip, cmd, timeout_sec=20.0)
+        python_script = r"""import subprocess, json, re
+def run_iw_scan():
+    try:
+        iw_out = subprocess.check_output(["sudo", "-n", "iw", "dev"], stderr=subprocess.DEVNULL).decode("utf-8")
+        ifaces = re.findall(r"Interface\s+(\w+)", iw_out)
+    except Exception:
+        ifaces = []
+    if not ifaces:
+        ifaces = ["wlan0", "wlp1s0", "wlp2s0"]
+    for iface in ifaces:
+        try:
+            out = subprocess.check_output(["sudo", "-n", "iw", "dev", iface, "scan"], stderr=subprocess.DEVNULL).decode("utf-8")
+            if out.strip(): return out
+        except Exception: pass
+    return ""
 
-    if remote_res and isinstance(remote_res, dict) and "channel_evaluations" in remote_res:
-        # Extract BSSIDs from channel evaluations
-        source = f"physical_edge ({sensor_ip})"
-        for ch_eval in remote_res.get("channel_evaluations", []):
-            band = ch_eval.get("band", "5GHz")
-            chan = ch_eval.get("channel", 1)
-            for ap in ch_eval.get("observed_aps", []):
-                ssid = ap.get("ssid") or "<Hidden SSID>"
-                bssid = ap.get("bssid") or "00:00:00:00:00:00"
-                rssi = ap.get("rssi_dbm", -70)
-                sec = ap.get("security", "open").lower()
-                gen = ap.get("standard_generation", "Wi-Fi 6")
-                is_cap = sec == "open" or "guest" in ssid.lower() or "visitor" in ssid.lower() or "portal" in ssid.lower()
-                pct = max(0, min(100, int((rssi + 100) * 2)))
-                scan_items.append(WifiScanResultItem(
-                    ssid=ssid,
-                    bssid=bssid,
-                    channel=chan,
-                    band=band,
-                    signal_strength_pct=pct,
-                    rssi_dbm=rssi,
-                    security="open" if sec == "open" else "psk" if "psk" in sec or "wpa" in sec else "eap-peap",
-                    is_captive_candidate=is_cap,
-                    standard_generation=gen
-                ))
+out = run_iw_scan()
+items = []
+current_ap = None
+for line in out.splitlines():
+    line = line.strip()
+    bssid_m = re.match(r"^BSS ([0-9a-fA-F:]{17})", line)
+    if bssid_m:
+        if current_ap: items.append(current_ap)
+        current_ap = {"bssid": bssid_m.group(1).lower(), "ssid": "<Hidden SSID>", "channel": 1, "signal_pct": 0, "security": "open"}
+        continue
+    if not current_ap: continue
+    freq_m = re.match(r"^freq:\s*(\d+)", line)
+    if freq_m:
+        freq = int(freq_m.group(1))
+        if freq < 3000: current_ap["channel"] = (freq - 2407) // 5
+        elif freq < 6000: current_ap["channel"] = (freq - 5000) // 5
+    sig_m = re.match(r"^signal:\s*(-?[\d\.]+)\s*dBm", line)
+    if sig_m:
+        current_ap["signal_pct"] = max(0, min(100, int((float(sig_m.group(1)) + 100) * 2)))
+    ssid_m = re.match(r"^SSID:\s*(.*)", line)
+    if ssid_m:
+        val = ssid_m.group(1).strip()
+        if val: current_ap["ssid"] = val
+    if "WPA" in line or "RSN" in line:
+        current_ap["security"] = "wpa2"
+if current_ap: items.append(current_ap)
+print(json.dumps(items))"""
+
+
+        cmd = f"python3 -c '{python_script}'"
+        raw_output = _run_remote_sensor_command(sensor_ip, cmd, timeout_sec=20.0)
+        
+        if raw_output:
+            import json
+            try:
+                # Find JSON array in the output
+                json_start = raw_output.find('[')
+                json_end = raw_output.rfind(']') + 1
+                if json_start >= 0 and json_end > json_start:
+                    parsed_json = json.loads(raw_output[json_start:json_end])
+                    source = f"physical_edge ({sensor_ip})"
+                    for item in parsed_json:
+                        pct = item.get("signal_pct", 0)
+                        rssi = -100 + (pct // 2) if pct > 0 else -90
+                        sec = item.get("security", "")
+                        ssid = item.get("ssid", "<Hidden>")
+                        chan = item.get("channel", 1)
+                        is_cap = sec == "open" or "guest" in ssid.lower() or "visitor" in ssid.lower() or "portal" in ssid.lower()
+                        band = "5GHz" if chan > 14 else "2.4GHz"
+                        
+                        scan_items.append(WifiScanResultItem(
+                            ssid=ssid,
+                            bssid=item.get("bssid", "00:00:00:00:00:00"),
+                            channel=chan,
+                            band=band,
+                            signal_strength_pct=pct,
+                            rssi_dbm=rssi,
+                            security="open" if "open" in sec or not sec else "psk" if "wpa" in sec or "psk" in sec else "eap-peap",
+                            is_captive_candidate=is_cap,
+                            standard_generation="Wi-Fi 6" if chan > 14 else "Wi-Fi 4"
+                        ))
+            except Exception as e:
+                print("Failed to parse remote JSON array:", e)
+
     elif sensor.get("wifi_survey") and isinstance(sensor["wifi_survey"], list):
         # Cached previous scan
         for item in sensor["wifi_survey"]:
@@ -307,7 +359,38 @@ async def get_captive_portal_status(sensor_id: str):
     sensor_ip = sensor.get("ip_address") or None
     is_edge = bool(sensor_ip) and not sensor_id.startswith("cb-") and not bool(sensor.get("is_chromebook"))
 
-    probe_res = _live_probe_captive_portal(timeout=2.5)
+    if is_edge:
+        python_script = r"""import urllib.request, time, json
+start = time.perf_counter()
+url = "http://connectivitycheck.gstatic.com/generate_204"
+try:
+    req = urllib.request.Request(url, headers={"User-Agent": "ONE-CaptivePortalCheck/1.0"})
+    with urllib.request.urlopen(req, timeout=2.5) as resp:
+        lat = round((time.perf_counter() - start) * 1000.0, 2)
+        if resp.status == 204:
+            print(json.dumps({"is_captive": False, "status_code": "204 No Content", "latency_ms": lat, "info": "Direct Internet egress verified (No splash page)"}))
+        else:
+            print(json.dumps({"is_captive": True, "status_code": f"HTTP {resp.status}", "latency_ms": lat, "info": f"Captive portal splash page intercepted (HTTP {resp.status})"}))
+except urllib.error.HTTPError as e:
+    lat = round((time.perf_counter() - start) * 1000.0, 2)
+    if e.code in (301, 302, 307, 308):
+        redirect = e.headers.get("Location", "Splash Page")
+        print(json.dumps({"is_captive": True, "status_code": f"Redirect {e.code}", "latency_ms": lat, "info": f"Captive portal redirect to {redirect}"}))
+    else:
+        print(json.dumps({"is_captive": False, "status_code": f"HTTP {e.code}", "latency_ms": lat, "info": f"Egress returned HTTP {e.code}"}))
+except Exception:
+    lat = round((time.perf_counter() - start) * 1000.0, 2)
+    print(json.dumps({"is_captive": False, "status_code": "Unreachable", "latency_ms": lat, "info": "Generate_204 unreachable"}))"""
+        cmd = f"python3 -c '{python_script}'"
+        raw_output = _run_remote_sensor_command(sensor_ip, cmd, timeout_sec=10.0)
+        try:
+            import json
+            probe_res = json.loads(raw_output.strip())
+        except Exception:
+            probe_res = _live_probe_captive_portal(timeout=2.5)
+    else:
+        probe_res = _live_probe_captive_portal(timeout=2.5)
+
     is_captive = probe_res.get("is_captive", False)
     status_code = probe_res.get("status_code", "204 No Content")
     lat = probe_res.get("latency_ms", 12.0)

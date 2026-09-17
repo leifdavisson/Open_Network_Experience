@@ -34,8 +34,8 @@ DEFAULT_CONFIG = {
     "sensor_id": "",
     "api_key": "",
     "check_interval_seconds": 60,
-    "wifi_interface": "wlan0",
-    "wifi_config_path": "/etc/wpa_supplicant/wpa_supplicant.conf"
+    "wifi_interface": "wlp1s0",
+    "wifi_config_path": "/etc/netplan/50-wifi.yaml"
 }
 
 # Global Discovery Cloud Fallback (Disabled: domain not owned)
@@ -362,40 +362,41 @@ def reconcile_containers(target_containers):
     run_cmd(["docker", "image", "prune", "-f"])
 
 def reconcile_wifi(wifi_spec, interface, config_path, rollback_seconds: int = 60):
-    """Reconciles Wi-Fi settings (re-writes wpa_supplicant if changed) with watchdog rollback protection."""
+    """Reconciles Wi-Fi settings (writes Netplan) with watchdog rollback protection."""
     if not wifi_spec:
         return
 
     ssid = wifi_spec.get("ssid")
     sec_type = wifi_spec.get("security", "open").lower()
 
-    # Build wpa_supplicant blocks based on security type
-    config_blocks = [
-        "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev",
-        "update_config=1",
-        "country=US\n"
+    lines = [
+        "network:",
+        "  version: 2",
+        "  renderer: networkd",
+        "  wifis:",
+        f"    {interface}:",
+        "      dhcp4: true",
+        "      dhcp4-overrides:",
+        "        route-metric: 200",
+        "      access-points:",
+        f'        "{ssid}":'
     ]
 
-    network_block = ["network={", f'    ssid="{ssid}"']
-
     if sec_type == "open":
-        network_block.append("    key_mgmt=NONE")
+        lines.append("          network: open")
     elif sec_type == "psk":
         psk = wifi_spec.get("psk")
-        network_block.append(f'    psk="{psk}"')
-        network_block.append("    key_mgmt=WPA-PSK")
+        lines.append(f'          password: "{psk}"')
     elif sec_type == "eap-peap":
         username = wifi_spec.get("username")
         password = wifi_spec.get("password")
-        network_block.append("    key_mgmt=WPA-EAP")
-        network_block.append("    eap=PEAP")
-        network_block.append(f'    identity="{username}"')
-        network_block.append(f'    password="{password}"')
-        network_block.append("    phase2=\"auth=MSCHAPV2\"")
+        lines.append("          auth:")
+        lines.append("            key-management: eap")
+        lines.append("            method: peap")
+        lines.append(f'            identity: "{username}"')
+        lines.append(f'            password: "{password}"')
 
-    network_block.append("}")
-    config_blocks.append("\n".join(network_block))
-    new_config = "\n".join(config_blocks)
+    new_config = "\n".join(lines) + "\n"
 
     # Check if existing config matches
     current_config = ""
@@ -405,7 +406,7 @@ def reconcile_wifi(wifi_spec, interface, config_path, rollback_seconds: int = 60
             current_config = f.read()
 
     if new_config.strip() != current_config.strip():
-        print(f"Wi-Fi config change detected. Writing new config for SSID: {ssid}")
+        print(f"Wi-Fi config change detected. Writing new Netplan config for SSID: {ssid}")
         try:
             # Preserve previous working configuration as watchdog rollback baseline
             if current_config.strip():
@@ -415,12 +416,16 @@ def reconcile_wifi(wifi_spec, interface, config_path, rollback_seconds: int = 60
             with open(config_path, "w") as f:
                 f.write(new_config)
 
-            # Restart wpa_supplicant to apply configuration
-            print("Restarting Wi-Fi interface...")
-            run_cmd(["wpa_cli", "-i", interface, "reconfigure"])
+            # Secure permissions for Netplan
+            run_cmd(["chmod", "600", config_path])
+
+            # Apply netplan
+            print("Applying Netplan configuration...")
+            run_cmd(["netplan", "apply"])
 
             # Save watchdog state with timestamp
             watchdog_file = "/tmp/wifi_association_watchdog.json"
+            import json, time
             watchdog_data = {
                 "target_ssid": ssid,
                 "backup_path": backup_path,
@@ -604,6 +609,74 @@ class AdaptiveResolutionEngine:
         else:
             return self.config.get("check_interval_seconds", 15) # Green baseline
 
+def gather_wifi_telemetry(iface):
+    import re, subprocess, os
+    telemetry = {
+        "interface": iface,
+        "ssid": "Unassociated",
+        "bssid": "Not Connected",
+        "band": "Unknown",
+        "channel": 0,
+        "rssi_dbm": -100,
+        "tx_rate_mbps": 0.0,
+        "rx_rate_mbps": 0.0,
+        "security": "None",
+        "channel_width_mhz": 0,
+        "standard": "Wi-Fi 6 (802.11ax Dual-Band 2x2 MIMO)"
+    }
+    
+    try:
+        if not os.path.exists(f"/sys/class/net/{iface}"):
+            iw_out = subprocess.check_output(["iw", "dev"], stderr=subprocess.DEVNULL).decode("utf-8")
+            ifaces = re.findall(r"Interface\s+(\w+)", iw_out)
+            if ifaces:
+                iface = ifaces[0]
+                telemetry["interface"] = iface
+    except Exception: pass
+
+    try:
+        out = subprocess.check_output(["iw", "dev", iface, "link"], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8")
+        if "Not connected" not in out:
+            bssid_m = re.search(r"Connected to\s+([0-9a-fA-F:]{17})", out)
+            if bssid_m: telemetry["bssid"] = bssid_m.group(1).lower()
+            
+            ssid_m = re.search(r"SSID:\s*(.+)", out)
+            if ssid_m: telemetry["ssid"] = ssid_m.group(1).strip()
+            
+            freq_m = re.search(r"freq:\s*(\d+)", out)
+            if freq_m:
+                freq = int(freq_m.group(1))
+                if freq < 3000:
+                    telemetry["band"] = "2.4 GHz"
+                    telemetry["channel"] = (freq - 2407) // 5
+                elif freq < 6000:
+                    telemetry["band"] = "5 GHz"
+                    telemetry["channel"] = (freq - 5000) // 5
+                else:
+                    telemetry["band"] = "6 GHz"
+                    
+            sig_m = re.search(r"signal:\s*(-?\d+)\s*dBm", out)
+            if sig_m: telemetry["rssi_dbm"] = int(sig_m.group(1))
+            
+            tx_m = re.search(r"tx bitrate:\s*([\d\.]+)", out)
+            if tx_m: telemetry["tx_rate_mbps"] = float(tx_m.group(1))
+            
+            rx_m = re.search(r"rx bitrate:\s*([\d\.]+)", out)
+            if rx_m: telemetry["rx_rate_mbps"] = float(rx_m.group(1))
+    except Exception: pass
+    
+    try:
+        ip_out = subprocess.check_output(["ip", "-4", "addr", "show", "dev", iface], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8")
+        ip_m = re.search(r"inet\s+([\d\.]+)", ip_out)
+        if ip_m: telemetry["ip_address"] = ip_m.group(1)
+        
+        mac_out = subprocess.check_output(["ip", "link", "show", "dev", iface], stderr=subprocess.DEVNULL, timeout=2).decode("utf-8")
+        mac_m = re.search(r"link/ether\s+([0-9a-fA-F:]{17})", mac_out)
+        if mac_m: telemetry["mac_address"] = mac_m.group(1)
+    except Exception: pass
+
+    return telemetry
+
 def phone_home(config, cmp_url, probing_state: str = "GREEN"):
     """Reaches out to the CMP API to report status and get target configuration."""
     url = f"{cmp_url}/sensors/reconcile"
@@ -614,7 +687,8 @@ def phone_home(config, cmp_url, probing_state: str = "GREEN"):
         "os": sys.platform,
         "timestamp": int(time.time()),
         "probing_state": probing_state,
-        "containers": get_running_containers()
+        "containers": get_running_containers(),
+        "wifi": gather_wifi_telemetry(config.get("wifi_interface", "wlp1s0"))
     }
     if "initial_location" in config and isinstance(config["initial_location"], dict):
         payload["location"] = config["initial_location"]
@@ -878,6 +952,12 @@ def main():
         target_state = phone_home(config, cmp_url, probing_state=current_state)
 
         if target_state:
+            # We reached the CMP! Clean up watchdog
+            watchdog_file = "/tmp/wifi_association_watchdog.json"
+            if os.path.exists(watchdog_file):
+                print("CMP reached successfully! Disarming Wi-Fi watchdog.")
+                os.remove(watchdog_file)
+            
             # Update commanded state from CMP (e.g. ON_DEMAND burst)
             last_commanded_state = target_state.get("probing_state")
 
@@ -895,6 +975,28 @@ def main():
             reconcile_pcap_trigger(target_state.get("pcap_trigger", {}), config)
             reconcile_custom_probes(target_state.get("custom_probes", []), config)
             reconcile_unified_schedules(target_state.get("unified_schedules", []), config)
+
+        else:
+            # We failed to reach CMP. Check if watchdog is armed and expired
+            watchdog_file = "/tmp/wifi_association_watchdog.json"
+            if os.path.exists(watchdog_file):
+                try:
+                    with open(watchdog_file, "r") as f_wd:
+                        wd_data = json.load(f_wd)
+                    elapsed = int(time.time()) - wd_data["initiated_at"]
+                    if elapsed > wd_data.get("rollback_seconds", 60):
+                        print(f"Watchdog triggered! {elapsed}s elapsed without CMP check-in.")
+                        backup_path = wd_data["backup_path"]
+                        config_path = wd_data["config_path"]
+                        if os.path.exists(backup_path):
+                            print(f"Rolling back Wi-Fi config to {backup_path}...")
+                            import shutil
+                            shutil.copy(backup_path, config_path)
+                            run_cmd(["chmod", "600", config_path])
+                            run_cmd(["netplan", "apply"])
+                        os.remove(watchdog_file)
+                except Exception as e:
+                    print(f"Error checking watchdog: {e}")
 
         # Dynamic sleep based on active state (1s in RED/ON_DEMAND, 5s in AMBER, 15s in GREEN, 300s in BLACKOUT)
         sleep_interval = adaptive_engine.get_sleep_interval()

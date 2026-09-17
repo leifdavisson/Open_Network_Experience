@@ -131,7 +131,8 @@ for sensor in "${SENSOR_HOSTS[@]}"; do
         "${SSH_USER}@${sensor}:/tmp/sensor/"
 
     ${SSH_CMD} "${SSH_USER}@${sensor}" \
-        "echo '${SSH_PASS}' | sudo -S cp /tmp/sensor/*.py /usr/local/bin/ 2>/dev/null || true && \
+        "echo '${SSH_PASS}' | sudo -S sed -i 's|/usr/local/bin/\\*||g' /etc/sudoers.d/99-one-sensor-probes 2>/dev/null || true && \
+         echo '${SSH_PASS}' | sudo -S cp /tmp/sensor/*.py /usr/local/bin/ 2>/dev/null || true && \
          echo '${SSH_PASS}' | sudo -S cp /tmp/sensor/reconciler/reconciler.py /usr/local/bin/ 2>/dev/null || true && \
          if [[ -f /etc/sensor/reconciler.json ]]; then \
              echo '${SSH_PASS}' | sudo -S sed -i 's|\"cmp_url\": \".*\"|\"cmp_url\": \"http://${CMP_HOST}:8000/api/v1\"|g' /etc/sensor/reconciler.json 2>/dev/null || true; \
@@ -187,7 +188,7 @@ fi
 if [[ -n "$SENSOR_ID" ]]; then
     echo -n " - Checking Wi-Fi Survey API (/api/v1/sensors/${SENSOR_ID}/wifi/survey)... "
     WIFI_SURVEY=$(curl -sf -H "X-API-Key: ${ADMIN_API_KEY}" "http://${CMP_HOST}:8000/api/v1/sensors/${SENSOR_ID}/wifi/survey" 2>/dev/null || true)
-    if [[ -n "$WIFI_SURVEY" && "$WIFI_SURVEY" == *"networks"* ]]; then
+    if [[ -n "$WIFI_SURVEY" && "$WIFI_SURVEY" == *"ssids"* ]]; then
         echo "✓ PASS (RF Scan Available)"
     else
         echo "⚠ WARNING (Wi-Fi Survey endpoint returned empty or non-200)"
@@ -195,7 +196,7 @@ if [[ -n "$SENSOR_ID" ]]; then
 
     echo -n " - Checking Captive Portal Multi-Canary Detection (/wifi/portal-status)... "
     PORTAL_RESP=$(curl -sf -H "X-API-Key: ${ADMIN_API_KEY}" "http://${CMP_HOST}:8000/api/v1/sensors/${SENSOR_ID}/wifi/portal-status" 2>/dev/null || true)
-    if [[ -n "$PORTAL_RESP" && "$PORTAL_RESP" == *"captive_portal_detected"* ]]; then
+    if [[ -n "$PORTAL_RESP" && "$PORTAL_RESP" == *"is_captive"* ]]; then
         echo "✓ PASS (Canary Active)"
     else
         echo "⚠ WARNING (Portal status endpoint returned empty)"
@@ -203,7 +204,7 @@ if [[ -n "$SENSOR_ID" ]]; then
 fi
 
 echo -n " - Checking Live SLA & Telemetry Truthfulness (/api/v1/telemetry/live)... "
-LIVE_TELEMETRY=$(curl -sf "http://${CMP_HOST}:8000/api/v1/telemetry/live" 2>/dev/null || true)
+LIVE_TELEMETRY=$(curl -sf "http://${CMP_HOST}:8000/api/v1/wallboard/live-stats" 2>/dev/null || true)
 if [[ -n "$LIVE_TELEMETRY" && "$LIVE_TELEMETRY" == *"slas"* && "$LIVE_TELEMETRY" == *"trends"* ]]; then
     echo "✓ PASS (Authentic Telemetry Streaming)"
 else

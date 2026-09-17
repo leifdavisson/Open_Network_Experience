@@ -338,7 +338,12 @@
                     </tr>`;
                 }).join('');
             } catch(e) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--danger);">Error loading rules: ${e.message}</td></tr>`;
+                t
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
+                body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--danger);">Error loading rules: ${e.message}</td></tr>`;
             }
         }
 
@@ -565,7 +570,12 @@
                     </tr>`;
                 }).join('');
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--danger);">Error loading maintenance windows: ${e.message}</td></tr>`;
+                t
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
+                body.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--danger);">Error loading maintenance windows: ${e.message}</td></tr>`;
             }
         }
 
@@ -843,7 +853,12 @@
                     </tr>`;
                 }).join('');
             } catch(e) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--danger);">Error loading channels: ${e.message}</td></tr>`;
+                t
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
+                body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--danger);">Error loading channels: ${e.message}</td></tr>`;
             }
         }
 
@@ -1170,7 +1185,12 @@
             if (!tbody) return;
 
             if (!ALERTS_CACHE || ALERTS_CACHE.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">
+                t
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:32px;">
                     <div style="font-size:24px; margin-bottom:8px;">✅</div>
                     <strong>No alerts matching filter '${CURRENT_ALERT_STATUS_FILTER}'.</strong>
                     <p style="font-size:12px; margin-top:4px;">All synthetic probers and edge network paths are within nominal SLA bounds.</p>
@@ -1560,10 +1580,15 @@
                         </div>
                     </div>
 
-                    <div style="background:var(--bg-input); padding:12px; border-radius:6px; border:1px solid var(--border);">
-                        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:6px;">Forensic Root Cause Analysis</div>
-                        <div style="font-size:13px; color:var(--text-main); line-height:1.4;">
-                            ${diss.root_cause_hint || evidence.reason || 'MITM SSL Decryption Certificate or upstream latency anomaly detected during synthetic transaction.'}
+                    <div style="background:var(--bg-input); padding:12px; border-radius:6px; border:1px solid var(--border); margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:6px;">Forensic Root Cause Analysis</div>
+                                <div style="font-size:13px; color:var(--text-main); line-height:1.4;">
+                                    ${diss.root_cause_hint || evidence.reason || 'MITM SSL Decryption Certificate or upstream latency anomaly detected during synthetic transaction.'}
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="downloadCurrentPcap()">📥 Download PCAP</button>
                         </div>
                     </div>
                 `;
@@ -1580,17 +1605,11 @@
 
         function downloadCurrentPcap() {
             if (!CURRENT_ACTIVE_EVIDENCE) return;
-            const filename = CURRENT_ACTIVE_EVIDENCE.filename || `incident_${CURRENT_ACTIVE_EVIDENCE.id}.pcap`;
-            const dummyHeader = new Uint8Array([0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00]);
-            const blob = new Blob([dummyHeader], { type: 'application/vnd.tcpdump.pcap' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            if (!CURRENT_ACTIVE_EVIDENCE.sensor_id) {
+                alert("Cannot download simulated or broken PCAP evidence without a linked sensor ID.");
+                return;
+            }
+            window.location.href = `/api/v1/evidence/${CURRENT_ACTIVE_EVIDENCE.sensor_id}/${CURRENT_ACTIVE_EVIDENCE.id}/download`;
         }
 
         async function triggerManualPcap(alertId) {
@@ -2198,7 +2217,12 @@
             const title = document.getElementById('cb-modal-title');
             if (modal) modal.style.display = 'flex';
             if (title) title.innerText = `💻 Chromebook Diagnostic Inspector: ${sensorId}`;
-            if (body) body.innerHTML = `<p style="color:var(--text-muted);">Fetching dynamic telemetry for <code>${sensorId}</code>...</p>`;
+            if (body) 
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
+                body.innerHTML = `<p style="color:var(--text-muted);">Fetching dynamic telemetry for <code>${sensorId}</code>...</p>`;
 
             try {
                 const res = await fetch(`/api/v1/chromebooks/${sensorId}`);
@@ -2243,6 +2267,11 @@
                 const rttDisplayHtml = isOnline ?
                     (webrtc.rtt_ms ? `<b>${webrtc.rtt_ms} ms</b>` : '<span style="color:var(--text-muted);">--</span>') :
                     (webrtc.rtt_ms ? `<span style="color:var(--text-muted);">${webrtc.rtt_ms} ms (Last)</span>` : '<span style="color:var(--text-muted);">--</span>');
+
+                
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
 
                 body.innerHTML = `
                     ${bannerHtml}
@@ -2296,17 +2325,27 @@
                     <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border);">
                         <strong style="color:var(--text-main); font-size:13px;">⚡ District App Latency Breakdown ${!isOnline ? '<span style="color:var(--text-muted); font-size:11px; font-weight:normal;">(Snapshot)</span>' : ''}</strong>
                         <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-                            ${apps.length > 0 ? apps.map(a => `
+                            ${apps.length > 0 ? apps.map(a => {
+                                const name = a.name || a.target || 'Unknown Web App';
+                                const latency = a.latency_ms !== undefined ? a.latency_ms : (a.rtt_ms !== undefined ? a.rtt_ms : '--');
+                                const status = a.success ? 'PASS' : 'FAIL';
+                                const color = a.success ? 'var(--success)' : 'var(--danger)';
+                                return `
                                 <div style="background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border); font-size:11px;">
-                                    <b>${a.name}</b>: <span style="color:${a.success ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">${a.latency_ms}ms</span> ${a.success ? '✓' : '✗'}
-                                </div>
-                            `).join('') : `
+                                    <b>${name}</b>: <span style="color:${color}; font-weight:700;">${status}</span> (${latency}ms)
+                                </div>`;
+                            }).join('') : `
                                 <span style="color:var(--text-muted); font-size:12px; padding:4px 0;">No active synthetic probe results recorded for this device.</span>
                             `}
                         </div>
                     </div>
                 `;
             } catch (err) {
+                
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
                 body.innerHTML = `<p style="color:var(--danger);">Error loading sensor telemetry: ${err.message}</p>`;
             }
         }
@@ -2323,7 +2362,12 @@
             const actions = document.getElementById('sensor-modal-actions');
             if (modal) modal.style.display = 'flex';
             if (title) title.innerText = `📡 Edge Sensor Diagnostic Inspector: ${sensorId}`;
-            if (body) body.innerHTML = `<p style="color:var(--text-muted);">Fetching complete telemetry and diagnostic matrix for <code>${sensorId}</code>...</p>`;
+            if (body) 
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
+                body.innerHTML = `<p style="color:var(--text-muted);">Fetching complete telemetry and diagnostic matrix for <code>${sensorId}</code>...</p>`;
 
             try {
                 const res = await fetch(`/api/v1/sensors/${sensorId}`, { headers: { 'X-API-Key': ADMIN_KEY } });
@@ -2338,6 +2382,7 @@
                 const loc = data.location || {};
 
                 function formatWifiGeneration(protoOrType, band) {
+                    if (!protoOrType && !band) return 'Wi-Fi';
                     const str = `${protoOrType || ''} ${band || ''}`.toLowerCase();
                     if (str.includes('802.11be') || str.includes('wi-fi 7') || str.includes('wifi 7')) return 'Wi-Fi 7';
                     if (str.includes('802.11ax') && (str.includes('6ghz') || str.includes('6 ghz'))) return 'Wi-Fi 6E';
@@ -2348,6 +2393,7 @@
                 }
 
                 const wifiGen = formatWifiGeneration(wlp1.protocol || wlp1.type, wlp1.band);
+                const hasWifi = Object.keys(wlp1).length > 0;
 
                 const bannerHtml = isOnline ? `
                     <div style="background:rgba(16,185,129,0.12); border:1px solid var(--success); padding:12px 16px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
@@ -2355,38 +2401,52 @@
                             <strong style="color:var(--success); font-size:14px;">● Edge Sensor Telemetry Stream Active</strong>
                             <div style="color:var(--text-muted); font-size:12px; margin-top:3px;">Reporting State: <b style="color:var(--text-main);">${data.probing_state || 'GREEN'}</b> &bull; Last seen: <b>${formatTimeAgo(data.last_seen)}</b> &bull; Containers Reconciled: <b>${data.reconciled_ok ? '✓ 100% In-Sync' : '⚠️ Sync Pending'}</b></div>
                         </div>
-                        <span class="status-pill status-online">● Online (${data.probing_state || 'GREEN'})</span>
+                        <span class="status-pill status-online">● Streaming</span>
                     </div>
                 ` : `
                     <div style="background:rgba(239,68,68,0.12); border:1px solid var(--danger); padding:12px 16px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
                         <div>
-                            <strong style="color:var(--danger); font-size:14px;">⚠️ Edge Sensor Offline — Cached Snapshot</strong>
-                            <div style="color:var(--text-muted); font-size:12px; margin-top:3px;">Last check-in was <b>${formatTimeAgo(data.last_seen)}</b>. Metrics below represent the last known state.</div>
+                            <strong style="color:var(--danger); font-size:14px;">⚠️ Sensor Offline — Stale Telemetry Warning</strong>
+                            <div style="color:var(--text-muted); font-size:12px; margin-top:3px;">Last check-in was <b>${formatTimeAgo(data.last_seen)}</b>. Metrics below represent a frozen snapshot and are not live.</div>
                         </div>
-                        <span class="status-pill status-offline">○ Unreachable</span>
+                        <span class="status-pill status-offline">○ Disconnected</span>
                     </div>
                 `;
+                
+                const wlp1Html = hasWifi ? `
+                                • IPv4 Address: <code>${wlp1.ip_address || 'Unassigned (DHCP Pending)'}</code><br>
+                                • Associated SSID: <b>${wlp1.ssid || 'Disconnected'}</b><br>
+                                • BSSID / Band: <code>${wlp1.bssid || '--'}</code> (${wlp1.band || '--'})<br>
+                                • RF Channel / Width: <b>Ch ${wlp1.channel || '--'} (${wlp1.channel_width_mhz || '--'} MHz)</b><br>
+                                • Signal / SNR: <b>${wlp1.rssi_dbm || '--'} dBm</b> (SNR: ${wlp1.snr_db || '--'} dB) &bull; Tx: ${wlp1.tx_rate_mbps || '--'} Mbps
+                ` : `
+                                <span style="color:var(--text-muted); font-style:italic;">No Wi-Fi interface detected or active on this sensor.</span>
+                `;
+
+                
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
 
                 body.innerHTML = `
                     ${bannerHtml}
 
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
                         <div style="background:var(--bg-input); padding:14px; border-radius:8px; border:1px solid var(--border);">
-                            <strong style="color:var(--accent); font-size:13px;">🏢 Sensor Identity & Deployment</strong>
+                            <strong style="color:var(--accent); font-size:13px;">🏢 Location & Identity</strong>
                             <div style="font-size:12px; margin-top:8px; line-height:1.7;">
-                                • Sensor ID: <code>${data.sensor_id}</code><br>
-                                • Hostname: <b>${data.hostname}</b><br>
-                                • Campus / Room: <b>${loc.campus_id || data.campus_id || 'Main Campus'}</b> &bull; ${loc.building || 'Bldg 1'}, ${loc.room || 'Room 101'}<br>
-                                • Operating System: <code>${data.os}</code><br>
-                                • Provisioning State: <span class="badge" style="background:#2563eb; color:white; padding:1px 6px; border-radius:4px; font-size:10px;">${(data.status || 'approved').toUpperCase()}</span>
+                                • Sensor ID: <b>${data.sensor_id}</b><br>
+                                • Campus Site: <b>${loc.site || 'Main Campus'}</b><br>
+                                • Room / Closet: <b>${loc.room || 'IT Closet 1'}</b><br>
+                                • Edge OS: <code>${hw.os_name || 'Ubuntu 24.04 LTS'}</code><br>
+                                • GPS: <a href="https://maps.google.com/?q=${loc.latitude || 0},${loc.longitude || 0}" target="_blank" style="color:var(--accent);">${loc.latitude || 0}, ${loc.longitude || 0}</a>
                             </div>
                         </div>
 
                         <div style="background:var(--bg-input); padding:14px; border-radius:8px; border:1px solid var(--border);">
-                            <strong style="color:var(--success); font-size:13px;">⚡ Hardware & Appliance Vitals</strong>
+                            <strong style="color:var(--purple); font-size:13px;">⚙️ Edge Compute Hardware</strong>
                             <div style="font-size:12px; margin-top:8px; line-height:1.7;">
-                                • Appliance Model: <b>${hw.model || 'Raspberry Pi 5'}</b><br>
-                                • CPU / Temp: <b>${hw.cpu || 'Quad-Core ARM'}</b> (${hw.cpu_temperature_c || 41.2}&deg;C)<br>
+                                • CPU: <b>${hw.cpu_model || 'ARM Cortex-A72'} (${hw.cpu_cores || 4} Cores)</b> &bull; ${hw.cpu_used_pct || 2.4}% Used<br>
                                 • RAM Usage: <b>${hw.memory_used_mb || 1420} MB / ${hw.memory_total_mb || 8192} MB (${hw.memory_used_pct || 17.3}%)</b><br>
                                 • Disk Storage: <b>${hw.storage_used_gb || 11.4} GB / ${hw.storage_total_gb || 64.0} GB (${hw.storage_used_pct || 17.8}%)</b><br>
                                 • Power Feed: <span style="color:var(--text-main); font-weight:600;">${hw.power_status || 'PoE+ IEEE 802.3at'}</span>
@@ -2406,13 +2466,9 @@
                         </div>
 
                         <div style="background:var(--bg-input); padding:14px; border-radius:8px; border:1px solid var(--border);">
-                            <strong style="color:var(--accent); font-size:13px;">📶 ${wifiGen} Radio (${wlp1.name || 'wlp1s0'})</strong>
+                            <strong style="color:var(--accent); font-size:13px;">📶 ${wifiGen} Radio (${wlp1.name || (hasWifi ? 'wlp1s0' : 'Missing')})</strong>
                             <div style="font-size:12px; margin-top:8px; line-height:1.7;">
-                                • IPv4 Address: <code>${wlp1.ip_address || 'Unassigned (DHCP Pending)'}</code><br>
-                                • Associated SSID: <b>${wlp1.ssid || 'District-Secure-WiFi'}</b><br>
-                                • BSSID / Band: <code>${wlp1.bssid || '00:11:22:33:44:55'}</code> (${wlp1.band || '5 GHz'})<br>
-                                • RF Channel / Width: <b>Ch ${wlp1.channel || 165} (${wlp1.channel_width_mhz || 80} MHz)</b><br>
-                                • Signal / SNR: <b>${wlp1.rssi_dbm || -55} dBm</b> (SNR: ${wlp1.snr_db || 38} dB) &bull; Tx: ${wlp1.tx_rate_mbps || 866.7} Mbps
+                                ${wlp1Html}
                             </div>
                         </div>
                     </div>
@@ -2450,6 +2506,11 @@
                     `;
                 }
             } catch (err) {
+                
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
                 body.innerHTML = `<p style="color:var(--danger);">Error loading sensor telemetry: ${err.message}</p>`;
             }
         }
@@ -2459,7 +2520,7 @@
             if (modal) modal.style.display = 'none';
         }
 
-        async function openWifiPortalModal(sensorId) {
+        async function openWifiPortalModal(sensorId, autoLaunchCaptive = false) {
             const modal = document.getElementById('wifi-portal-modal');
             const body = document.getElementById('wifi-portal-modal-body');
             const title = document.getElementById('wifi-portal-modal-title');
@@ -2478,6 +2539,10 @@
 
                 const ssids = survey.ssids || [];
                 const isCaptive = portal.is_captive || portal.state === 'PORTAL_INTERCEPTED';
+
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
 
                 let portalBanner = isCaptive ? `
                     <div style="background:rgba(245,158,11,0.15); border:1px solid var(--warning); padding:12px 16px; border-radius:8px; margin-bottom:16px;">
@@ -2519,6 +2584,11 @@
                         </tr>
                     `;
                 }).join('');
+
+                
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
 
                 body.innerHTML = `
                     ${portalBanner}
@@ -2567,6 +2637,11 @@
                     </div>
                 `;
             } catch (err) {
+                
+                if (autoLaunchCaptive && isCaptive) {
+                    setTimeout(() => launchCaptiveScreencast(sensorId), 500);
+                }
+
                 body.innerHTML = `<p style="color:var(--danger);">Failed to load Wi-Fi survey: ${err.message}</p>`;
             }
         }
@@ -2575,6 +2650,9 @@
             const modal = document.getElementById('wifi-portal-modal');
             if (modal) modal.style.display = 'none';
         }
+
+        
+        let screencastIntervals = {};
 
         async function launchCaptiveScreencast(sensorId) {
             const container = document.getElementById(`screencast-container-${sensorId}`);
@@ -2585,16 +2663,56 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY }
                 });
+                
                 const img = document.getElementById(`screencast-frame-${sensorId}`);
                 if (img) {
                     img.src = `/api/v1/sensors/${sensorId}/wifi/screencast/frame?t=${Date.now()}`;
+                    
+                    // Add click coordinate tracking
+                    img.onclick = async function(e) {
+                        const rect = img.getBoundingClientRect();
+                        // Scale coordinates to the 1024x768 viewport expected by the backend
+                        const scaleX = 1024 / rect.width;
+                        const scaleY = 768 / rect.height;
+                        const x = Math.round((e.clientX - rect.left) * scaleX);
+                        const y = Math.round((e.clientY - rect.top) * scaleY);
+                        
+                        try {
+                            await fetch(`/api/v1/sensors/${sensorId}/wifi/screencast/input`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-API-Key': ADMIN_KEY },
+                                body: JSON.stringify({ event_type: 'click', x: x, y: y })
+                            });
+                            const stat = document.getElementById(`screencast-status-${sensorId}`);
+                            if (stat) stat.innerText = `Dispatched click at (${x}, ${y})`;
+                            setTimeout(() => refreshScreencastFrame(sensorId), 500);
+                        } catch (err) {
+                            console.error("Input dispatch error:", err);
+                        }
+                    };
                 }
+
+                // Poll every 3 seconds for updates
+                if (screencastIntervals[sensorId]) clearInterval(screencastIntervals[sensorId]);
+                screencastIntervals[sensorId] = setInterval(() => refreshScreencastFrame(sensorId), 3000);
+
             } catch (e) {
                 console.error("Failed to start screencast session:", e);
             }
         }
 
+        function refreshScreencastFrame(sensorId) {
+            const img = document.getElementById(`screencast-frame-${sensorId}`);
+            if (img && img.offsetParent !== null) {
+                img.src = `/api/v1/sensors/${sensorId}/wifi/screencast/frame?t=${Date.now()}`;
+            }
+        }
+
         async function closeCaptiveScreencast(sensorId) {
+            if (screencastIntervals[sensorId]) {
+                clearInterval(screencastIntervals[sensorId]);
+                delete screencastIntervals[sensorId];
+            }
             const container = document.getElementById(`screencast-container-${sensorId}`);
             if (container) container.style.display = 'none';
 
@@ -2623,28 +2741,69 @@
             }
         }
 
-        async function promptConnectWifi(sensorId, ssid, security) {
-            let psk = null;
-            let username = null;
-            let password = null;
+                function togglePasswordVisibility(inputId) {
+            const el = document.getElementById(inputId);
+            if (el) {
+                el.type = el.type === 'password' ? 'text' : 'password';
+            }
+        }
+
+        function closeWifiProvisionModal() {
+            const modal = document.getElementById('wifi-provision-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function promptConnectWifi(sensorId, ssid, security) {
+            const modal = document.getElementById('wifi-provision-modal');
+            if (!modal) return;
+
+            document.getElementById('wifi-prov-sensor-id').value = sensorId;
+            document.getElementById('wifi-prov-ssid').value = ssid;
+            document.getElementById('wifi-prov-security').value = security;
+            
+            document.getElementById('wifi-prov-ssid-display').innerText = ssid;
+            document.getElementById('wifi-prov-sec-display').innerText = security.toUpperCase();
+
+            document.getElementById('wifi-prov-psk-group').style.display = 'none';
+            document.getElementById('wifi-prov-eap-group').style.display = 'none';
+            document.getElementById('wifi-prov-open-group').style.display = 'none';
 
             if (security === 'psk') {
-                psk = prompt(`Enter WPA2/WPA3 Pre-Shared Key for '${ssid}':`);
-                if (!psk) return;
-                if (psk.length < 8 || psk.length > 63) {
-                    alert("Pre-Shared Key must be between 8 and 63 characters.");
-                    return;
-                }
+                document.getElementById('wifi-prov-psk-group').style.display = 'block';
+                document.getElementById('wifi-prov-psk').value = '';
+                document.getElementById('wifi-prov-psk').required = true;
+                document.getElementById('wifi-prov-username').required = false;
+                document.getElementById('wifi-prov-password').required = false;
             } else if (security === 'eap-peap') {
-                username = prompt(`Enter EAP-PEAP Username/Identity for '${ssid}':`);
-                if (!username) return;
-                password = prompt(`Enter EAP-PEAP Password for '${ssid}':`);
-                if (!password) return;
+                document.getElementById('wifi-prov-eap-group').style.display = 'block';
+                document.getElementById('wifi-prov-username').value = '';
+                document.getElementById('wifi-prov-password').value = '';
+                document.getElementById('wifi-prov-psk').required = false;
+                document.getElementById('wifi-prov-username').required = true;
+                document.getElementById('wifi-prov-password').required = true;
             } else {
-                if (!confirm(`Connect to Open Wi-Fi network '${ssid}'? 60-second watchdog rollback will be armed.`)) {
-                    return;
-                }
+                document.getElementById('wifi-prov-open-group').style.display = 'block';
+                document.getElementById('wifi-prov-psk').required = false;
+                document.getElementById('wifi-prov-username').required = false;
+                document.getElementById('wifi-prov-password').required = false;
             }
+
+            modal.style.display = 'flex';
+        }
+
+        async function submitWifiProvision(e) {
+            e.preventDefault();
+            const sensorId = document.getElementById('wifi-prov-sensor-id').value;
+            const ssid = document.getElementById('wifi-prov-ssid').value;
+            const security = document.getElementById('wifi-prov-security').value;
+            
+            let psk = document.getElementById('wifi-prov-psk').value;
+            let username = document.getElementById('wifi-prov-username').value;
+            let password = document.getElementById('wifi-prov-password').value;
+
+            const btn = document.getElementById('wifi-prov-submit-btn');
+            btn.disabled = true;
+            btn.innerText = 'Connecting...';
 
             try {
                 const payload = {
@@ -2668,15 +2827,23 @@
                     return;
                 }
 
-                const data = await res.json();
-                alert(`✓ Provisioned network '${ssid}'!\nWatchdog is armed for ${data.rollback_timeout_seconds}s. If CMP connection is lost, sensor will automatically revert.`);
-                openWifiPortalModal(sensorId);
+                btn.innerText = 'Verifying Captive Portal...';
+                
+                // Wait a few seconds for the network association and IP acquisition
+                await new Promise(r => setTimeout(r, 4000));
+                
+                // Close provision modal, open survey modal, and automatically handle captive portal if intercepted
+                closeWifiProvisionModal();
+                await openWifiPortalModal(sensorId, true); 
+
             } catch (err) {
-                alert("Network error connecting Wi-Fi: " + err.message);
+                alert("Request failed: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Connect & Verify';
             }
         }
-
-        async function loadDashboardData() {
+async function loadDashboardData() {
             try {
                 const resSensors = await fetch('/api/v1/sensors', { headers: { 'X-API-Key': ADMIN_KEY } });
                 SENSORS_CACHE = await resSensors.json();
@@ -3345,23 +3512,39 @@
                     }
                 }
 
-                // 2. Are Testing Portals Ready? (Bind to live CAASPP / Cambium TDS probe)
+                // 2. Are Testing Portals Ready? (District Apps & Portals Table)
                 const testStatus = document.getElementById('helpdesk-testing-status');
                 const testDesc = document.getElementById('helpdesk-testing-desc');
-                if (testStatus && testDesc) {
-                    const caaspp = (liveStats.saas && liveStats.saas.caaspp) ? liveStats.saas.caaspp : null;
-                    if (!caaspp || caaspp.is_up == null) {
-                        testStatus.innerHTML = '⚪ Checking Portals';
-                        testStatus.style.color = 'var(--text-muted)';
-                        testDesc.innerText = 'Testing portal synthetic probes initializing.';
-                    } else if (caaspp.is_up === false) {
-                        testStatus.innerHTML = '🔴 Testing Portals Down';
-                        testStatus.style.color = 'var(--danger)';
-                        testDesc.innerText = 'CAASPP / Cambium TDS unreachable. Do not start high-stakes testing sessions.';
+                if (testStatus && testDesc && liveStats.saas) {
+                    const appsToRender = [
+                        { key: 'caaspp', label: 'CAASPP' },
+                        { key: 'canvas', label: 'Canvas LMS' },
+                        { key: 'google', label: 'Google Classroom' },
+                        { key: 'sis', label: 'Clever / SIS' }
+                    ];
+                    
+                    let html = '';
+                    let allDown = false;
+                    let someDown = false;
+                    
+                    appsToRender.forEach(app => {
+                        const data = liveStats.saas[app.key];
+                        if (!data || data.is_up == null) {
+                            html += `<span class="status-pill" style="background:var(--bg-input); color:var(--text-muted); padding:4px 8px; font-size:11px;">⚪ ${app.label}: Pending</span>`;
+                        } else if (data.is_up === false) {
+                            html += `<span class="status-pill" style="background:rgba(239,68,68,0.15); color:var(--danger); border:1px solid var(--danger); padding:4px 8px; font-size:11px;">🔴 ${app.label}: DOWN</span>`;
+                            someDown = true;
+                        } else {
+                            const rtt = data.rtt_ms ? `${data.rtt_ms}ms` : 'UP';
+                            html += `<span class="status-pill" style="background:rgba(16,185,129,0.15); color:var(--success); border:1px solid var(--success); padding:4px 8px; font-size:11px;">🟢 ${app.label}: ${rtt}</span>`;
+                        }
+                    });
+                    
+                    testStatus.innerHTML = html;
+                    if (someDown) {
+                        testDesc.innerText = 'One or more critical district applications are unreachable.';
                     } else {
-                        testStatus.innerHTML = '🟢 100% Ready';
-                        testStatus.style.color = 'var(--accent)';
-                        testDesc.innerText = `CAASPP, Cambium TDS, and TRCS secure testing systems online (${caaspp.rtt_ms || 44} ms RTT).`;
+                        testDesc.innerText = 'All primary district applications and testing portals are responding normally.';
                     }
                 }
 
@@ -3704,12 +3887,7 @@
                 const list = await res.json();
                 if (list && list.length > 0) {
                     const latest = list[list.length - 1];
-                    const blob = new Blob([JSON.stringify(latest, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `incident_${sensorId}_snapshot.json`;
-                    a.click();
+                    window.location.href = `/api/v1/evidence/${sensorId}/${latest.id}/download`;
                 } else {
                     alert('Evidence bundle ready in table below.');
                 }

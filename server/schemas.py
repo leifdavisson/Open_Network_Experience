@@ -36,6 +36,7 @@ class SensorReportRequest(BaseModel):
         default_factory=dict,
         description="Map of container names to their running specs"
     )
+    wifi: Optional[Dict[str, Any]] = Field(None, description="Wi-Fi interface telemetry state")
 
 class ChromebookDeviceInfo(BaseModel):
     serial_number: Optional[str] = None

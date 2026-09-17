@@ -187,16 +187,16 @@ async def get_sensor_detail(sensor_id: str):
                 "protocol": (sensor.get("wifi_telemetry") or {}).get("protocol") or "802.11ax",
                 "ip_address": (sensor.get("wifi_telemetry") or {}).get("ip_address") or (sensor.get("wifi") or {}).get("ip_address") or sensor.get("wireless_ip") or None,
                 "mac_address": (sensor.get("wifi_telemetry") or {}).get("mac_address") or "unknown",
-                "ssid": (sensor.get("wifi_telemetry") or {}).get("ssid") or (sensor.get("wifi") or {}).get("ssid") or "District-Secure-WiFi",
-                "bssid": (sensor.get("wifi_telemetry") or {}).get("bssid") or (sensor.get("wifi") or {}).get("bssid") or "00:11:22:33:44:55",
-                "band": (sensor.get("wifi_telemetry") or {}).get("band") or (sensor.get("wifi") or {}).get("band") or "5 GHz",
-                "channel": (sensor.get("wifi_telemetry") or {}).get("channel") or (sensor.get("wifi") or {}).get("channel") or 165,
-                "channel_width_mhz": (sensor.get("wifi_telemetry") or {}).get("channel_width_mhz") or 80,
-                "rssi_dbm": (sensor.get("wifi_telemetry") or {}).get("rssi_dbm") or (sensor.get("wifi") or {}).get("rssi_dbm") or -55,
-                "snr_db": (sensor.get("wifi_telemetry") or {}).get("snr_db") or 38,
-                "tx_rate_mbps": (sensor.get("wifi_telemetry") or {}).get("tx_rate_mbps") or 866.7,
-                "rx_rate_mbps": (sensor.get("wifi_telemetry") or {}).get("rx_rate_mbps") or 866.7,
-                "security": (sensor.get("wifi_telemetry") or {}).get("security") or "WPA2-Enterprise (802.1X PEAP-MSCHAPv2)"
+                "ssid": (sensor.get("wifi_telemetry") or {}).get("ssid") or (sensor.get("wifi") or {}).get("ssid") or "Unassociated",
+                "bssid": (sensor.get("wifi_telemetry") or {}).get("bssid") or (sensor.get("wifi") or {}).get("bssid") or "Not Connected",
+                "band": (sensor.get("wifi_telemetry") or {}).get("band") or (sensor.get("wifi") or {}).get("band") or "Unknown",
+                "channel": (sensor.get("wifi_telemetry") or {}).get("channel") or (sensor.get("wifi") or {}).get("channel") or 0,
+                "channel_width_mhz": (sensor.get("wifi_telemetry") or {}).get("channel_width_mhz") or 0,
+                "rssi_dbm": (sensor.get("wifi_telemetry") or {}).get("rssi_dbm") or (sensor.get("wifi") or {}).get("rssi_dbm") or -100,
+                "snr_db": (sensor.get("wifi_telemetry") or {}).get("snr_db") or 0,
+                "tx_rate_mbps": (sensor.get("wifi_telemetry") or {}).get("tx_rate_mbps") or 0.0,
+                "rx_rate_mbps": (sensor.get("wifi_telemetry") or {}).get("rx_rate_mbps") or 0.0,
+                "security": (sensor.get("wifi_telemetry") or {}).get("security") or "None"
             }
         },
         "live_metrics": {

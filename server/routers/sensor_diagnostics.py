@@ -14,6 +14,15 @@ import time
 import urllib.error
 import urllib.request
 
+import asyncio
+from fastapi import BackgroundTasks
+from fastapi.responses import FileResponse
+from fastapi import HTTPException
+import time
+import os
+import base64
+import hashlib
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -193,6 +202,64 @@ def _live_probe_stun_jitter(host: str = "stun.l.google.com", port: int = 19302, 
         return {"success": True, "rtt_ms": rtt_ms, "jitter_ms": jitter_ms, "mos_score": mos, "loss_pct": 0.0}
     except Exception:
         return {"success": True, "rtt_ms": 16.4, "jitter_ms": 1.2, "mos_score": 4.41, "loss_pct": 0.0}
+
+def _run_remote_sensor_command(sensor_ip: str | None, cmd: str, timeout_sec: float = 12.0) -> str | None:
+    """Executes a probe script directly on the physical edge sensor over SSH and returns raw stdout."""
+    if not sensor_ip:
+        return None
+    ssh_user = os.environ.get("SSH_USER", "sensor")
+    ssh_pass = os.environ.get("SSH_PASS", "")
+
+    explicit_key = os.environ.get("SSH_KEY_PATH")
+    if explicit_key is not None:
+        key_path = explicit_key if os.path.exists(explicit_key) else ""
+    else:
+        key_path = ""
+        for candidate in ["/app/data/id_ed25519", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "id_ed25519"))]:
+            if os.path.exists(candidate):
+                key_path = candidate
+                break
+
+    if key_path and os.path.exists(key_path):
+        candidate_users = [u for u in [os.environ.get("SSH_USER"), "one-sensor", "sensor"] if u]
+        candidate_users = list(dict.fromkeys(candidate_users))
+
+        for candidate_user in candidate_users:
+            ssh_cmd = [
+                "ssh", "-i", key_path,
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "BatchMode=yes",
+                "-o", "ConnectTimeout=3",
+                f"{candidate_user}@{sensor_ip}",
+                cmd
+            ]
+            try:
+                res = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout_sec)
+                if res.returncode == 0 and res.stdout.strip():
+                    return res.stdout.strip()
+            except Exception:
+                continue
+
+    if ssh_pass:
+        ssh_cmd = [
+            "sshpass", "-p", ssh_pass,
+            "ssh", "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "PreferredAuthentications=password",
+            "-o", "PubkeyAuthentication=no",
+            "-o", "ConnectTimeout=4",
+            f"{ssh_user}@{sensor_ip}",
+            cmd
+        ]
+        try:
+            res = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout_sec)
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip()
+        except Exception:
+            pass
+
+    return None
 
 def _run_remote_sensor_probe(sensor_ip: str | None, cmd: str, timeout_sec: float = 12.0) -> dict | None:
     """Executes a probe script directly on the physical edge sensor over SSH and parses JSON stdout.
@@ -1094,7 +1161,11 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
         log_lines.append(f"[OK] Full 7-Layer OSI and SaaS synthetic suite executed from {src} successfully.")
 
     total_latency = sum(d["latency_ms"] for d in details)
-    all_passed = all(d.get("passed", True) for d in details)
+    if tt == "dns":
+        # For DNS benchmarking, pass if at least one resolver succeeded (often public DNS is intentionally firewalled)
+        all_passed = any(d.get("passed", False) for d in details)
+    else:
+        all_passed = all(d.get("passed", True) for d in details)
     has_cmp_fallback = any("CMP Container" in str(d.get("info", "")) for d in details)
 
     if not all_passed:
@@ -1125,12 +1196,86 @@ async def run_sensor_diagnostics(sensor_id: str, req: DiagnosticRunRequest):
     }
 
 
+
+def cleanup_old_pcaps(directory="/app/data/captures", max_age_days=7):
+    if not os.path.exists(directory):
+        return
+    now = time.time()
+    for f in os.listdir(directory):
+        if not f.endswith(".pcap"):
+            continue
+        p = os.path.join(directory, f)
+        if os.path.isfile(p):
+            if os.stat(p).st_mtime < now - max_age_days * 86400:
+                try:
+                    os.remove(p)
+                except:
+                    pass
+
+def run_real_pcap_capture(sensor_id: str, ip: str, filename: str, ev_id: str, reason: str):
+    cleanup_old_pcaps()
+    
+    # Run the TCPDump on the sensor for 60 seconds (1 file, wait to finish)
+    cmd = f"sudo tcpdump -i any -G 60 -W 1 -w /tmp/{filename}"
+    _run_remote_sensor_command(ip, cmd, timeout_sec=75.0)
+    
+    # Read the file and base64 it so we can print to stdout and capture it
+    b64_out = _run_remote_sensor_command(ip, f"base64 /tmp/{filename}", timeout_sec=20.0)
+    
+    # Clean up on sensor
+    _run_remote_sensor_command(ip, f"sudo rm -f /tmp/{filename}", timeout_sec=5.0)
+    
+    if b64_out:
+        out_dir = "/app/data/captures"
+        os.makedirs(out_dir, exist_ok=True)
+        out_path = os.path.join(out_dir, filename)
+        
+        # Decode and write
+        try:
+            with open(out_path, "wb") as f:
+                f.write(base64.b64decode(b64_out.strip()))
+                
+            file_size = os.path.getsize(out_path)
+            sha = hashlib.sha256(open(out_path, "rb").read()).hexdigest()
+            
+            # Update evidence DB
+            if sensor_id in EVIDENCE_DB:
+                for ev in EVIDENCE_DB[sensor_id]:
+                    if ev["id"] == ev_id:
+                        ev["size_bytes"] = file_size
+                        ev["bundle"]["pcap_size_bytes"] = file_size
+                        ev["bundle"]["sha256"] = sha
+                        ev["bundle"]["is_real"] = True
+                        db.save_evidence(sensor_id, ev)
+                        break
+        except Exception as e:
+            print(f"Error saving pcap: {e}")
+
+@router.get("/api/v1/evidence/{sensor_id}/{ev_id}/download")
+async def download_evidence(sensor_id: str, ev_id: str):
+    if sensor_id not in EVIDENCE_DB:
+        raise HTTPException(404, "Sensor not found")
+    
+    evidence = next((ev for ev in EVIDENCE_DB[sensor_id] if ev["id"] == ev_id), None)
+    if not evidence:
+        raise HTTPException(404, "Evidence not found")
+        
+    filename = evidence.get("filename")
+    if not filename:
+        raise HTTPException(404, "Filename missing")
+        
+    path = os.path.join("/app/data/captures", filename)
+    if not os.path.exists(path):
+        raise HTTPException(404, "File not available or still capturing")
+        
+    return FileResponse(path, filename=filename, media_type="application/vnd.tcpdump.pcap")
+
 @router.post(
     "/api/v1/sensors/{sensor_id}/pcap/trigger",
     summary="Trigger Incident PCAP Capture",
     dependencies=[Depends(verify_admin_key)]
 )
-async def trigger_pcap_capture(sensor_id: str, reason: str = "manual_noc_trigger"):
+async def trigger_pcap_capture(sensor_id: str, background_tasks: BackgroundTasks, reason: str = "manual_noc_trigger"):
     """Queues a remote PCAP snapshot capture on the targeted sensor and creates an evidence record."""
     sensor = get_or_create_sensor(sensor_id)
     sensor["target_config"].pcap_trigger.trigger_now = True
@@ -1160,12 +1305,16 @@ async def trigger_pcap_capture(sensor_id: str, reason: str = "manual_noc_trigger
         EVIDENCE_DB[sensor_id] = []
     EVIDENCE_DB[sensor_id].append(bundle_data)
     db.save_evidence(sensor_id, bundle_data)
+    
+    ip = sensor.get("ip_address")
+    if ip:
+        background_tasks.add_task(run_real_pcap_capture, sensor_id, ip, bundle_data["filename"], ev_id, reason)
 
     return {
         "status": "success",
         "message": f"PCAP snapshot trigger '{reason}' queued for sensor {sensor_id}.",
         "evidence_id": ev_id,
-        "estimated_ready_seconds": 10
+        "estimated_ready_seconds": 65
     }
 
 @router.post(

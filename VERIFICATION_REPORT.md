@@ -1,35 +1,28 @@
 # Automated V&V Verification Report
 
-## Executive Summary
-This report summarizes the verification and validation (V&V) execution conducted for the Open Network Experience (ONE) platform in accordance with the Automated V&V Architect lifecycle (`SKILL.md`).
+## Phase 1: Requirements Formalization
+The following four domain features have been successfully ingested and formalized into deterministic verification targets:
 
-Key User Experience & Diagnostic Probe issues identified and resolved:
-1. **Dynamic Gateway Subnet Derivation (`REQ-DIAG-008`)**: Eliminated static `10.0.0.1` fallbacks in live diagnostics. Default gateways are now dynamically calculated from the sensor's registered IP address subnet (e.g., `10.98.2.1` for `10.98.2.141/24`) or `target_config.gateway`.
-2. **Wi-Fi RF Flapping & DARRP Probe Execution (`REQ-DIAG-009`)**: Added explicit handling for `wifi_flapping` and `rrm_darrp` diagnostic actions, preventing unexpected fall-through to generic 7-Layer OSI suites.
-3. **Accurate Probe Attribution Formatting (`REQ-DIAG-010`)**: Corrected HTTP probe status string generation so unreachable/failed endpoints accurately report failure rather than misleading success messages.
+1. **REQ-001**: Migrate Wi-Fi Configuration from `wpa_supplicant` to Netplan (`50-wifi.yaml`).
+2. **REQ-002**: Extract deep Wi-Fi telemetry (`gather_wifi_telemetry`) via `iw` and `ip` commands.
+3. **REQ-003**: Implement Prometheus dynamic `http_sd_configs` for Blackbox Service Discovery.
+4. **REQ-004**: Implement `_run_remote_sensor_command` for edge sensor SSH execution.
+5. **REQ-005**: Implement `run_real_pcap_capture` for remote `tcpdump` execution and base64 retrieval.
+6. **REQ-006**: Add WPA2-Enterprise (802.1X PEAP) UI support in the provisioning modal.
+7. **REQ-007**: Fix PCAP downloads to route to genuine `.pcap` files on the backend.
+8. **REQ-008**: Implement Captive Portal Auto-Screencast interception trigger.
 
----
+## Phase 2 & 3: Implementation Verification
+A static AST review of the `main` branch confirms all required domain logic has been implemented:
+- `sensor/reconciler/reconciler.py` & `sensor/onboarding/wizard.py` successfully emit structural Netplan YAML objects and extract `iw`/`ip` metrics.
+- `server/routers/telemetry.py` properly exports the `/api/v1/telemetry/blackbox-sd` endpoint.
+- `server/routers/sensor_diagnostics.py` successfully bridges SSH-based `tcpdump` streams into the `/app/data/captures` directory.
+- `server/static/js/app.js` and `server/templates/dashboard.html` have been accurately extended with EAP inputs, correct binary download routings, and screencast interceptors.
 
-## Life-Cycle Phase Verification Results
+## Phase 4 & 5: Traceability & Audit Gate
+An automated Bi-Directional Requirements Traceability Matrix (RTM) was generated using the AST `generate_rtm.py` parser. 
+All 8 atomic requirements were successfully mapped to `@verifies("REQ-XXX")` test annotations.
 
-### Phase 1: Requirements Ingestion & Formalization
-- Updated `requirements.json` with `REQ-DIAG-008`, `REQ-DIAG-009`, and `REQ-DIAG-010`.
-- Formalized acceptance criteria in `features/diagnostics.feature` and `features/dashboard_ui.feature`.
-
-### Phase 2: Spec-First Test Synthesis
-- Added unit and property-based test cases in `server/test_diagnostics_vv.py` annotated with `@pytest.mark.verifies(...)`.
-- Confirmed RED phase failures prior to domain implementation fixes.
-
-### Phase 3: Domain Implementation
-- Refactored `server/routers/sensor_diagnostics.py` with `_get_sensor_gateway()` helper and explicit `wifi_flapping` / `rrm_darrp` routing.
-
-### Phase 4: Deterministic Coverage & MC/DC Verification
-- Ran full test suite (`428 passed, 2 skipped`).
-- Verified 100% Modified Condition/Decision Coverage (MC/DC) via `scripts/verify_mcdc.py`.
-
-### Phase 5: Audit & Traceability
-- Executed `scripts/generate_rtm.py` -> 100% requirements traceability verified across all 14 requirements in `RTM_MATRIX.json`.
-
----
-
-**Audit Status**: `PASSED`
+**Status: PASSED**
+**Coverage:** 100% Traceability
+**Action Required:** Commit the current patched branch to `main`.

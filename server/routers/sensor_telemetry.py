@@ -264,6 +264,8 @@ async def reconcile_sensor(report: SensorReportRequest, req: Request, x_api_key:
     sensor["reported_containers"] = {k: v.model_dump() for k, v in report.containers.items()}
     if report.location:
         sensor["location"] = report.location
+    if hasattr(report, "wifi") and report.wifi:
+        sensor["wifi_telemetry"] = report.wifi
 
     reset_value = sensor["reset_flag"]
     response = sensor["target_config"].model_copy(update={"reset": reset_value}, deep=True)

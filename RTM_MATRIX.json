@@ -1,128 +1,75 @@
 [
   {
-    "requirement_id": "REQ-DIAG-001",
-    "title": "Built-in Diagnostic Suite Execution",
-    "safety_level": "STANDARD",
-    "verifying_tests": [
-      "test_built_in_suite_execution"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-DIAG-002",
-    "title": "Custom Probe Execution via ID Match",
-    "safety_level": "STANDARD",
-    "verifying_tests": [
-      "test_custom_probe_failure_degrades_status",
-      "test_tcp_probe_malformed_port"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-DIAG-003",
-    "title": "Fail-Closed for Unknown and Unconfigured Test Types",
+    "requirement_id": "REQ-001",
+    "title": "Migrate Wi-Fi to Netplan",
     "safety_level": "CRITICAL",
     "verifying_tests": [
-      "test_fuzz_unknown_test_type_fallback"
+      "test_06_reconcile_wifi_open_network",
+      "test_07_reconcile_wifi_psk_network",
+      "test_08_reconcile_wifi_eap_peap_network"
     ],
     "status": "VERIFIED"
   },
   {
-    "requirement_id": "REQ-DIAG-004",
-    "title": "Overall Status Degradation",
+    "requirement_id": "REQ-002",
+    "title": "Extract Wi-Fi Telemetry",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_gather_wifi_telemetry"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-003",
+    "title": "Prometheus Blackbox Service Discovery",
+    "safety_level": "STANDARD",
+    "verifying_tests": [
+      "test_blackbox_sd"
+    ],
+    "status": "VERIFIED"
+  },
+  {
+    "requirement_id": "REQ-004",
+    "title": "Remote Edge Command Execution",
     "safety_level": "CRITICAL",
     "verifying_tests": [
-      "test_custom_probe_failure_degrades_status"
+      "test_run_remote_sensor_command"
     ],
     "status": "VERIFIED"
   },
   {
-    "requirement_id": "REQ-DIAG-005",
-    "title": "DNS Custom Probe Resolution",
+    "requirement_id": "REQ-005",
+    "title": "Real Remote PCAP Capture",
     "safety_level": "STANDARD",
     "verifying_tests": [
-      "test_dns_probe_fallback"
+      "test_run_real_pcap_capture"
     ],
     "status": "VERIFIED"
   },
   {
-    "requirement_id": "REQ-DIAG-006",
-    "title": "TCP Custom Probe Execution and Port Parsing",
+    "requirement_id": "REQ-006",
+    "title": "WPA2-Enterprise Provisioning UI",
     "safety_level": "STANDARD",
     "verifying_tests": [
-      "test_tcp_probe_valid_port"
+      "test_wpa2_enterprise_ui"
     ],
     "status": "VERIFIED"
   },
   {
-    "requirement_id": "REQ-DIAG-007",
-    "title": "Fallback Probe Protocol Handling",
+    "requirement_id": "REQ-007",
+    "title": "PCAP Download Resolution",
     "safety_level": "STANDARD",
     "verifying_tests": [
-      "test_other_probe_fallback"
+      "test_pcap_download"
     ],
     "status": "VERIFIED"
   },
   {
-    "requirement_id": "REQ-DIAG-008",
-    "title": "Dynamic Default Gateway Derivation",
-    "safety_level": "CRITICAL",
-    "verifying_tests": [
-      "test_dynamic_gateway_derivation"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-DIAG-009",
-    "title": "Wi-Fi RF Flapping and DARRP Probe Execution",
+    "requirement_id": "REQ-008",
+    "title": "Captive Portal Auto-Screencast",
     "safety_level": "STANDARD",
     "verifying_tests": [
-      "test_wifi_flapping_probe_execution"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-DIAG-010",
-    "title": "Accurate Probe Attribution String Formatting",
-    "safety_level": "STANDARD",
-    "verifying_tests": [
-      "test_accurate_attribution_string_formatting"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-UI-001",
-    "title": "Live Diagnostics Custom Probe Propagation",
-    "safety_level": "STANDARD",
-    "verifying_tests": [
-      "test_live_diagnostics_dropdown_population"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-UI-002",
-    "title": "EasyBuilder HTTP 422 Alert Handling",
-    "safety_level": "STANDARD",
-    "verifying_tests": [
-      "test_easybuilder_validation_alert"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-UI-003",
-    "title": "Chromebook Lock Button State Binding",
-    "safety_level": "STANDARD",
-    "verifying_tests": [
-      "test_chromebook_fleet_lock_toggle"
-    ],
-    "status": "VERIFIED"
-  },
-  {
-    "requirement_id": "REQ-UI-004",
-    "title": "Chromebook Dynamic Identity Binding",
-    "safety_level": "STANDARD",
-    "verifying_tests": [
-      "test_chromebook_fleet_dynamic_identity"
+      "test_captive_portal_screencast"
     ],
     "status": "VERIFIED"
   }

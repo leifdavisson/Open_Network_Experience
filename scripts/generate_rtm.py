@@ -26,8 +26,7 @@ def run_audit(req_file: str, test_dir: str, output_file: str) -> bool:
         reqs = json.load(f)
 
     parser = RTMParser()
-    search_path = Path(test_dir)
-    for py_file in search_path.rglob("test_*.py"):
+    for py_file in Path(test_dir).rglob("test_*.py"):
         with open(py_file, "r", encoding="utf-8") as f:
             parser.visit(ast.parse(f.read(), filename=str(py_file)))
 
@@ -57,6 +56,5 @@ def run_audit(req_file: str, test_dir: str, output_file: str) -> bool:
     return True
 
 if __name__ == "__main__":
-    test_dir = sys.argv[1] if len(sys.argv) > 1 else "."
-    success = run_audit("requirements.json", test_dir, "RTM_MATRIX.json")
+    success = run_audit("requirements.json", ".", "RTM_MATRIX.json")
     sys.exit(0 if success else 1)

@@ -154,8 +154,48 @@ async def get_prometheus_http_sd():
             }
         })
 
+    active = sd_targets
+    # If no sensors are connected, return empty list
+    if not active:
+        return []
+
     _PROMETHEUS_SD_CACHE["targets"] = sd_targets
     _PROMETHEUS_SD_CACHE["expires_at"] = now + 15.0
+    return sd_targets
+
+@router.get("/api/v1/telemetry/blackbox-sd", summary="Prometheus HTTP SD for Blackbox")
+async def get_blackbox_http_sd(module: str = "saas"):
+    """Dynamically serves blackbox targets mapped to all active edge sensors."""
+    sensors = await get_prometheus_http_sd()
+    
+    if module == "saas":
+        targets = [
+            "https://canvas.instructure.com",
+            "https://classroom.google.com",
+            "https://login.i-ready.com",
+            "https://ca.portal.cambiumtds.com",
+            "https://zoom.us",
+            "https://aeries.net"
+        ]
+    elif module == "dns":
+        targets = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+    elif module == "gateway":
+        # CMP IP could be dynamic, but keeping what was in scrape.yml for now
+        targets = ["10.98.2.125:8000", "8.8.8.8:53"]
+    else:
+        targets = []
+
+    sd_targets = []
+    for s in sensors:
+        sensor_ip = s["targets"][0].split(":")[0]
+        for t in targets:
+            sd_targets.append({
+                "targets": [t],
+                "labels": {
+                    **s["labels"],
+                    "sensor_ip": sensor_ip
+                }
+            })
     return sd_targets
 
 

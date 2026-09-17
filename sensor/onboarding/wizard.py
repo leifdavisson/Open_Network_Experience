@@ -47,7 +47,7 @@ COLOR_DIM = '\033[2m'
 COLOR_RESET = '\033[0m'
 
 CONFIG_PATH = "/etc/sensor/reconciler.json"
-WIFI_CONFIG_PATH = "/etc/wpa_supplicant/wpa_supplicant.conf"
+WIFI_CONFIG_PATH = "/etc/netplan/50-wifi.yaml"
 SERVICE_PATH = "/etc/systemd/system/sensor-reconciler.service"
 
 DEFAULT_CMP_URL = "http://central-monitoring-platform.local/api/v1"
@@ -500,29 +500,42 @@ def save_sensor_configuration(config: Dict[str, Any], path: Optional[str] = None
         return False
 
 def configure_wpa_supplicant(ssid: str, psk: str, security: str = "psk", config_path: Optional[str] = None) -> bool:
-    """Generates / updates /etc/wpa_supplicant/wpa_supplicant.conf."""
+    """Generates / updates /etc/netplan/50-wifi.yaml."""
     target_path = config_path or WIFI_CONFIG_PATH
     try:
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
-        content = "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\ncountry=US\n\n"
+        interface = "wlp1s0"
+        
+        lines = [
+            "network:",
+            "  version: 2",
+            "  renderer: networkd",
+            "  wifis:",
+            f"    {interface}:",
+            "      dhcp4: true",
+            "      dhcp4-overrides:",
+            "        route-metric: 200",
+            "      access-points:",
+            f'        "{ssid}":'
+        ]
+
         if security.lower() == "open":
-            content += f"""network={{
-    ssid="{ssid}"
-    key_mgmt=NONE
-}}
-"""
+            lines.append("          network: open")
         else:
-            content += f"""network={{
-    ssid="{ssid}"
-    psk="{psk}"
-    key_mgmt=WPA-PSK
-}}
-"""
+            lines.append(f'          password: "{psk}"')
+
+        content = "\n".join(lines) + "\n"
         with open(target_path, "w") as f:
             f.write(content)
+        
+        # Secure permissions and apply
+        subprocess.run(["chmod", "600", target_path], capture_output=True)
+        pass
+        subprocess.run(["netplan", "apply"], capture_output=True)
+        
         return True
     except Exception as e:
-        print_warning(f"Could not write wpa_supplicant file: {e}")
+        print_warning(f"Could not write netplan file: {e}")
         return False
 
 def manage_systemd_service() -> bool:
